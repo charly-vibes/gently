@@ -11,4 +11,22 @@ mod tb {
     fn workspace_smoke() {
         assert!(gently_core::ready());
     }
+
+    /// tb.txt-render (gently-2po.7): minimal canonical txt serialization of
+    /// the tracer graph shape, byte-identical to the pinned oracle.
+    ///
+    /// Oracle (Graph::Easy v0.69 @ ededa3d7, recorded 2026-10-08):
+    ///   perl -IGraph-Easy-0.69/lib -MGraph::Easy \
+    ///     -e 'my $g = Graph::Easy->new; $g->add_edge("a","b"); print $g->as_txt'
+    ///   → "[ a ] --> [ b ]\n"
+    /// Deepened by gently-3hv (capability contracts p1–p4).
+    mod txt_render {
+        use gently_core::{graph::Graph, render::txt};
+
+        #[test]
+        fn tracer_shape_matches_oracle() {
+            let g = Graph::tracer();
+            assert_eq!(txt::render(&g), "[ a ] --> [ b ]\n");
+        }
+    }
 }
