@@ -33,21 +33,69 @@ ci:
     just clippy
     just test
 
-# Record oracle fixtures for new inputs (spec: ge.oracle.c5)
+# Record oracle fixtures for new inputs (spec: ge.oracle.c5). Runner:
+# tools/oracle.pl — needs Graph::Easy exactly 0.69 on PERL5LIB (see
+# tests/fixtures/graph-easy/README.md for both remediations).
 oracle-record:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v perl >/dev/null || { echo "oracle: perl not found — spec ge.oracle.c4 (remediation: install perl)"; exit 1; }
-    perl -MGraph::Easy -e 'exit((Graph::Easy->VERSION eq "0.69") ? 0 : 1)' \
-        || { echo "oracle: installed Graph::Easy differs from pin v0.69 @ ededa3d7 — spec ge.oracle.c4 (remediation: cpanm Graph::Easy==0.69 or just oracle-pin)"; exit 1; }
-    echo "oracle-record: implementation phase not started — runner spec'd in specs/ge-oracle.md c5"; exit 1
+    FIX=tests/fixtures/graph-easy
+    [ -d "$FIX" ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2 (remediation: create it, see $FIX/README.md)"; exit 1; }
+    perl tools/oracle.pl record "$FIX"
 
-# Verify gently output byte-identically against recorded oracle outputs (spec: ge.oracle.c3)
+# Verify gently output byte-identically against recorded oracle outputs
+# (spec: ge.oracle.c3). Needs no perl: ascii goes through the built
+# gently binary, txt through the tb::oracle differential tests driving
+# gently-core's pipeline.
 oracle-verify:
     #!/usr/bin/env bash
     set -euo pipefail
-    [ -d tests/fixtures/graph-easy ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2"; exit 1; }
-    echo "oracle-verify: implementation phase not started — runner spec'd in specs/ge-oracle.md c3"; exit 1
+    FIX=tests/fixtures/graph-easy
+    PIN="# oracle: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499"
+    [ -d "$FIX" ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2"; exit 1; }
+    ls "$FIX"/*.txt >/dev/null 2>&1 || { echo "oracle: no *.txt inputs in $FIX — spec ge.oracle.c2"; exit 1; }
+    # ge.oracle.c4: stale or missing pin headers are typed errors —
+    # comparing against bytes recorded from a foreign revision would be
+    # worse than failing.
+    for exp in "$FIX"/*.expected; do
+        [ -f "$exp" ] || { echo "oracle: no recorded companions in $FIX — run just oracle-record (spec ge.oracle.c2)"; exit 1; }
+        head -n1 "$exp" | grep -qxF "$PIN" \
+            || { echo "oracle: stale pin header in $exp — spec ge.oracle.c4 (remediation: deliberate pin change → just oracle-record)"; exit 1; }
+    done
+    # ge.oracle.c2: every input has exactly one companion per format, no
+    # orphans.
+    for input in "$FIX"/*.txt; do
+        base=$(basename "$input" .txt)
+        for fmt in txt ascii; do
+            [ -f "$FIX/$base.$fmt.expected" ] \
+                || { echo "oracle: missing recorded companion for $base.$fmt.expected — run just oracle-record (spec ge.oracle.c2)"; exit 1; }
+        done
+    done
+    for exp in "$FIX"/*.expected; do
+        base=$(basename "$exp" | sed -E 's/\.(txt|ascii)\.expected$//')
+        [ -f "$FIX/$base.txt" ] \
+            || { echo "oracle: orphan companion $exp has no $FIX/$base.txt input — spec ge.oracle.c2"; exit 1; }
+    done
+    cargo build -q -p gently-cli
+    BIN=target/debug/gently
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    for input in "$FIX"/*.txt; do
+        base=$(basename "$input" .txt)
+        "$BIN" --format ascii < "$input" > "$tmp/out" \
+            || { echo "oracle: gently failed on $input — spec ge.oracle.c3"; exit 1; }
+        awk 'done{print;next} /^# oracle: /{next} {done=1;print}' "$FIX/$base.ascii.expected" > "$tmp/body"
+        if ! cmp -s "$tmp/out" "$tmp/body"; then
+            where=$(cmp "$tmp/out" "$tmp/body" 2>&1 | head -n1 || true)
+            echo "oracle-verify: MISMATCH input=$base.txt format=ascii first differing line: $where — spec ge.oracle.c3"
+            diff "$tmp/body" "$tmp/out" | head -n10 || true
+            exit 1
+        fi
+    done
+    echo "oracle-verify: ascii companions byte-identical (built gently binary)"
+    echo "oracle-verify: txt companions verified via the tb::oracle differential tests (gently-core pipeline)"
+    cargo test -q -p gently-core --test scenarios tb::oracle::
+    echo "oracle-verify: green — corpus verified against pin v0.69 @ ededa3d7"
 
 # Run the performance budget gates (spec: ge.perf c1-c4)
 perf-check:
