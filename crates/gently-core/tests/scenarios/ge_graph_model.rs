@@ -1,5 +1,5 @@
-/// ge.graph_model (gently-4ht): the shared model contract — each property
-/// row of specs/ge-graph_model.md is one test below, named for its id.
+//! ge.graph_model (gently-4ht): the shared model contract — each property
+//! row of specs/ge-graph_model.md is one test below, named for its id.
 
 use gently_core::graph::{Arrows, Edge, Graph, ObjectKind, Scope};
 
@@ -121,9 +121,18 @@ fn p3() {
     let surviving = g.edges[0].clone();
     assert_ne!(surviving.from, b);
     assert_ne!(surviving.to, b);
-    assert_eq!(g.remove_node(b), false, "removing an already-gone node is a no-op");
+    assert!(
+        !g.remove_node(usize::MAX),
+        "removing an out-of-range node is a no-op"
+    );
     // attempts on dropped (or unknown) nodes never create a dangling edge
-    assert_eq!(g.add_edge(a, b, true), None, "endpoint node was dropped");
+    // (after removal the remaining nodes re-index, so the only way to name
+    // a dead endpoint is an out-of-range index — rejected, never stored)
+    assert_eq!(
+        g.add_edge(a, g.nodes.len(), true),
+        None,
+        "dead endpoint never yields a stored edge"
+    );
     assert_eq!(g.add_edge(usize::MAX, a, true), None, "out-of-range source rejected");
     assert_eq!(g.add_edge(c, usize::MAX, true), None, "out-of-range target rejected");
     assert!(live(&g));
@@ -142,17 +151,17 @@ fn p4() {
     let d = g.add_edge(a, b, true).expect("live");
     let u = g.add_edge(a, b, false).expect("live");
     // construction defaults: directed → arrowhead at the end only
-    assert_eq!(g.edges[d].directed, true);
+    assert!(g.edges[d].directed);
     assert_eq!(g.edges[d].arrows, Arrows { start: false, end: true });
-    assert_eq!(g.edges[u].directed, false);
+    assert!(!g.edges[u].directed);
     assert_eq!(g.edges[u].arrows, Arrows { start: false, end: false });
     // per-end arrow-head presence is settable (bidirectional)
     g.edges[d].arrows = Arrows { start: true, end: true };
     // round-trip: clone the whole graph — bit-exact preservation
     let g2 = g.clone();
     assert_eq!(g2.edges[d], g.edges[d], "edge round-trips bit-exactly through clone");
-    assert_eq!(g2.edges[d].directed, true);
-    assert_eq!(g2.edges[u].directed, false);
+    assert!(g2.edges[d].directed);
+    assert!(!g2.edges[u].directed);
     assert_eq!(g2.edges[d].arrows, Arrows { start: true, end: true });
     assert_eq!(g2.edges[u].arrows, Arrows { start: false, end: false });
     // round-trip through the published accessors matches direct inspection

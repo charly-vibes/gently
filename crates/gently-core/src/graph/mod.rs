@@ -32,128 +32,9 @@
 //!   base class. Groups are a documented v1 stub (no membership semantics
 //!   yet — see specs/ge-graph_model.md).
 
-/// An ordered attribute table: verbatim `(key, value)` pairs in insertion
-/// order, last-set wins on duplicates.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct AttributeTable {
-    entries: Vec<(String, String)>,
-}
+mod attributes;
 
-impl AttributeTable {
-    /// Store `value` verbatim under `key`; overwrites an earlier value.
-    /// The key `border` additionally derives `border_style`, `border_width`
-    /// and `border_color` at assignment time (upstream
-    /// `split_border_attributes` semantics — see the module header).
-    pub fn set(&mut self, key: &str, value: &str) {
-        set_entry(&mut self.entries, key, value);
-        if key == "border" {
-            let (style, width, color) = split_border_attributes(value);
-            set_entry(&mut self.entries, "border_style", &style);
-            set_entry(&mut self.entries, "border_width", &width);
-            set_entry(&mut self.entries, "border_color", &color);
-        }
-    }
-
-    /// The verbatim value stored under `key`, if any.
-    pub fn get(&self, key: &str) -> Option<&str> {
-        self.entries
-            .iter()
-            .rev()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v.as_str())
-    }
-
-    /// True when no attribute is stored.
-    pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
-    }
-}
-
-/// Overwrite or append `(key, value)` preserving first-seen position.
-fn set_entry(entries: &mut Vec<(String, String)>, key: &str, value: &str) {
-    match entries.iter_mut().find(|(k, _)| k == key) {
-        Some(slot) => slot.1 = value.to_string(),
-        None => entries.push((key.to_string(), value.to_string())),
-    }
-}
-
-/// Split a border value into `(style, width, color)` exactly as upstream
-/// Graph::Easy 0.69 `split_border_attributes` does: the style is the first
-/// (leftmost-position, alternation-order) occurrence of a style word, and
-/// defaults to `solid`; every `\d+(px|em|%)` token is removed with the last
-/// one remembered digits-only as the width; the whitespace-free remainder
-/// is the color.
-fn split_border_attributes(border: &str) -> (String, String, String) {
-    // upstream special case: `border: 0` → none
-    if border == "0" {
-        return ("none".into(), String::new(), String::new());
-    }
-    let (mut rest, matched) = strip_first_style_word(border);
-    let style = matched.unwrap_or("solid");
-    // width: remove every `\d+(px|em|%)` token, remember the last, digits only
-    let ranges = width_ranges(&rest);
-    let mut width = String::new();
-    if let Some(&(start, end)) = ranges.last() {
-        width = rest[start..end].chars().filter(|c| c.is_ascii_digit()).collect();
-    }
-    for &(start, end) in ranges.iter().rev() {
-        rest.replace_range(start..end, "");
-    }
-    let color: String = rest.chars().filter(|c| !c.is_whitespace()).collect();
-    (style.to_string(), width, color)
-}
-
-/// The upstream style words in alternation order — leftmost position wins,
-/// then this order decides.
-const STYLES: [&str; 13] = [
-    "solid", "dotted", "dot-dot-dash", "dot-dash", "dashed", "double-dash", "double",
-    "bold-dash", "bold", "broad", "wide", "wave", "none",
-];
-
-/// Remove the first style word from `s` (leftmost position, upstream
-/// alternation order — no word boundaries, exactly as upstream's regex
-/// substitution does), returning the remainder and the matched style.
-fn strip_first_style_word(s: &str) -> (String, Option<&'static str>) {
-    for pos in 0..s.len() {
-        for candidate in STYLES {
-            if s[pos..].starts_with(candidate) {
-                let mut rest = s.to_string();
-                rest.replace_range(pos..pos + candidate.len(), "");
-                return (rest, Some(candidate));
-            }
-        }
-    }
-    (s.to_string(), None)
-}
-
-/// All `\d+(px|em|%)` token ranges in `s`, left to right (upstream's global
-/// width substitution: the unit is required, bare digits are left alone).
-fn width_ranges(s: &str) -> Vec<(usize, usize)> {
-    let b = s.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < b.len() {
-        let end = if b[i].is_ascii_digit() { digit_token_end(s, i) } else { i };
-        if end > i {
-            out.push((i, end));
-        }
-        i = end.max(i + 1);
-    }
-    out
-}
-
-/// End of the `\d+(px|em|%)` token starting at `i`, or `i` when the digits
-/// are not followed by a unit (upstream requires the unit).
-fn digit_token_end(s: &str, i: usize) -> usize {
-    let digits = s[i..].bytes().take_while(u8::is_ascii_digit).count();
-    let after = i + digits;
-    for unit in ["px", "em", "%"] {
-        if s[after..].starts_with(unit) {
-            return after + unit.len();
-        }
-    }
-    i
-}
+pub use attributes::AttributeTable;
 
 /// Which object kind a class scope applies to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -299,25 +180,47 @@ impl Graph {
     /// returned, no second node is created (upstream add_node semantics).
     /// The empty name creates a fresh anonymous node every call.
     pub fn add_node(&mut self, name: &str) -> usize {
-        todo!("gently-4ht RED: node identity")
+        if name.is_empty() {
+            self.nodes.push(Node {
+                name: String::new(),
+                attributes: AttributeTable::default(),
+            });
+        } else if let Some(existing) = self.node_by_name(name) {
+            return existing;
+        } else {
+            self.nodes.push(Node::named(name));
+        }
+        self.nodes.len() - 1
     }
 
     /// Create a fresh anonymous node (upstream add_anon_node): unnamed,
     /// distinct from every other node, unreferencable by name after
     /// creation. Returns its index.
     pub fn add_anonymous_node(&mut self) -> usize {
-        todo!("gently-4ht RED: node identity")
+        self.add_node("")
     }
 
     /// The index of the named node, if it exists. Anonymous nodes are
     /// never found by name.
     pub fn node_by_name(&self, name: &str) -> Option<usize> {
-        todo!("gently-4ht RED: node identity")
+        if name.is_empty() {
+            return None;
+        }
+        self.nodes.iter().position(|n| n.name == name)
     }
 
     /// Intern a group stub by name (duplicate names merge, as nodes do).
     pub fn add_group(&mut self, name: &str) -> usize {
-        todo!("gently-4ht RED: group stub")
+        match self.groups.iter().position(|grp| grp.name == name) {
+            Some(existing) => existing,
+            None => {
+                self.groups.push(Group {
+                    name: name.to_string(),
+                    attributes: AttributeTable::default(),
+                });
+                self.groups.len() - 1
+            }
+        }
     }
 
     /// Add an edge between two **live** nodes (c3): both indices must be
@@ -325,35 +228,93 @@ impl Graph {
     /// edge ever escapes a mutation. Self-loops (`from == to`) are legal.
     /// Returns the new edge's index.
     pub fn add_edge(&mut self, from: usize, to: usize, directed: bool) -> Option<usize> {
-        todo!("gently-4ht RED: edge integrity")
+        if from >= self.nodes.len() || to >= self.nodes.len() {
+            return None;
+        }
+        let edge = if directed {
+            Edge::directed(from, to)
+        } else {
+            Edge::undirected(from, to)
+        };
+        self.edges.push(edge);
+        Some(self.edges.len() - 1)
     }
 
     /// Remove a node (upstream `del_node`): all incident edges are dropped
-    /// with it, so no dangling edge escapes the mutation. Returns `false`
-    /// (no-op) when the index is out of range, upstream-faithful.
+    /// with it, so no dangling edge escapes the mutation. Remaining edge
+    /// endpoints are re-indexed so they stay live. Returns `false` (no-op)
+    /// when the index is out of range, upstream-faithful.
     pub fn remove_node(&mut self, index: usize) -> bool {
-        todo!("gently-4ht RED: edge integrity")
+        if index >= self.nodes.len() {
+            return false;
+        }
+        self.edges.retain(|e| e.from != index && e.to != index);
+        self.nodes.remove(index);
+        for edge in &mut self.edges {
+            if edge.from > index {
+                edge.from -= 1;
+            }
+            if edge.to > index {
+                edge.to -= 1;
+            }
+        }
+        true
     }
 
     /// Store `value` verbatim under `key` in the table `scope` targets
     /// (c2). Assignment to one scope never touches any other scope.
+    /// Panics when an object-indexed scope is out of range.
     pub fn set_attr(&mut self, scope: Scope, key: &str, value: &str) {
-        todo!("gently-4ht RED: attributes")
+        match scope {
+            Scope::Node(i) => self.nodes[i].attributes.set(key, value),
+            Scope::Edge(i) => self.edges[i].attributes.set(key, value),
+            Scope::Group(i) => self.groups[i].attributes.set(key, value),
+            Scope::Graph => self.attributes.set(key, value),
+            Scope::Class(kind, class) => self.class_table(kind, class).set(key, value),
+        }
     }
 
     /// Read the value stored under `key` in the table `scope` targets.
+    /// Panics when an object-indexed scope is out of range.
     pub fn get_attr(&self, scope: Scope, key: &str) -> Option<&str> {
-        todo!("gently-4ht RED: attributes")
+        match scope {
+            Scope::Node(i) => self.nodes[i].attributes.get(key),
+            Scope::Edge(i) => self.edges[i].attributes.get(key),
+            Scope::Group(i) => self.groups[i].attributes.get(key),
+            Scope::Graph => self.attributes.get(key),
+            Scope::Class(kind, class) => self
+                .class_attributes
+                .iter()
+                .find(|(k, c, _)| *k == kind && *c == class)
+                .and_then(|(_, _, table)| table.get(key)),
+        }
+    }
+
+    /// The class-scoped table for `(kind, class)`, created on first touch.
+    fn class_table(&mut self, kind: ObjectKind, class: String) -> &mut AttributeTable {
+        let existing = self
+            .class_attributes
+            .iter()
+            .position(|(k, c, _)| *k == kind && *c == class);
+        let idx = match existing {
+            Some(idx) => idx,
+            None => {
+                self.class_attributes.push((kind, class, AttributeTable::default()));
+                self.class_attributes.len() - 1
+            }
+        };
+        let (_, _, table) = &mut self.class_attributes[idx];
+        table
     }
 
     /// Published consumer accessor: all nodes, in model order.
     pub fn nodes(&self) -> &[Node] {
-        todo!("gently-4ht RED: published contract")
+        &self.nodes
     }
 
     /// Published consumer accessor: all edges, in model order.
     pub fn edges(&self) -> &[Edge] {
-        todo!("gently-4ht RED: published contract")
+        &self.edges
     }
 }
 

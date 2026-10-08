@@ -9,7 +9,7 @@
 //! ge.text_parser capability (classes, styles, quoting, attributes) lands
 //! with gently-bzx.
 
-use crate::graph::{Edge, Graph, Node};
+use crate::graph::{Edge, Graph};
 
 /// A typed parse failure: 1-based line number and a human description.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -109,14 +109,10 @@ fn node_name(inner: &str) -> Option<&str> {
     }
 }
 
-/// Intern `name` into `graph.nodes`, returning its index (first-seen order).
+/// Intern `name` into the graph, returning its index (first-seen order) —
+/// the model's own duplicate-merging add_node (ge.graph_model c1).
 fn intern(graph: &mut Graph, name: &str) -> usize {
-    if let Some(i) = graph.nodes.iter().position(|n| n.name == name) {
-        i
-    } else {
-        graph.nodes.push(Node::named(name));
-        graph.nodes.len() - 1
-    }
+    graph.add_node(name)
 }
 
 #[cfg(test)]
