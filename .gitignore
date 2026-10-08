@@ -12,3 +12,8 @@
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# devenv.sh state (see devenv.nix)
+.devenv/
+.devenv.flake.nix
+.direnv/
