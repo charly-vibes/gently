@@ -190,4 +190,143 @@ mod tb {
             assert_eq!(ascii::render(&g, &l).unwrap(), "");
         }
     }
+
+    /// tb.oracle (gently-2po.10): the first differential fixture proves the
+    /// tracer end to end. `tests/fixtures/graph-easy/tracer.txt` is the
+    /// input; each companion (`tracer.txt.expected` from `as_txt`,
+    /// `tracer.ascii.expected` from `as_ascii`) is recorded from the pinned
+    /// oracle — Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499
+    /// — and carries a leading `# oracle: ` pin header naming that pin
+    /// (ge.oracle.c1/c2). These tests re-render the fixture through
+    /// gently's pipeline and compare byte-identically against the recorded
+    /// bytes (ge.oracle.c3); `just oracle-record` / `just oracle-verify`
+    /// run the same correspondence against live perl locally (c4/c5).
+    mod oracle {
+        use gently_core::{layout, parse::text, render::ascii, render::txt};
+        use std::path::PathBuf;
+
+        /// The pinned oracle (ge.oracle.c1): the (version, commit) pair
+        /// every recorded companion's pin header must name.
+        const PIN: (&str, &str) = ("0.69", "ededa3d787ad89ac532c578c06390e8a7b270499");
+
+        fn fixture_dir() -> PathBuf {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/graph-easy")
+        }
+
+        /// Read the leading `# oracle: ` pin-header line off a recorded
+        /// companion: returns the named (version, commit) when the header
+        /// is present and well-formed, None when it is missing or
+        /// malformed. A companion may carry several leading header lines;
+        /// only the first is the pin.
+        fn pin_header_of(bytes: &[u8]) -> Option<(String, String)> {
+            let first = std::str::from_utf8(bytes).ok()?.lines().next()?;
+            let rest = first.strip_prefix("# oracle: Graph::Easy v")?;
+            let (version, commit) = rest.split_once(" @ ")?;
+            Some((version.to_string(), commit.trim().to_string()))
+        }
+
+        /// Strip every leading `# oracle: ` header line so only the oracle
+        /// payload bytes remain for byte-identical comparison.
+        fn strip_pin_header(bytes: &[u8]) -> &[u8] {
+            let s = std::str::from_utf8(bytes).expect("companion must be utf-8 text");
+            let mut rest = s;
+            while let Some(idx) = rest.find('\n') {
+                if rest[..idx].starts_with("# oracle: ") {
+                    rest = &rest[idx + 1..];
+                } else {
+                    break;
+                }
+            }
+            rest.as_bytes()
+        }
+
+        /// The verifier-side pin check (ge.oracle.c4): a companion is
+        /// stale when its header is missing, malformed, or names a pin
+        /// other than the pinned revision.
+        fn pin_is_stale(bytes: &[u8]) -> bool {
+            pin_header_of(bytes) != Some((PIN.0.to_string(), PIN.1.to_string()))
+        }
+
+        /// ge.oracle.c3: compare the rendered bytes to the recorded
+        /// companion byte-identically; on any difference, describe it
+        /// naming the input, the format, and the first differing line.
+        fn mismatch(input: &str, format: &str, got: &[u8], want: &[u8]) -> Option<String> {
+            if got == want {
+                return None;
+            }
+            let common = got.iter().zip(want).take_while(|(a, b)| a == b).count();
+            let n = got[..common].iter().filter(|&&b| b == b'\n').count() + 1;
+            let line = |b: &[u8]| {
+                String::from_utf8_lossy(
+                    b.split(|&c| c == b'\n').nth(n - 1).unwrap_or_default(),
+                )
+                .into_owned()
+            };
+            Some(format!(
+                "oracle mismatch: input={input} format={format} \
+                 first differing line {n}: got {:?}, recorded {:?} — spec ge.oracle.c3",
+                line(got),
+                line(want)
+            ))
+        }
+
+        /// ge.oracle.c3: the tracer fixture re-renders through gently's
+        /// parse -> render pipeline byte-identically to the recorded
+        /// `as_txt` companion.
+        #[test]
+        fn tracer_fixture_matches_recorded_oracle_txt() {
+            let input = std::fs::read(fixture_dir().join("tracer.txt")).expect("fixture input");
+            let expected =
+                std::fs::read(fixture_dir().join("tracer.txt.expected")).expect("recorded companion");
+            let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
+                .expect("fixture input must parse");
+            let m = mismatch(
+                "tracer.txt",
+                "txt",
+                txt::render(&g).as_bytes(),
+                strip_pin_header(&expected),
+            );
+            assert!(m.is_none(), "{m:?}");
+        }
+
+        /// ge.oracle.c3: the tracer fixture re-renders through the full
+        /// pipeline (parse -> layout -> ascii render — the same path the
+        /// `gently` binary drives) byte-identically to the recorded
+        /// `as_ascii` companion.
+        #[test]
+        fn tracer_fixture_matches_recorded_oracle_ascii() {
+            let input = std::fs::read(fixture_dir().join("tracer.txt")).expect("fixture input");
+            let expected = std::fs::read(fixture_dir().join("tracer.ascii.expected"))
+                .expect("recorded companion");
+            let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
+                .expect("fixture input must parse");
+            let l = layout::layout(&g);
+            let art = ascii::render(&g, &l).expect("fixture layout must render");
+            let m = mismatch(
+                "tracer.txt",
+                "ascii",
+                art.as_bytes(),
+                strip_pin_header(&expected),
+            );
+            assert!(m.is_none(), "{m:?}");
+        }
+
+        /// ge.oracle.c4: the pin-header gate — the real companions carry
+        /// exactly the pinned header, and a foreign version, a foreign
+        /// commit, or a missing header is rejected as stale.
+        #[test]
+        fn stale_pin_header_is_rejected() {
+            for name in ["tracer.txt.expected", "tracer.ascii.expected"] {
+                let bytes = std::fs::read(fixture_dir().join(name)).expect("recorded companion");
+                assert!(!pin_is_stale(&bytes), "{name} must carry the pinned header");
+            }
+            let foreign_version =
+                format!("# oracle: Graph::Easy v0.76 @ {}\n", PIN.1);
+            let foreign_commit =
+                format!("# oracle: Graph::Easy v{} @ 0123456789abcdef0123456789abcdef01234567\n", PIN.0);
+            assert!(pin_is_stale(foreign_version.as_bytes()), "foreign version is stale");
+            assert!(pin_is_stale(foreign_commit.as_bytes()), "foreign commit is stale");
+            assert!(pin_is_stale(b"[ a ] --> [ b ]\n"), "missing header is stale");
+        }
+    }
 }
