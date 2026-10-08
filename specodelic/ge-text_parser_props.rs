@@ -23,11 +23,19 @@ fn p1() {
 }
 
 // id: p2
-// generator: arbitrary operator patterns from the style grammar, valid and invalid
-// predicate: each valid pattern maps to the documented style; each invalid repetition is rejected
+// generator: arbitrary operator patterns from the style grammar
+// predicate: each valid operator maps to the documented style; style-only styles are accepted via the attribute and rejected as operators
 #[test]
 fn p2() {
-        todo_predicate!("each valid pattern maps to the documented style; each invalid repetition is rejected");
+        todo_predicate!("each valid operator maps to the documented style; style-only styles are accepted via the attribute and rejected as operators");
+}
+
+// id: p9
+// generator: repeated and arrow-less operator patterns, valid and invalid
+// predicate: each invalid repetition is rejected and each valid repetition parses to the right style
+#[test]
+fn p9() {
+        todo_predicate!("each invalid repetition is rejected and each valid repetition parses to the right style");
 }
 
 // id: p3

@@ -27,5 +27,5 @@ traces_to = "[[ge.graph_model]]"
 [[constraints]]
 id = "c5"
 kind = "extension_point"
-expr = "The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies`."
+expr = "The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies` cells declared on their own constraint rows."
 traces_to = "[[ge.graph_model]]"

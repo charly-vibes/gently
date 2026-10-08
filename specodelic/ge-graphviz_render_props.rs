@@ -32,10 +32,10 @@ fn p2() {
 
 // id: p3
 // generator: graphs with named and anonymous groups
-// predicate: cluster membership equals group membership
+// predicate: cluster membership equals group membership and anonymous clusters get `cluster<N>` names in internal-id order
 #[test]
 fn p3() {
-        todo_predicate!("cluster membership equals group membership");
+        todo_predicate!("cluster membership equals group membership and anonymous clusters get `cluster<N>` names in internal-id order");
 }
 
 // id: p4

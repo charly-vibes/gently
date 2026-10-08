@@ -1,7 +1,7 @@
 ---
 id: ge.boxart_render
 kind: intent
-statement: "WHERE the boxart renderer is used THE boxart-render SHALL draw the laid-out graph with Unicode box-drawing and block glyphs so that every cell of the grid output renders in one character."
+statement: "WHERE the boxart renderer is used THE boxart-render SHALL draw the laid-out graph with Unicode box-drawing glyphs so that borders and edge lines join seamlessly as upstream Graph::Easy's boxart output does."
 ---
 
 # boxart-render
@@ -17,7 +17,8 @@ box-drawing characters so borders and edge lines join seamlessly.
 |----|------|------|-----------|-----------|
 | c1 | invariant | Each node renders as a box built from Unicode box-drawing glyphs (`─ │ ┌ ┐ └ ┘ ═ ║ ╔ ╗ ╚ ╝` and friends) selected by the node's border style. | [[ge.boxart_render]] | [[ge.layout.c5]] |
 | c2 | invariant | Border corners and T-junctions are drawn from the actual neighbouring cells, so a junction always renders as the correct combined glyph. | [[ge.boxart_render]] | |
-| c3 | invariant | Edge styles map to their Unicode line glyphs (solid `──`, double `══`, dotted `┄┄`, dashed `╌╌`, wave `≈≈`) with arrow heads from the edge direction. | [[ge.boxart_render]] | |
+| c3 | invariant | Edge styles map to the upstream Unicode edge-style table: solid `─│`, double `═║`, dotted `·:`, dashed `╴╵`, dot-dash `·-`/`!`, dot-dot-dash `··-`/`!`, wave `∼≀`, bold `━┃`, double-dash `═ `/`∥`; horizontal repeat units may span several columns per cell width. | [[ge.boxart_render]] | |
+| c4 | invariant | A node's `shape` attribute (upstream vocabulary: box, rounded, point, circle, ellipse, diamond, triangle, pentagon, hexagon, octagon, parallelogram, house, invisible, img) changes the box outline per the upstream Unicode shape table. | [[ge.boxart_render]] | |
 
 ## Model
 
@@ -41,4 +42,5 @@ box-drawing characters so borders and edge lines join seamlessly.
 |----|------|--------------|-----------|-----------|
 | p1 | unit | [[ge.boxart_render.c1]] | nodes with every border style | each border style yields its Unicode glyph set, one character per cell |
 | p2 | unit | [[ge.boxart_render.c2]] | grids with junctions between borders and edges of mixed styles | every junction cell equals the combined glyph for its exact neighbourhood |
-| p3 | unit | [[ge.boxart_render.c3]] | graphs with every edge style | each edge renders with its documented Unicode line glyphs and arrow heads |
+| p3 | unit | [[ge.boxart_render.c3]] | graphs with every edge style | each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream |
+| p4 | unit | [[ge.boxart_render.c4]] | nodes with every shape in the upstream vocabulary | each shape's outline matches the upstream Unicode shape table glyph for glyph |

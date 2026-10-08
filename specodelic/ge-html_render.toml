@@ -23,3 +23,9 @@ id = "c4"
 kind = "invariant"
 expr = "The emitted document embeds the CSS rules for every class it uses, so the output is self-contained."
 traces_to = "[[ge.html_render]]"
+
+[[constraints]]
+id = "c5"
+kind = "invariant"
+expr = "Node and edge `fill`, `background`, and `color` attributes map to CSS color declarations on the corresponding elements, using the upstream W3C color-name scheme, and node `shape` attributes map to their documented CSS classes."
+traces_to = "[[ge.html_render]]"

@@ -17,7 +17,7 @@ one-to-one with the model.
 |----|------|------|-----------|
 | c1 | invariant | Every node emits exactly one DOT node statement with a safely quoted name, and node attributes map onto their DOT counterparts. | [[ge.graphviz_render]] |
 | c2 | invariant | Every edge emits one edge statement whose arrow (`->` or `--`) matches the model edge direction, with edge style attributes mapped to DOT attribute values. | [[ge.graphviz_render]] |
-| c3 | invariant | Every group emits a subgraph cluster containing exactly its member nodes, with the group label as cluster label. | [[ge.graphviz_render]] |
+| c3 | invariant | Every group emits a subgraph cluster containing exactly its member nodes, with the group label as cluster label; anonymous groups emit clusters named `cluster<N>` after their internal id, as upstream does. | [[ge.graphviz_render]] |
 | c4 | invariant | Feeding the emitted DOT through [[ge.dot_parser]] yields a model isomorphic to the source model (same nodes, edges, directions, and group membership). | [[ge.graphviz_render]] |
 
 ## Model
@@ -42,5 +42,5 @@ one-to-one with the model.
 |----|------|--------------|-----------|-----------|
 | p1 | unit | [[ge.graphviz_render.c1]] | arbitrary graphs with quoted, spaced, and unicode node names | each node appears exactly once with its quoted name and mapped attributes |
 | p2 | unit | [[ge.graphviz_render.c2]] | graphs with directed, undirected, and styled edges | arrow type and attribute mapping match the model exactly |
-| p3 | unit | [[ge.graphviz_render.c3]] | graphs with named and anonymous groups | cluster membership equals group membership |
+| p3 | unit | [[ge.graphviz_render.c3]] | graphs with named and anonymous groups | cluster membership equals group membership and anonymous clusters get `cluster<N>` names in internal-id order |
 | p4 | unit | [[ge.graphviz_render.c4]] | arbitrary graphs rendered to DOT and re-parsed | the re-parsed model is isomorphic to the source model |

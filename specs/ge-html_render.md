@@ -18,6 +18,7 @@ table plus CSS classes, the default output format of the Perl module.
 | c2 | invariant | Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label; label text and link URLs are HTML-escaped. | [[ge.html_render]] | |
 | c3 | invariant | Edge styles map to the documented border-image CSS classes, and edge labels render as text on the edge cells. | [[ge.html_render]] | |
 | c4 | invariant | The emitted document embeds the CSS rules for every class it uses, so the output is self-contained. | [[ge.html_render]] | |
+| c5 | invariant | Node and edge `fill`, `background`, and `color` attributes map to CSS color declarations on the corresponding elements, using the upstream W3C color-name scheme, and node `shape` attributes map to their documented CSS classes. | [[ge.html_render]] | |
 
 ## Model
 
@@ -43,3 +44,4 @@ table plus CSS classes, the default output format of the Perl module.
 | p2 | unit | [[ge.html_render.c2]] | nodes with plain labels, link attributes, and labels containing `&`, `<`, `>`, quotes | labels and links render as specified and fully escaped |
 | p3 | unit | [[ge.html_render.c3]] | graphs with every edge style | edge cells carry the documented CSS classes |
 | p4 | unit | [[ge.html_render.c4]] | rendered documents of arbitrary graphs | every class referenced in the table has a matching CSS rule in the document |
+| p5 | unit | [[ge.html_render.c5]] | nodes and edges with named, rgb, and hex colors plus every shape | colors appear as the upstream CSS declarations and shapes carry their documented classes |

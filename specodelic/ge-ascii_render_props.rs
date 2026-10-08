@@ -54,3 +54,11 @@ fn p5() {
         todo_predicate!("wrapped lines each occupy one interior row and column counts follow display width, not byte count");
 }
 
+// id: p6
+// generator: nodes with every shape in the upstream vocabulary, with and without color attributes
+// predicate: each shape's outline matches the upstream ASCII shape table and color attributes leave the output byte-identical
+#[test]
+fn p6() {
+        todo_predicate!("each shape's outline matches the upstream ASCII shape table and color attributes leave the output byte-identical");
+}
+

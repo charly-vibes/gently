@@ -9,7 +9,7 @@ traces_to = "[[ge.text_parser]]"
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "The edge operators `->`, `=>`, `.>`, `~>` map to styles solid, double, dotted, wave, and repeated patterns repeat their unit fully (e.g. `..-..-..->` is valid dot-dot-dash while `..-..-..>` is a parse error); arrow-less patterns (`---`, `.-.-`, `= =`) require at least two full repetitions."
+expr = "The edge operators `->`, `=>`, `.>`, `~>`, `- >`, `.->`, `..->`, `= >` map to styles solid, double, dotted, wave, dashed, dot-dash, dot-dot-dash, and double-dash; the styles bold, wide, and broad are settable only via the `style` attribute."
 traces_to = "[[ge.text_parser]]"
 
 [[constraints]]
@@ -46,4 +46,10 @@ traces_to = "[[ge.text_parser]]"
 id = "c8"
 kind = "effect"
 expr = "A malformed input line produces a typed parse error naming the source line number and the reason."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c9"
+kind = "invariant"
+expr = "Repeated edge patterns must repeat their unit fully (e.g. `..-..-..->` is valid dot-dot-dash while `..-..-..>` is a parse error); arrow-less patterns (`---`, `.-.-`, `= =`) require at least two full repetitions, and single-character arrow-less patterns (`-`, `~`, `.-`) are parse errors."
 traces_to = "[[ge.text_parser]]"

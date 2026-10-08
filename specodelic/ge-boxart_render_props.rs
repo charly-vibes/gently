@@ -32,9 +32,17 @@ fn p2() {
 
 // id: p3
 // generator: graphs with every edge style
-// predicate: each edge renders with its documented Unicode line glyphs and arrow heads
+// predicate: each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream
 #[test]
 fn p3() {
-        todo_predicate!("each edge renders with its documented Unicode line glyphs and arrow heads");
+        todo_predicate!("each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream");
+}
+
+// id: p4
+// generator: nodes with every shape in the upstream vocabulary
+// predicate: each shape's outline matches the upstream Unicode shape table glyph for glyph
+#[test]
+fn p4() {
+        todo_predicate!("each shape's outline matches the upstream Unicode shape table glyph for glyph");
 }
 

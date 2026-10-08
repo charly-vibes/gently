@@ -12,6 +12,12 @@ carries a class-scoped attribute table. This capability renders and lays
 out nothing itself; the parsers ([[ge.text_parser]], [[ge.dot_parser]]),
 [[ge.layout]], and the render specs are its consumers.
 
+Out of scope for v1, matching upstream's own packaging: SVG output
+(lives in the separate Graph::Easy::As_svg dist upstream), GraphML and
+VCG output (As_graphml.pm / As_vcg.pm), and animations. These are
+deliberately unmodeled; introducing any of them is a new capability
+spec, not a silent extension of an existing one.
+
 ## Constraints
 
 | id | kind | expr | traces_to |
@@ -20,7 +26,7 @@ out nothing itself; the parsers ([[ge.text_parser]], [[ge.dot_parser]]),
 | c2 | invariant | Every attribute assignment applies to exactly the object or class scope it targets, and its value is stored verbatim (no loss); derived border components (style, width, color) are computed at assignment time exactly as upstream Graph::Easy does. | [[ge.graph_model]] |
 | c3 | invariant | Every edge references exactly two existing nodes as source and target at all times; self-loops (source == target) are legal. | [[ge.graph_model]] |
 | c4 | invariant | Each edge is either directed or undirected and this direction, together with per-end arrow-head presence, is preserved exactly as constructed. | [[ge.graph_model]] |
-| c5 | extension_point | The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies`. | [[ge.graph_model]] |
+| c5 | extension_point | The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies` cells declared on their own constraint rows. | [[ge.graph_model]] |
 
 ## Model
 

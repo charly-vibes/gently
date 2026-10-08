@@ -46,3 +46,11 @@ fn p4() {
         todo_predicate!("every class referenced in the table has a matching CSS rule in the document");
 }
 
+// id: p5
+// generator: nodes and edges with named, rgb, and hex colors plus every shape
+// predicate: colors appear as the upstream CSS declarations and shapes carry their documented classes
+#[test]
+fn p5() {
+        todo_predicate!("colors appear as the upstream CSS declarations and shapes carry their documented classes");
+}
+

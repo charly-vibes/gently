@@ -28,6 +28,10 @@ upstream test corpus.
 - **Golden tests**: the `txt` renderer (canonical text form) and the
   `ascii` renderer are the differential-testing surface; fixtures come
   from the upstream Graph::Easy `t/` corpus.
+- **Pinned upstream revision**: all differential fixtures and glyph
+  tables are captured against Graph::Easy **v0.69**, upstream master
+  commit `ededa3d787ad89ac532c578c06390e8a7b270499` (2010-10-22).
+  Changing the pin is a deliberate, separately reviewed change.
 - **TDD / Tidy First**: every capability gets red→green→refactor cycles;
   refactors are separate changes from features (tracked in beads).
 - **No implementation before approval**: openspec changes carry

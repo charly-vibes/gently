@@ -29,3 +29,9 @@ id = "c5"
 kind = "invariant"
 expr = "A node label wraps into multiple interior rows exactly as upstream does, and each glyph occupies its display width (double-width glyphs take two columns); alignment never depends on byte length."
 traces_to = "[[ge.ascii_render]]"
+
+[[constraints]]
+id = "c6"
+kind = "invariant"
+expr = "A node's `shape` attribute (upstream vocabulary: box, rounded, point, circle, ellipse, diamond, triangle, pentagon, hexagon, octagon, parallelogram, house, invisible, img) changes the rendered outline per the upstream ASCII shape table; color attributes do not affect ASCII output."
+traces_to = "[[ge.ascii_render]]"

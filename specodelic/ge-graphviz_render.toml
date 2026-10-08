@@ -15,7 +15,7 @@ traces_to = "[[ge.graphviz_render]]"
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "Every group emits a subgraph cluster containing exactly its member nodes, with the group label as cluster label."
+expr = "Every group emits a subgraph cluster containing exactly its member nodes, with the group label as cluster label; anonymous groups emit clusters named `cluster<N>` after their internal id, as upstream does."
 traces_to = "[[ge.graphviz_render]]"
 
 [[constraints]]
