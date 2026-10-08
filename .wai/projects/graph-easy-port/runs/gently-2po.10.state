@@ -1,0 +1,8 @@
+ticket: gently-2po.10
+title: tb.oracle — first differential fixture proves the tracer
+branch: main
+head_at_claim: c351147
+brief_path: .wai/projects/graph-easy-port/briefs/gently-2po.10.md
+steps:
+  - brief @ c351147
+  - claim @ c351147
