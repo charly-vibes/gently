@@ -1,0 +1,9 @@
+ticket: gently-2po.7
+title: tb.txt-render — minimal txt serialization for the tracer shape
+branch: main
+head_at_claim: 417a0f3
+brief_path: .wai/projects/graph-easy-port/briefs/gently-2po.7.md
+steps:
+  - brief @ 417a0f3
+  - gates @ 417a0f3
+  - claim @ 417a0f3
