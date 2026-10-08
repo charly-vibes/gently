@@ -13,6 +13,7 @@ pub const fn ready() -> bool {
 
 pub mod graph;
 pub mod layout;
+pub mod parse;
 pub mod render;
 
 #[cfg(test)]
