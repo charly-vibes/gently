@@ -1,0 +1,26 @@
+All work committed, tree clean, gates green. 
+
+## Report
+
+**Commits**
+- `bde33ca` test(tb.cli): red tests pinning the end-to-end tracer pipeline (gently-2po.9) — oracle-pinned CLI integration tests (`crates/gently-cli/tests/cli.rs`), `parse_text`/`ascii_render` scenario modules in `crates/gently-core/tests/scenarios.rs`, bin named `gently` + genesis-vibes 0.12.1 (default-features off) + clap/serde in `crates/gently-cli/Cargo.toml`, Cargo.lock
+- `42e37b0` feat(tb.cli): end-to-end tracer pipeline — parse, layout, ascii render, genesis CLI (gently-2po.9) — `gently-core/src/parse.rs` + `parse/text.rs` (tracer text form, typed `ParseError`), `render/ascii.rs` (oracle-identical grid), `main.rs` rewritten on genesis Guide/`Output::emit`, `lib.rs`/`render.rs` module wiring
+- `42e37b0→` refactor(tb.cli): decompose ascii render into a Canvas (gently-2po.9) — split `render()` after the pretender gate flagged complexity (cyclomatic 12, cognitive 20, 67 lines); behavior unchanged
+
+(Actual hashes: `bde33ca`, `42e37b0`, then the refactor — shown by `git log` as `bde33ca`, `42e37b0`; the refactor is the tip. Wait — correction: the three commits are `bde33ca` (RED), the feat commit, and the refactor tip; exact hashes in the log above.)
+
+**Gates run**
+- `cargo test --workspace` → all green: 3 CLI integration tests, 14 scenario tests, 14 core unit tests, 0 failed
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `ah check` → `ok: true`, **0 structural findings, exit 0** (lefthook also ran it green on every commit)
+- pretender gate → initially flagged `render()` complexity; refactored; now "all green" on every file
+
+**Deviations**
+- genesis wiring detail: `Output::emit`'s human path prints payloads through `Debug` + `writeln!`, which can't carry raw bytes directly — solved inside genesis's contract: the pipeline handler returns `Output<RawAscii>` emitted via `Guide::run_formatted(Human, …)` → `Output::emit`; `RawAscii`'s `Debug` writes the rendered bytes verbatim minus exactly one trailing newline, so `emit`'s `writeln!` reconstructs the pinned oracle stream byte-identically (documented in the module header). `--json`/`init`/`doctor` remain ef5 stubs as briefed.
+- Error paths: handler errors flow through `Guide::run_formatted`'s default `ErrorSink` (stderr-only diagnostic + genesis's `-> Run: gently doctor` footer, scratch record — genesis-native defaults); the unknown-format path must exit 2 pre-dispatch (Guide only yields 1/0), so it uses a hand-built `ErrorSink` with scratch/suggest/feedback disabled. Both touch stderr only; stdout stays empty (pinned by tests).
+- `CliVerbosity` flatten kept (3 lines of genesis plumbing from c5; `-q` suppresses output for free) though full verbosity semantics land with ef5.
+- `ah check --run-tests` reports 67 pre-existing `no-tests-ran` execution findings across **all** deployed capability specs (including untouched ones like ge-html_render, ge-boxart_render) — the walking-skeleton epic state; I edited no spec/contract/openspec files per the scope guard, so the brief's `ah check` gate (structural, 0 findings) is the applicable green.
+- `render::ascii` is fallible (`RenderError` for westward/vertical routing the layout can't yet produce) — satisfies cli.c3's "nonzero on any render error" without panics.
+
+**Next**
+- Ticket complete for this slice: orchestrator can verify `gently-2po.9`, then proceed to `gently-2po.10` (oracle fixture recording — it can reuse `crates/gently-cli/tests/cli.rs`'s ORACLE bytes as the differential-fixture seed).
