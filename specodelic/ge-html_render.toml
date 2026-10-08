@@ -1,0 +1,25 @@
+source = "ge.html_render"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "Every grid cell maps to exactly one `td` element, with a CSS class derived from its content kind (node, edge, group, empty)."
+traces_to = "[[ge.html_render]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label."
+traces_to = "[[ge.html_render]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "Edge styles map to the documented border-image CSS classes, and edge labels render as text on the edge cells."
+traces_to = "[[ge.html_render]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "The emitted document embeds the CSS rules for every class it uses, so the output is self-contained."
+traces_to = "[[ge.html_render]]"

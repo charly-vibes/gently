@@ -1,0 +1,25 @@
+source = "ge.graphviz_render"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "Every node emits exactly one DOT node statement with a safely quoted name, and node attributes map onto their DOT counterparts."
+traces_to = "[[ge.graphviz_render]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "Every edge emits one edge statement whose arrow (`->` or `--`) matches the model edge direction, with edge style attributes mapped to DOT attribute values."
+traces_to = "[[ge.graphviz_render]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "Every group emits a subgraph cluster containing exactly its member nodes, with the group label as cluster label."
+traces_to = "[[ge.graphviz_render]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "Feeding the emitted DOT through [[ge.dot_parser]] yields a model isomorphic to the source model (same nodes, edges, directions, and group membership)."
+traces_to = "[[ge.graphviz_render]]"

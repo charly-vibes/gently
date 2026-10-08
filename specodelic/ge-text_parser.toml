@@ -1,0 +1,49 @@
+source = "ge.text_parser"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "A bracketed token `[ Name ]` creates a named node; the bare token `[ ]` creates an anonymous node that cannot be referenced again after creation."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "The edge operators `->`, `=>`, `.>`, `~>` map to styles solid, double, dotted, wave, and repeated patterns repeat their unit fully (e.g. `..-..-..->` is valid dot-dot-dash while `..-..-..>` is a parse error); arrow-less patterns (`---`, `.-.-`, `= =`) require at least two full repetitions."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "A chain `A -> B -> C` creates exactly one edge per adjacent pair with the correct endpoints, sharing node objects for repeated names."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "An inline edge label `-- label -->` sets the edge's label only when both flanking patterns match and the edge has an arrow; an arrow-less edge with an inline label is a parse error."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c5"
+kind = "invariant"
+expr = "An attribute block `{ key: value; }` applies to the nearest preceding object (node, edge, or group), and class sections `graph { ... }`, `node { ... }`, `edge { ... }`, `group { ... }` apply attributes to the whole class."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c6"
+kind = "invariant"
+expr = "A group block `( Name: ... )` or an anonymous group `( [ A ] )` produces a group containing exactly the nodes declared inside it, and later `[ Name ]` references reuse the existing node."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c7"
+kind = "invariant"
+expr = "Comment lines beginning with `#` are ignored everywhere outside of quoted strings."
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c8"
+kind = "effect"
+expr = "A malformed input line produces a typed parse error naming the source line number and the reason."
+traces_to = "[[ge.text_parser]]"

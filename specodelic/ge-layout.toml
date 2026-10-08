@@ -1,0 +1,37 @@
+source = "ge.layout"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "The layout is a pure function of the graph model and the layout options: identical inputs always produce identical ranks, orders, coordinates, and edge paths."
+traces_to = "[[ge.layout]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "In the final grid, no two node cells overlap and every node is fully contained inside the grid."
+traces_to = "[[ge.layout]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "The configured flow direction (down, up, left, right) maps source nodes to strictly earlier positions along the flow axis than their targets."
+traces_to = "[[ge.layout]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "Every edge is routed along an orthogonal path of grid cells connecting its source port to its target port, passing through its label cell when the edge has a label."
+traces_to = "[[ge.layout]]"
+
+[[constraints]]
+id = "c5"
+kind = "extension_point"
+expr = "The layout publishes its grid-output contract — cell grid, node extents, edge cell paths — which [[ge.ascii_render]], [[ge.boxart_render]], and [[ge.html_render]] consume via `satisfies`."
+traces_to = "[[ge.layout]]"
+
+[[constraints]]
+id = "c6"
+kind = "advisory"
+expr = "For typical inputs the layout completes without exponential blowup: the ranking, ordering, and routing stages each run in time polynomial in nodes times edge crossings."
+traces_to = "[[ge.layout]]"

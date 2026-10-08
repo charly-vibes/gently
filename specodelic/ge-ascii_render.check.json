@@ -1,0 +1,23 @@
+{
+  "artifact_sha256": "9d2bc323c42cb66cfc3809d81a6deda256c40fbb13381ecd48dbdb16910b8ee6",
+  "backend": {
+    "engine": "stateright",
+    "version": "0.31.0"
+  },
+  "bound": {
+    "max_depth": 4
+  },
+  "claim_schema_version": 1,
+  "claims": [],
+  "expected_claim_ids": [],
+  "invariants_checked": [],
+  "outcome": "exploration_only",
+  "scope_sha256": "083a15430550adae019a44d4b40c82cb53fc8cf95c6c4ea0a0ce0ecb183e5838",
+  "states_explored": 3,
+  "unchecked_claim_ids": [
+    "c1",
+    "c2",
+    "c3",
+    "c4"
+  ]
+}

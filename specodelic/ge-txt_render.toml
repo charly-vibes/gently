@@ -1,0 +1,25 @@
+source = "ge.txt_render"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "The output starts with class attribute sections for graph, node, edge, and group classes, emitted in sorted class order with sorted attribute order."
+traces_to = "[[ge.txt_render]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "Every node is emitted with its name and its instance attributes, and every edge as an operator chain whose operator matches the edge style and direction."
+traces_to = "[[ge.txt_render]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "Parsing the emitted text with [[ge.text_parser]] reproduces a model with the same nodes, edges, styles, labels, directions, and attributes as the source model."
+traces_to = "[[ge.txt_render]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "Recorded upstream Graph::Easy fixtures (input text plus expected canonical text) render byte-identically once their layout-annotation attributes are honored."
+traces_to = "[[ge.txt_render]]"

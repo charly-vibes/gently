@@ -1,0 +1,25 @@
+source = "ge.ascii_render"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "Each node renders as a box whose interior is its label and whose border style (solid, dotted, dashed, double, wave, bold, wide) comes from the node's border attributes."
+traces_to = "[[ge.ascii_render]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "Edge style maps to glyph runs exactly as Graph::Easy does: solid `-->`, double `==>`, dotted `....>`, wave `~~~>`, dashed `- - >`, and arrow-less edges use the pattern without the arrow head."
+traces_to = "[[ge.ascii_render]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "The rendered output is a function of the grid output alone: no hidden state, no dependence on input text or parse order."
+traces_to = "[[ge.ascii_render]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "Edge labels occupy cells on their edge's routed path and never overlap node cells or other labels."
+traces_to = "[[ge.ascii_render]]"

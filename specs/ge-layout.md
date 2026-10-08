@@ -1,0 +1,54 @@
+---
+id: ge.layout
+kind: intent
+statement: "WHEN a graph model is laid out THE layout SHALL assign ranks, orders, and grid coordinates deterministically and route every edge along an orthogonal path without overlapping node cells."
+---
+
+# layout
+
+The layout engine — gently's port of Graph::Easy::Layout and its
+rank/order/position/path submodules. It consumes [[ge.graph_model]]
+through the published model contract and produces a deterministic grid
+of cells that the renderers consume. Flow direction, node and edge
+labels, and group placement all influence the result.
+
+## Constraints
+
+| id | kind | expr | traces_to | satisfies |
+|----|------|------|-----------|-----------|
+| c1 | invariant | The layout is a pure function of the graph model and the layout options: identical inputs always produce identical ranks, orders, coordinates, and edge paths. | [[ge.layout]] | |
+| c2 | invariant | In the final grid, no two node cells overlap and every node is fully contained inside the grid. | [[ge.layout]] | [[ge.graph_model.c5]] |
+| c3 | invariant | The configured flow direction (down, up, left, right) maps source nodes to strictly earlier positions along the flow axis than their targets. | [[ge.layout]] | |
+| c4 | invariant | Every edge is routed along an orthogonal path of grid cells connecting its source port to its target port, passing through its label cell when the edge has a label. | [[ge.layout]] | |
+| c5 | extension_point | The layout publishes its grid-output contract — cell grid, node extents, edge cell paths — which [[ge.ascii_render]], [[ge.boxart_render]], and [[ge.html_render]] consume via `satisfies`. | [[ge.layout]] | |
+| c6 | advisory | For typical inputs the layout completes without exponential blowup: the ranking, ordering, and routing stages each run in time polynomial in nodes times edge crossings. | [[ge.layout]] | |
+
+## Model
+
+### States
+
+- `initial`
+- `ranked`
+- `ordered`
+- `positioned`
+- `routed`
+
+### Transitions
+
+| id | from | to | guard |
+|----|------|----|-------|
+| t1 | initial | ranked | [[ge.layout.c1]] |
+| t2 | ranked | ordered | [[ge.layout.c3]] |
+| t3 | ordered | positioned | [[ge.layout.c2]] |
+| t4 | positioned | routed | [[ge.layout.c4]] |
+
+## Properties
+
+| id | kind | derives_from | generator | predicate |
+|----|------|--------------|-----------|-----------|
+| p1 | unit | [[ge.layout.c1]] | arbitrary graphs laid out twice under identical options | both runs produce byte-identical grid outputs |
+| p2 | unit | [[ge.layout.c2]] | arbitrary graphs including dense and wide ones | the produced grid contains no node cell overlap |
+| p3 | unit | [[ge.layout.c3]] | graphs with all four flow directions | every edge's source precedes its target along the flow axis |
+| p4 | unit | [[ge.layout.c4]] | graphs with labelled, self-loop, and multi edges | each edge's routed path is orthogonal, connected, and passes through its label |
+| p5 | unit | [[ge.layout.c5]] | renderer-style consumers reading the grid output contract | every consumer read matches the layout's own inspection of grid, extents, and paths |
+| p6 | unit | [[ge.layout.c6]] | large arbitrary graphs with dense crossing regions | each stage's running time stays within its polynomial bound |

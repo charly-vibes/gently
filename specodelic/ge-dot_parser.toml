@@ -1,0 +1,31 @@
+source = "ge.dot_parser"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "A `digraph` header maps to a directed model graph and a `graph` header maps to an undirected one."
+traces_to = "[[ge.dot_parser]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "An edge chain `a -> b -> c;` creates one directed edge per arrow, and `a -- b;` in a plain graph creates an undirected edge."
+traces_to = "[[ge.dot_parser]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "An attribute list `[key=val, key2=val2]` attached to a node or edge maps onto the model attributes of that object, with quoted values unescaped once."
+traces_to = "[[ge.dot_parser]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "A subgraph block named `cluster_*` maps to a model group with that name containing the nodes declared inside it."
+traces_to = "[[ge.dot_parser]]"
+
+[[constraints]]
+id = "c5"
+kind = "effect"
+expr = "An unsupported DOT construct produces a typed error naming the construct and its source position."
+traces_to = "[[ge.dot_parser]]"

@@ -1,0 +1,19 @@
+source = "ge.boxart_render"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "Each node renders as a box built from Unicode box-drawing glyphs (`─ │ ┌ ┐ └ ┘ ═ ║ ╔ ╗ ╚ ╝` and friends) selected by the node's border style."
+traces_to = "[[ge.boxart_render]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "Border corners and T-junctions are drawn from the actual neighbouring cells, so a junction always renders as the correct combined glyph."
+traces_to = "[[ge.boxart_render]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "Edge styles map to their Unicode line glyphs (solid `──`, double `══`, dotted `┄┄`, dashed `╌╌`, wave `≈≈`) with arrow heads from the edge direction."
+traces_to = "[[ge.boxart_render]]"

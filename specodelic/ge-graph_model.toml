@@ -1,0 +1,31 @@
+source = "ge.graph_model"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "Within one graph, every named node is identified by a unique name; anonymous nodes are unnamed and cannot be referenced again after creation."
+traces_to = "[[ge.graph_model]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "Every attribute assignment applies to exactly the object or class scope it targets, and its value is preserved verbatim (no normalization, no loss)."
+traces_to = "[[ge.graph_model]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "Every edge references exactly two existing nodes as source and target at all times; self-loops (source == target) are legal."
+traces_to = "[[ge.graph_model]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "Each edge is either directed or undirected and this direction, together with per-end arrow-head presence, is preserved exactly as constructed."
+traces_to = "[[ge.graph_model]]"
+
+[[constraints]]
+id = "c5"
+kind = "extension_point"
+expr = "The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies`."
+traces_to = "[[ge.graph_model]]"
