@@ -1,5 +1,5 @@
 {
-  "artifact_sha256": "f938ab85394c79fa444c92e8b64a9b4ac680cd997c5c5748f2132480b03f9c8e",
+  "artifact_sha256": "77c03f684d8d0f1b14a8a11663e95d149d79954b2a32659bc2063416aabb6ed6",
   "backend": {
     "engine": "stateright",
     "version": "0.31.0"
@@ -12,7 +12,7 @@
   "expected_claim_ids": [],
   "invariants_checked": [],
   "outcome": "exploration_only",
-  "scope_sha256": "bc2ccaba247bc211f547eb791333f5774d19d2ee4d360b11ad6c8bf5bd6ef293",
+  "scope_sha256": "4e82f3497ef1de2920d55370adcd48085d16929a71d7cbed00c09f9d8cfdb798",
   "states_explored": 5,
   "unchecked_claim_ids": [
     "c1",

@@ -17,7 +17,7 @@ upstream test corpus.
 - Rust (edition 2021, workspace with focused crates)
 - **genesis-vibes** (crate >= 0.12) as the CLI foundation/orchestrator:
   Guide dispatch, `Output::emit` envelopes, `CliVerbosity`/`CliFormat`,
-  `DoctorRunner`, suggestions, and the `fixture` module (see `ge.cli`)
+  `DoctorRunner`, suggestions, and the `fixture` module (see `cli`)
 - Proptest for property-based verification (compiled from the spec corpus)
 - Specodelic four-layer specs under `specs/` (lint/compile/model-check gates)
 - OpenSpec for change management (`openspec/changes/`)
@@ -53,6 +53,6 @@ upstream test corpus.
 | `ge.html_render` | Table-based HTML output |
 | `ge.graphviz_render` | DOT output (round-trips through `ge.dot_parser`) |
 | `ge.txt_render` | Canonical text serialization (golden-test lingua franca) |
-| `ge.cli` | `gently` command-line pipeline, built on genesis-vibes |
+| `cli` | `gently` command-line pipeline, built on genesis-vibes |
 | `ge.oracle` | Differential oracle gating against upstream Graph::Easy v0.69 (`just oracle-verify`) |
 | `ge.perf` | Performance budgets: latency, memory, scaling (`just perf-check`) |

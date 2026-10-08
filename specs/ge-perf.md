@@ -8,7 +8,7 @@ statement: "WHEN gently processes any supported input class THE performance SHAL
 
 The performance capability: concrete, machine-checkable budgets for the
 pipeline stages ([[ge.text_parser]], [[ge.dot_parser]], [[ge.layout]], and
-the renderers) plus the CLI round-trip ([[ge.cli]]). Byte-compatibility
+the renderers) plus the CLI round-trip ([[cli]]). Byte-compatibility
 ([[ge.oracle]]) always wins over speed; budgets are regression floors,
 not aspirations. The `just perf-check` recipe runs the budget gates.
 

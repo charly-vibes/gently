@@ -1,5 +1,5 @@
 ---
-id: spec
+id: ge.txt_render
 kind: intent
 statement: "WHEN canonical serialization is requested THE txt-render SHALL emit the Graph::Easy canonical text form so that re-parsing it reproduces a model equal to the source."
 ---
@@ -10,7 +10,7 @@ The canonical text serializer — gently's port of Graph::Easy's
 `as_txt` (As_txt.pm). Beyond being one output format, it is the
 lingua franca of golden testing: Graph::Easy's own test corpus stores
 expected results in this form, so the port's differential tests read
-[[ge.text_parser]] fixtures in and compare [[spec]] output
+[[ge.text_parser]] fixtures in and compare [[ge.txt_render]] output
 against recorded upstream expectations.
 
 The fixture corpus is pinned to one upstream revision; re-recording
@@ -23,7 +23,7 @@ The canonical text serializer — gently's port of Graph::Easy's
 `as_txt` (As_txt.pm). Beyond being one output format, it is the
 lingua franca of golden testing: Graph::Easy's own test corpus stores
 expected results in this form, so the port's differential tests read
-[[ge.text_parser]] fixtures in and compare [[spec]] output
+[[ge.text_parser]] fixtures in and compare [[ge.txt_render]] output
 against recorded upstream expectations.
 The fixture corpus is pinned to one upstream revision; re-recording
 expectations is a deliberate, separately reviewed change, never a
@@ -33,10 +33,10 @@ side effect of code edits.
 
 | id | kind | expr | traces_to |
 |----|------|------|-----------|
-| c1 | invariant | The output starts with class attribute sections for graph, node, edge, and group classes, emitted in sorted class order with sorted attribute order. | [[spec]] |
-| c2 | invariant | Every node is emitted with its name and its instance attributes, and every edge as an operator chain whose operator matches the edge style and direction. | [[spec]] |
-| c3 | invariant | Parsing the emitted text with ge.text_parser (cross-file) reproduces a model with the same nodes, edges, styles, labels, directions, and attributes as the source model. | [[spec]] |
-| c4 | invariant | Recorded upstream Graph::Easy fixtures — stored under `tests/fixtures/graph-easy/` as input-text files with expected canonical-text companions, captured from one pinned upstream revision — render byte-identically. | [[spec]] |
+| c1 | invariant | The output starts with class attribute sections for graph, node, edge, and group classes, emitted in sorted class order with sorted attribute order. | [[ge.txt_render]] |
+| c2 | invariant | Every node is emitted with its name and its instance attributes, and every edge as an operator chain whose operator matches the edge style and direction. | [[ge.txt_render]] |
+| c3 | invariant | Parsing the emitted text with [[ge.text_parser]] reproduces a model with the same nodes, edges, styles, labels, directions, and attributes as the source model. | [[ge.txt_render]] |
+| c4 | invariant | Recorded upstream Graph::Easy fixtures — stored under `tests/fixtures/graph-easy/` as input-text files with expected canonical-text companions, captured from one pinned upstream revision — render byte-identically. | [[ge.txt_render]] |
 
 ## Model
 
@@ -50,18 +50,18 @@ side effect of code edits.
 
 | id | from | to | guard |
 |----|------|----|-------|
-| t1 | model_received | serializing | [[spec.c1]] |
-| t2 | serializing | txt_done | [[spec.c2]] |
-| t3 | txt_done | serializing | [[spec.c3]] |
+| t1 | model_received | serializing | [[ge.txt_render.c1]] |
+| t2 | serializing | txt_done | [[ge.txt_render.c2]] |
+| t3 | txt_done | serializing | [[ge.txt_render.c3]] |
 
 ## Properties
 
 | id | kind | derives_from | generator | predicate |
 |----|------|--------------|-----------|-----------|
-| p1 | unit | [[spec.c1]] | graphs with class attributes on every class | class sections appear first, sorted, with sorted attributes |
-| p2 | unit | [[spec.c2]] | arbitrary graphs of nodes, edges, and styles | every object appears exactly once with a correct operator form |
-| p3 | unit | [[spec.c3]] | arbitrary graphs serialized then re-parsed | the re-parsed model is equal to the source model under the model-equality predicate |
-| p4 | unit | [[spec.c4]] | the recorded upstream fixture corpus | every fixture's expected canonical text matches gently's output byte-for-byte |
+| p1 | unit | [[ge.txt_render.c1]] | graphs with class attributes on every class | class sections appear first, sorted, with sorted attributes |
+| p2 | unit | [[ge.txt_render.c2]] | arbitrary graphs of nodes, edges, and styles | every object appears exactly once with a correct operator form |
+| p3 | unit | [[ge.txt_render.c3]] | arbitrary graphs serialized then re-parsed | the re-parsed model is equal to the source model under the model-equality predicate |
+| p4 | unit | [[ge.txt_render.c4]] | the recorded upstream fixture corpus | every fixture's expected canonical text matches gently's output byte-for-byte |
 
 ## Requirements
 
@@ -74,23 +74,23 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 
 - **WHEN** graphs with class attributes on every class
 - **THEN** class sections appear first, sorted, with sorted attributes
-- **VERIFIES** [[spec.p1]]
+- **VERIFIES** [[ge.txt_render.p1]]
 
 #### Scenario: p2
 
 - **WHEN** arbitrary graphs of nodes, edges, and styles
 - **THEN** every object appears exactly once with a correct operator form
-- **VERIFIES** [[spec.p2]]
+- **VERIFIES** [[ge.txt_render.p2]]
 
 #### Scenario: p3
 
 - **WHEN** arbitrary graphs serialized then re-parsed
 - **THEN** the re-parsed model is equal to the source model under the model-equality predicate
-- **VERIFIES** [[spec.p3]]
+- **VERIFIES** [[ge.txt_render.p3]]
 
 #### Scenario: p4
 
 - **WHEN** the recorded upstream fixture corpus
 - **THEN** every fixture's expected canonical text matches gently's output byte-for-byte
-- **VERIFIES** [[spec.p4]]
+- **VERIFIES** [[ge.txt_render.p4]]
 
