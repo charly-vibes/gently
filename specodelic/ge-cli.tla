@@ -6,7 +6,7 @@
 \* No executable invariant fragments (Revision 15).
 
 \* Each State becomes a value in the state variable's range.
-StateValues == {"reading", "rendering", "cli_done", "cli_failed"}
+StateValues == {"reading", "rendering", "cli_done", "diagnosing", "cli_failed"}
 
 VARIABLES vpc   \* the state variable (program counter)
 
@@ -24,6 +24,10 @@ Next ==
   \/ vpc = "rendering" /\ vpc' = "cli_done"
   \* t3: rendering -> cli_failed (guard: [[ge.cli.c2]])
   \/ vpc = "rendering" /\ vpc' = "cli_failed"
+  \* t4: reading -> diagnosing (guard: [[ge.cli.c5]])
+  \/ vpc = "reading" /\ vpc' = "diagnosing"
+  \* t5: diagnosing -> cli_done (guard: [[ge.cli.c6]])
+  \/ vpc = "diagnosing" /\ vpc' = "cli_done"
   \* stuttering: guards are prose (uninterpreted) — a terminal
   \* state must not read as an engine-side deadlock
   \/ UNCHANGED vpc

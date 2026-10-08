@@ -23,3 +23,27 @@ id = "c4"
 kind = "effect"
 expr = "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 2."
 traces_to = "[[ge.cli]]"
+
+[[constraints]]
+id = "c5"
+kind = "invariant"
+expr = "The CLI is built on the genesis-vibes foundation (crate >= 0.12): command dispatch via `Guide`, output via `Output::emit`, verbosity via `CliVerbosity` (`-v`/`-vv`/`-vvv`, `-q`), and format via `CliFormat`; `init` registers gently in `.genesis/tools.toml` via genesis discovery."
+traces_to = "[[ge.cli]]"
+
+[[constraints]]
+id = "c6"
+kind = "invariant"
+expr = "With `--json`, machine-readable results are emitted wrapped in the genesis Envelope (`ok`, `envelope_version`, `envelope_kind`, `data`, `warnings`, `hints`, `meta`); without it (human mode), the rendered graph is printed to stdout as raw bytes exactly as the oracle comparison requires."
+traces_to = "[[ge.cli]]"
+
+[[constraints]]
+id = "c7"
+kind = "invariant"
+expr = "An unknown subcommand or flag produces a genesis suggestion (`DidYouMean` / `Fix`) on stderr before the nonzero exit."
+traces_to = "[[ge.cli]]"
+
+[[constraints]]
+id = "c8"
+kind = "effect"
+expr = "`gently doctor` runs the suite health checks through genesis `DoctorRunner` — oracle availability (perl + pinned Graph::Easy), output-format support, fixture pin freshness — and applies available auto-fixes."
+traces_to = "[[ge.cli]]"

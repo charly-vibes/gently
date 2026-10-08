@@ -1,5 +1,5 @@
 {
-  "artifact_sha256": "b4b978e3cf6858738cfff112a0cb97e2fc4d6730281b5b0d049d090b9540d971",
+  "artifact_sha256": "3f481b04b2963190a344feae22dc7baef5deb3d99be665f87ae99b2884b13619",
   "backend": {
     "engine": "stateright",
     "version": "0.31.0"
@@ -17,8 +17,6 @@
   "unchecked_claim_ids": [
     "c1",
     "c2",
-    "c3",
-    "c4",
-    "c5"
+    "c3"
   ]
 }

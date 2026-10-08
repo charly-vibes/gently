@@ -46,3 +46,35 @@ fn p4() {
         todo_predicate!("the diagnostic names both the requested and the valid formats and exit code is 2");
 }
 
+// id: p5
+// generator: every subcommand and flag combination
+// predicate: dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry
+#[test]
+fn p5() {
+        todo_predicate!("dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry");
+}
+
+// id: p6
+// generator: render runs with and without `--json`
+// predicate: json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output
+#[test]
+fn p6() {
+        todo_predicate!("json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output");
+}
+
+// id: p7
+// generator: misspelled subcommands and flags
+// predicate: every misspelling yields a DidYouMean/Fix suggestion naming the closest known name
+#[test]
+fn p7() {
+        todo_predicate!("every misspelling yields a DidYouMean/Fix suggestion naming the closest known name");
+}
+
+// id: p8
+// generator: environments with and without the oracle toolchain and fresh/stale fixture pins
+// predicate: the DoctorReport names each check's status and applies available auto-fixes
+#[test]
+fn p8() {
+        todo_predicate!("the DoctorReport names each check's status and applies available auto-fixes");
+}
+

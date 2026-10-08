@@ -1,0 +1,31 @@
+source = "ge.perf"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "Cold-start round-trip — parse, layout, and ascii-render a 20-node/30-edge graph — completes within 50 ms in release builds."
+traces_to = "[[ge.perf]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "A 1,000-node/2,000-edge graph lays out and renders in every supported format within 2 s wall time and 256 MB peak RSS in release builds."
+traces_to = "[[ge.perf]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = "Peak memory stays O(nodes + edges + grid cells): the process holds no caches that grow across pipeline stages beyond one intermediate graph, one laid-out grid, and one rendered buffer."
+traces_to = "[[ge.perf]]"
+
+[[constraints]]
+id = "c4"
+kind = "effect"
+expr = "A budget violation produces a typed diagnostic naming the stage, the budget, and the measured value, with a non-zero exit when `just perf-check` runs it."
+traces_to = "[[ge.perf]]"
+
+[[constraints]]
+id = "c5"
+kind = "advisory"
+expr = "Beyond the budgeted input classes, runtime scales near-linearly in nodes plus edge-crossing work; regressions in scaling are reported, never silently accepted."
+traces_to = "[[ge.perf]]"
