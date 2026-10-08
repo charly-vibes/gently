@@ -1,0 +1,16 @@
+## Report
+
+**Commits**
+- `dc227f2` test(tb.txt-render): red test pinning tracer txt oracle (gently-2po.7) — RED: `scenarios::tb::txt_render::tracer_shape_matches_oracle` with oracle-provenance doc comment; recorded honest red (`E0432` unresolved imports `gently_core::graph`, `gently_core::render`)
+- `df5d6fc` feat(tb.txt-render): minimal graph model + tracer txt serializer (gently-2po.7) — GREEN: `gently_core::graph` (`Node { name }`, `Edge { from, to }` indices, `Graph { nodes, edges }` with `Graph::tracer()`) and `gently_core::render::txt::render(&Graph) -> String` (edge → `[ <from> ] --> [ <to> ]\n`, edge-less node → `[ <name> ]\n`); both modules re-exported from lib.rs; new source files carry Purpose/Responsibilities/Rationale headers
+
+**Gates run**
+- `cargo test --workspace` → ok: scenarios `tb::txt_render::tracer_shape_matches_oracle` + unmodified `tb::workspace_smoke` pass; 4 unit tests pass (incl. edge-less-node and empty-graph extras)
+- `cargo clippy --workspace --all-targets -- -D warnings` → ok, 0 warnings
+- `ah check` → 0 findings (0 structural, 0 execution)
+
+**Deviations**
+- none in scope. REFACTOR step was a no-op (implementation already minimal, zero behavior change; nothing committed for it). Added two small unit tests inside the new modules beyond the mandated scenario test (edge-less node line, empty graph) — they guard the serializer's two emission rules without touching any forbidden file.
+
+**Next**
+- ticket complete from my side — orchestrator verifies gates/push, runs `bd update`/`bd close` and `wai close`. Afterwards: gently-2po.8 (layout) or gently-2po.9 (CLI end-to-end over the tracer shape).

@@ -4,6 +4,7 @@ branch: main
 head_at_claim: 417a0f3
 brief_path: .wai/projects/graph-easy-port/briefs/gently-2po.7.md
 steps:
+  - spawn-retry OK; verify @ df5d6fc
   - spawn @ afd07f7 (pre-spawn head)
   - brief @ 417a0f3
   - gates @ 417a0f3
