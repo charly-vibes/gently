@@ -180,16 +180,11 @@ impl Graph {
     /// returned, no second node is created (upstream add_node semantics).
     /// The empty name creates a fresh anonymous node every call.
     pub fn add_node(&mut self, name: &str) -> usize {
-        if name.is_empty() {
-            self.nodes.push(Node {
-                name: String::new(),
-                attributes: AttributeTable::default(),
-            });
-        } else if let Some(existing) = self.node_by_name(name) {
+        if let Some(existing) = self.node_by_name(name) {
             return existing;
-        } else {
-            self.nodes.push(Node::named(name));
         }
+        // the empty name is never found by name — this is a fresh anonymous node
+        self.nodes.push(Node::named(name));
         self.nodes.len() - 1
     }
 
