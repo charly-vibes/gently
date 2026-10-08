@@ -46,7 +46,7 @@ pub fn parse(input: &str) -> Result<Graph, ParseError> {
         if let Some((from, to)) = split_edge(line) {
             let from = intern(&mut graph, from);
             let to = intern(&mut graph, to);
-            graph.edges.push(Edge { from, to });
+            graph.edges.push(Edge::directed(from, to));
         } else if let Some(name) = single_node(line) {
             intern(&mut graph, name);
         } else {
@@ -114,9 +114,7 @@ fn intern(graph: &mut Graph, name: &str) -> usize {
     if let Some(i) = graph.nodes.iter().position(|n| n.name == name) {
         i
     } else {
-        graph.nodes.push(Node {
-            name: name.to_string(),
-        });
+        graph.nodes.push(Node::named(name));
         graph.nodes.len() - 1
     }
 }
@@ -138,10 +136,7 @@ mod tests {
         assert_eq!(g.nodes.len(), 2);
         assert_eq!(
             g.edges,
-            vec![
-                Edge { from: 0, to: 1 },
-                Edge { from: 0, to: 1 },
-            ]
+            vec![Edge::directed(0, 1), Edge::directed(0, 1),]
         );
     }
 
@@ -172,7 +167,7 @@ mod tests {
         let g = parse("\n[ a ]\n\n  \n[ b ]\n").expect("must parse");
         assert_eq!(
             g.nodes,
-            vec![Node { name: "a".into() }, Node { name: "b".into() }]
+            vec![Node::named("a"), Node::named("b")]
         );
         assert!(g.edges.is_empty());
     }

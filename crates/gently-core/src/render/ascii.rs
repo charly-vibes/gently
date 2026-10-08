@@ -167,8 +167,9 @@ mod tests {
     #[test]
     fn longer_labels_widen_boxes_and_keep_the_gap() {
         let g = Graph {
-            nodes: vec![Node { name: "node1".into() }, Node { name: "node2".into() }],
-            edges: vec![Edge { from: 0, to: 1 }],
+            nodes: vec![Node::named("node1"), Node::named("node2")],
+            edges: vec![Edge::directed(0, 1)],
+            ..Graph::default()
         };
         let art = ascii::render(&g, &layout::layout(&g)).expect("must render");
         assert_eq!(
@@ -180,8 +181,9 @@ mod tests {
     #[test]
     fn edgeless_nodes_render_without_arrows() {
         let g = Graph {
-            nodes: vec![Node { name: "a".into() }, Node { name: "b".into() }],
+            nodes: vec![Node::named("a"), Node::named("b")],
             edges: vec![],
+            ..Graph::default()
         };
         let art = ascii::render(&g, &layout::layout(&g)).expect("must render");
         assert_eq!(art, "+---+     +---+\n| a |     | b |\n+---+     +---+\n");

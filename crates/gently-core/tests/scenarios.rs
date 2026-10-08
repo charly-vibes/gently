@@ -112,7 +112,11 @@ mod tb {
             assert_eq!(g.nodes.len(), 2);
             assert_eq!(g.nodes[0].name, "a");
             assert_eq!(g.nodes[1].name, "b");
-            assert_eq!(g.edges, vec![gently_core::graph::Edge { from: 0, to: 1 }]);
+            assert_eq!(
+                g.edges,
+                vec![gently_core::graph::Edge::directed(0, 1)],
+                "tracer edges are directed"
+            );
         }
 
         /// Flexible whitespace and the `->` spelling are accepted.
@@ -330,3 +334,8 @@ mod tb {
         }
     }
 }
+
+/// ge.graph_model (gently-4ht): the shared model contract, one test per
+/// property row of specs/ge-graph_model.md.
+#[path = "scenarios/ge_graph_model.rs"]
+mod ge_graph_model;
