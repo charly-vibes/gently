@@ -6,4 +6,4 @@ superseded_by = ""
 authored_with = "0.9.3"
 
 [tests]
-cargo = [{flags = "scenarios::ge-graph_model::p3"}]
+cargo = [{flags = "ge_graph_model::p3"}]
