@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/gently-core", "crates/gently-cli"]
+
+[workspace.package]
+edition = "2021"
+version = "0.0.1"
+license = "MIT"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"

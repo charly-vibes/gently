@@ -18,6 +18,9 @@
 .devenv.flake.nix
 .direnv/
 
+# cargo
+/target/
+
 # tool data dirs (managed by `ddl init --gates`)
 .testaruda/
 .pretender/

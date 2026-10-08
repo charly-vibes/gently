@@ -53,3 +53,8 @@ pre-push:
       skip:
         - merge
         - rebase
+    cargo-gate:
+      run: cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+      skip:
+        - merge
+        - rebase

@@ -1,7 +1,7 @@
 # gently — task runner
 # Spec-defined recipes: ge.oracle (oracle), ge.perf (perf gates).
-# Implementation phase has not started; recipes that need the built CLI
-# fail honestly with a spec pointer.
+# Oracle/perf recipes still need the built CLI (spec pointers below);
+# the cargo gate is live since the tb.workspace scaffold (gently-2po.1).
 
 default:
     @just --list
@@ -10,10 +10,28 @@ default:
 lint:
     specodelic lint --human
 
-# Re-compile + model-check the spec corpus (pre-push equivalent)
+# Compile + model-check the spec corpus (pre-push equivalent)
 gates:
     specodelic compile specs --human
     specodelic model-check specs --human
+
+# Cargo gates (live since gently-2po.1)
+test:
+    cargo test --workspace
+
+clippy:
+    cargo clippy --workspace --all-targets -- -D warnings
+
+# ddl-standard CI parity entry point: the same gates lefthook runs, in one
+# recipe. CI (.github/workflows/ci.yml) runs exactly this — if CI fails,
+# run `just ci` locally to reproduce.
+ci:
+    just lint
+    just gates
+    spk lint openspec || test $? -eq 2
+    ah check
+    just clippy
+    just test
 
 # Record oracle fixtures for new inputs (spec: ge.oracle.c5)
 oracle-record:

@@ -1,0 +1,97 @@
+# CI workflow - runs the same commands as local development.
+#
+# Uses `just ci` to ensure parity between local and CI environments
+# (ddl standard, mirrors the specodelic ci.yml pattern). If CI fails,
+# run `just ci` locally to reproduce the issue.
+#
+# Ecosystem tools are installed pinned (specodelic 0.7.0 = Revision 18,
+# espectacular 0.9.3 = .espectacular/config.toml tool_version) and
+# smoke-dogfooded: installed tools must run, not just install.
+# The ubuntu leg runs the full pipeline; macOS/Windows legs run
+# clippy + tests (cross-platform CLI contract); cargo-deny gates
+# advisories + licenses.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  ci:
+    name: Full pipeline (just ci)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install ecosystem tools (pinned)
+        run: cargo install --locked specodelic@0.7.0 espectacular@0.9.3
+
+      - name: Smoke dogfooded tools
+        run: |
+          specodelic --version >/dev/null
+          ah --version >/dev/null
+
+      - name: Run CI pipeline
+        run: just ci
+
+  cross:
+    name: Clippy & tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+  deny:
+    name: cargo-deny (advisories + licenses)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories licenses

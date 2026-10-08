@@ -1,0 +1,11 @@
+[package]
+name = "gently-core"
+description = "Core pipeline for gently: parse -> model -> layout -> render"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "gently-cli"
+description = "CLI for gently: graph text in, rendered output out"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+gently-core = { path = "../gently-core" }
+
+[lints]
+workspace = true
