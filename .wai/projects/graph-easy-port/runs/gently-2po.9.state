@@ -1,0 +1,8 @@
+ticket: gently-2po.9
+title: tb.cli — end-to-end pipeline over the tracer shape
+branch: main
+head_at_claim: d9ba195
+brief_path: .wai/projects/graph-easy-port/briefs/gently-2po.9.md
+steps:
+  - brief @ d9ba195
+  - claim @ d9ba195
