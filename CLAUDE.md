@@ -1,3 +1,17 @@
+<!-- ah:managed:start -->
+## espectacular
+
+Run `ah check` to verify spec-test correspondence before committing.
+
+- `ah check` — validate all deployed specs
+- `ah check --changes <name>` — validate with a change overlay
+- `ah init` — set up or refresh espectacular project files
+- `ah doctor` — diagnose setup issues
+- `ah explain <topic>` — playbook guidance for finding kinds and suggested actions
+- `ah doctor --enable <adapter>` — write adapter config into .espectacular/config.toml
+- `ah signals` — emit dont drift signals
+<!-- ah:managed:end -->
+
 <!-- WAI:START --># Workflow Tools
 
 This project uses **wai** to track the *why* behind decisions — research,
@@ -48,7 +62,7 @@ Read it at the start of your first session or when you need detailed guidance.
 Keep this managed block so `wai init` can refresh the instructions.
 
 
-<!-- provenance: generator=wai version=0.11.1 source=WAI sha=3e02f7c4 -->
+<!-- provenance: generator=wai version=0.12.1 source=WAI sha=3e02f7c4 -->
 <!-- WAI:END -->
 <!-- WAI:REFLECT:REF:START -->
 ## Accumulated Project Patterns
@@ -61,5 +75,5 @@ context before starting research or creating tickets.
 > check for known patterns. Do not rediscover what is already documented.
 
 
-<!-- provenance: generator=wai version=0.11.1 source=WAI:REFLECT:REF sha=73879972 -->
+<!-- provenance: generator=wai version=0.12.1 source=WAI:REFLECT:REF sha=73879972 -->
 <!-- WAI:REFLECT:REF:END -->

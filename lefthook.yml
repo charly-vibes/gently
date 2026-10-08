@@ -10,6 +10,18 @@
 
 pre-commit:
   commands:
+# ah:managed:start
+    ah-check:
+      run: ah check
+# ah:managed:end
+    # ddl:managed:start (pre-commit)
+    ddl-ah-check:
+      run: ah check
+    ddl-pretender-gate:
+      run: pretender check --mode gate
+    ddl-spk-lint:
+      run: spk lint openspec
+    # ddl:managed:end (pre-commit)
     spec-drift-gate:
       # Regenerate deployed specs from the corpus and fail on any diff —
       # an edited corpus file without redeploy cannot slip past the gates.
@@ -32,6 +44,10 @@ pre-commit:
 
 pre-push:
   commands:
+    # ddl:managed:start (pre-push)
+    ddl-ah-check:
+      run: ah check
+    # ddl:managed:end (pre-push)
     specodelic-compile:
       run: specodelic compile specs --human && specodelic model-check specs --human
       skip:

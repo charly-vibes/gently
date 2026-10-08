@@ -39,6 +39,21 @@ upstream test corpus.
   refactors are separate changes from features (tracked in beads).
 - **No implementation before approval**: openspec changes carry
   dual-format deltas; implementation happens only in the apply stage.
+- **Autonomous implementation loop** (one bead = one capability): claim the
+  ready bead (`bd ready` -> `bd update <id> --claim`) -> openspec proposal
+  with dual-format deltas (real ids per the specodelic naming law,
+  Revision 18 — no `id: spec`) -> `openspec validate --all --strict` ->
+  TDD red→green→refactor until every Properties-table row is a passing
+  test -> gates (`just lint`, `just gates`, `spk lint openspec`,
+  `cargo test`/`clippy`, `ah check`) -> `openspec archive` -> `bd close`.
+  Every property has a stubbed espectacular contract under `.espectacular/`
+  (`ah init`); the implementer adds `[tests]` entries per contract as the
+  capability's tests land — `ah check` must exit 0 (structural
+  no-tests-declared findings are fine until the capability is implemented).
+  The corpus
+  `specs/` is the source of truth; `openspec/specs/` is deployed via
+  `tools/deploy_specs.py` and drift-gated on pre-commit — never edit it
+  by hand.
 
 ## Capability Map
 

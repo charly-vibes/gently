@@ -1,3 +1,10 @@
+[tools.wai]
+description = "Workflow manager for AI-assisted development"
+
+[tools.wai.detector]
+type = "directory"
+path = ".wai"
+
 [tools.specodelic]
 description = "Specodelic spec format linter + pipeline (spk)"
 
@@ -5,9 +12,9 @@ description = "Specodelic spec format linter + pipeline (spk)"
 type = "file"
 path = "AGENTS.md"
 
-[tools.wai]
-description = "Workflow manager for AI-assisted development"
+[tools.espectacular]
+description = "Spec-test correspondence enforcer"
 
-[tools.wai.detector]
+[tools.espectacular.detector]
 type = "directory"
-path = ".wai"
+path = ".espectacular"
