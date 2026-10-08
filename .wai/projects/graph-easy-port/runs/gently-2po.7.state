@@ -9,3 +9,4 @@ steps:
   - brief @ 417a0f3
   - gates @ 417a0f3
   - claim @ 417a0f3
+run: COMPLETE (all steps advanced, oracle tests-pass green)
