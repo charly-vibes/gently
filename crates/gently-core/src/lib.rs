@@ -11,6 +11,9 @@ pub const fn ready() -> bool {
     true
 }
 
+pub mod graph;
+pub mod render;
+
 #[cfg(test)]
 mod tests {
     #[test]
