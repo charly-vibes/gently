@@ -98,4 +98,96 @@ mod tb {
             assert_eq!(*path.last().unwrap(), (b.0 - 1, b.1), "path must end at b's west side");
         }
     }
+
+    /// tb.cli (gently-2po.9): the minimal ge.text_parser slice — the tracer
+    /// text form `[ a ] --> [ b ]` (or `->`, flexible whitespace) parses to
+    /// two interned nodes and one edge; junk lines are typed parse errors,
+    /// never panics. Deepened by gently-bzx (full ge.text_parser).
+    mod parse_text {
+        use gently_core::parse::text::{self, ParseError};
+
+        #[test]
+        fn tracer_edge_parses_to_interned_shape() {
+            let g = text::parse("[ a ] --> [ b ]\n").expect("tracer line must parse");
+            assert_eq!(g.nodes.len(), 2);
+            assert_eq!(g.nodes[0].name, "a");
+            assert_eq!(g.nodes[1].name, "b");
+            assert_eq!(g.edges, vec![gently_core::graph::Edge { from: 0, to: 1 }]);
+        }
+
+        /// Flexible whitespace and the `->` spelling are accepted.
+        #[test]
+        fn arrow_spelling_and_whitespace_flexibility() {
+            let g = text::parse("[a]->[b]\n").expect("compact form must parse");
+            assert_eq!(g.edges.len(), 1);
+            let g = text::parse("  [  a  ]   -->   [  b  ]  \n").expect("spaced form must parse");
+            assert_eq!(g.edges.len(), 1);
+            assert_eq!(g.nodes[0].name, "a");
+        }
+
+        /// Shared names intern to one node; bare node lines add nodes.
+        #[test]
+        fn names_intern_and_bare_nodes_parse() {
+            let g = text::parse("[ x ]\n[ x ] --> [ y ]\n").expect("must parse");
+            assert_eq!(g.nodes.len(), 2, "x must intern to a single node");
+            assert_eq!(g.nodes[0].name, "x");
+            assert_eq!(g.nodes[1].name, "y");
+            assert_eq!(g.edges.len(), 1);
+        }
+
+        /// Junk input is a typed error naming the offending line — no panic.
+        #[test]
+        fn junk_lines_are_typed_errors() {
+            let err = text::parse("this is not graph text\n").expect_err("junk must error");
+            assert_eq!(err.line, 1);
+            assert!(text::parse("[ a ] -->\n").is_err());
+            assert!(text::parse("[ ] --> [ b ]\n").is_err(), "empty node name errors");
+            assert!(text::parse("[ a ] junk [ b ]\n").is_err());
+            assert!(text::parse("]]][[[\n").is_err(), "no panic on bracket soup");
+            // empty input is a valid (empty) graph
+            assert_eq!(text::parse("").unwrap(), gently_core::graph::Graph::default());
+        }
+
+        /// Line numbers in errors are 1-based and point at the offender.
+        #[test]
+        fn error_line_numbers_are_one_based() {
+            let err = text::parse("[ a ] --> [ b ]\nnope\n").expect_err("second line is junk");
+            assert_eq!(err, ParseError { line: 2, message: err.message.clone() });
+        }
+    }
+
+    /// tb.cli (gently-2po.9): the minimal ascii renderer — the tracer layout
+    /// draws node boxes (`+---+` / `| a |` / `+---+`), a 5-char gap column
+    /// carrying ` --> ` on the middle row, and one trailing newline.
+    /// Oracle (Graph::Easy v0.69 @ ededa3d7, `add_edge("a","b"); as_ascii`):
+    /// `+---+     +---+` / `| a | --> | b |` / `+---+     +---+`.
+    /// Deepened by the ge-ascii_render capability slices.
+    mod ascii_render {
+        use gently_core::{graph::Graph, layout, render::ascii};
+
+        #[test]
+        fn tracer_layout_renders_oracle_bytes() {
+            let g = Graph::tracer();
+            let l = layout::layout(&g);
+            let art = ascii::render(&g, &l).expect("tracer layout must render");
+            assert_eq!(art, "+---+     +---+\n| a | --> | b |\n+---+     +---+\n");
+        }
+
+        /// Deterministic: identical inputs render identical bytes.
+        #[test]
+        fn rendering_is_deterministic() {
+            let g = Graph::tracer();
+            let l = layout::layout(&g);
+            assert_eq!(ascii::render(&g, &l), ascii::render(&g, &l));
+        }
+
+        /// Rendering is a pure function of the layout — no panic on the
+        /// empty graph, and unsupported geometry is a typed error.
+        #[test]
+        fn empty_graph_renders_empty() {
+            let g = Graph::default();
+            let l = layout::layout(&g);
+            assert_eq!(ascii::render(&g, &l).unwrap(), "");
+        }
+    }
 }
