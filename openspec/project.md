@@ -39,6 +39,11 @@ upstream test corpus.
   refactors are separate changes from features (tracked in beads).
 - **No implementation before approval**: openspec changes carry
   dual-format deltas; implementation happens only in the apply stage.
+- **Tracer-bullet first**: the `gently-2po` epic walks one thin end-to-end
+  slice (workspace -> minimal txt render + model/layout -> genesis-vibes
+  CLI pipeline -> first oracle fixture) before any capability is fleshed
+  out; the capability beads depend on that epic and deepen the running
+  pipeline slice by slice.
 - **Autonomous implementation loop** (one bead = one capability): claim the
   ready bead (`bd ready` -> `bd update <id> --claim`) -> openspec proposal
   with dual-format deltas (real ids per the specodelic naming law,
