@@ -1,0 +1,29 @@
+## Report
+
+**Commits**
+- `6879288` test(ge.graph_model): p1–p5 property tests first, red on stubbed model (gently-4ht) — RED: all 5 property tests fail on `todo!()` stubs, 34 existing tests stay green
+- `3a1d445` feat(ge.graph_model): node identity, scoped attributes, edge integrity, direction, consumer accessors (gently-4ht) — GREEN: full implementation
+- `f5fce80` chore(espectacular): match ge-graph_model contract flags to real test paths (gently-4ht) — contract flag reconciliation (see deviations)
+- `2950355` refactor(ge.graph_model): collapse add_node interning, drop redundant test bindings (gently-4ht) — REFACTOR: zero behavior change
+
+**What was built** (`crates/gently-core/src/graph/` — `mod.rs` + `attributes.rs`)
+- **c1/p1**: `add_node` interns by name — duplicate names merge, existing index returned (upstream add_node); `add_anonymous_node` creates distinct unnamed nodes; `node_by_name("")` → None
+- **c2/p2**: `AttributeTable` stores every key/value **verbatim**; `Scope::{Node,Edge,Group,Graph,Class}` tables fully independent; `border` derives `border_style`/`border_width`/`border_color` **at assignment time**, exactly as upstream 0.69 `split_border_attributes` (fetched & ported: leftmost-position style word scan, default `solid`, unit-required `\d+(px|em|%)` width digits-only, `0`→none)
+- **c3/p3**: `add_edge` rejects non-live endpoints (`None`); self-loops legal; `remove_node` drops incident edges and re-indexes survivors (upstream `del_node`), out-of-range removal is a no-op
+- **c4/p4**: `Edge{directed, arrows:{start,end}}` with directed/undirected/bidirectional constructors; bit-exact through clone + accessors
+- **c5/p5**: published `nodes()`/`edges()`/`get_attr`/`set_attr` contract asserted equal to direct inspection
+- Groups left as documented stub (`Group{name,attributes}`, `add_group`) — no membership semantics
+- Parser `intern` now routes through the model's own `add_node`
+
+**Gates run**
+- `cargo test --workspace` → all green: 39 tests (34 pre-existing + p1–p5)
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `ah check` → no issues — 0 structural, 0 execution
+- `ah check --run-tests` → **summary: 5 passed** — all 5 ge-graph_model contracts execute and pass; the 62 `no-tests-ran` findings are the pre-existing other-spec epic state (left untouched per brief). Also pretender gate clean (file-size/complexity limits forced the `graph/` module split).
+
+**Deviations**
+- The brief prescribed `flags = "scenarios::ge_graph_model::pN"`, but libtest matches filters against the test path only (no target prefix) — that form runs 0 tests. I set `flags = "ge_graph_model::pN"`, the form that actually executes and passes under `ah check --run-tests` (the binding gate). Flag direction (hyphen→underscore) matches the brief's intent; the target-name prefix was dropped as unmatchable.
+- `remove_node` re-indexes surviving edge endpoints (documented upstream-faithful choice); p3 asserts via out-of-range endpoints since post-removal indices renumber.
+
+**Next**
+- Ticket complete — orchestrator to verify gates and close gently-4ht (I did not `bd close`, did not push).
