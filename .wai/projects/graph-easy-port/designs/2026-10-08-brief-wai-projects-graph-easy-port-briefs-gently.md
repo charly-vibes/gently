@@ -1,0 +1,5 @@
+---
+tags: [pipeline-run:epic-orchestrator-2026-10-08-gently-2po-7-tb-txt-render-minimal-txt-serialization-for-the-tracer-shape, pipeline-step:brief]
+---
+
+BRIEF: .wai/projects/graph-easy-port/briefs/gently-2po.7.md; committed
