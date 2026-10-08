@@ -39,7 +39,7 @@ format.
 |----|------|----|-------|
 | t1 | clean | accepted | [[ge.text_parser.c1]] |
 | t2 | clean | parse_failed | [[ge.text_parser.c1]] |
-| t3 | accepted | clean | [[ge.text_parser.c3]] |
+| t3 | parse_failed | clean | [[ge.text_parser.c3]] |
 
 ## Properties
 

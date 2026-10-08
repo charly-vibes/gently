@@ -22,8 +22,8 @@ Next ==
   \/ vpc = "clean" /\ vpc' = "accepted"
   \* t2: clean -> parse_failed (guard: [[ge.text_parser.c1]])
   \/ vpc = "clean" /\ vpc' = "parse_failed"
-  \* t3: accepted -> clean (guard: [[ge.text_parser.c3]])
-  \/ vpc = "accepted" /\ vpc' = "clean"
+  \* t3: parse_failed -> clean (guard: [[ge.text_parser.c3]])
+  \/ vpc = "parse_failed" /\ vpc' = "clean"
   \* stuttering: guards are prose (uninterpreted) — a terminal
   \* state must not read as an engine-side deadlock
   \/ UNCHANGED vpc

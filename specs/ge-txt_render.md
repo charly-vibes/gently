@@ -13,6 +13,10 @@ expected results in this form, so the port's differential tests read
 [[ge.text_parser]] fixtures in and compare [[ge.txt_render]] output
 against recorded upstream expectations.
 
+The fixture corpus is pinned to one upstream revision; re-recording
+expectations is a deliberate, separately reviewed change, never a
+side effect of code edits.
+
 ## Constraints
 
 | id | kind | expr | traces_to |
@@ -20,7 +24,7 @@ against recorded upstream expectations.
 | c1 | invariant | The output starts with class attribute sections for graph, node, edge, and group classes, emitted in sorted class order with sorted attribute order. | [[ge.txt_render]] |
 | c2 | invariant | Every node is emitted with its name and its instance attributes, and every edge as an operator chain whose operator matches the edge style and direction. | [[ge.txt_render]] |
 | c3 | invariant | Parsing the emitted text with [[ge.text_parser]] reproduces a model with the same nodes, edges, styles, labels, directions, and attributes as the source model. | [[ge.txt_render]] |
-| c4 | invariant | Recorded upstream Graph::Easy fixtures (input text plus expected canonical text) render byte-identically once their layout-annotation attributes are honored. | [[ge.txt_render]] |
+| c4 | invariant | Recorded upstream Graph::Easy fixtures — stored under `tests/fixtures/graph-easy/` as input-text files with expected canonical-text companions, captured from one pinned upstream revision — render byte-identically. | [[ge.txt_render]] |
 
 ## Model
 

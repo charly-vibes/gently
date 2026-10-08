@@ -1,18 +1,18 @@
 {
-  "artifact_sha256": "badbb25d829cdd00650a9bfb89e1804d5820195b2148d8dfef5ffe4ca211522c",
+  "artifact_sha256": "1c9cd775f4a6db54eab441abf74c1e7af8b045644870a02f39bc89aecd64e343",
   "backend": {
     "engine": "stateright",
     "version": "0.31.0"
   },
   "bound": {
-    "max_depth": 4
+    "max_depth": 100
   },
   "claim_schema_version": 1,
   "claims": [],
   "expected_claim_ids": [],
   "invariants_checked": [],
   "outcome": "exploration_only",
-  "scope_sha256": "083a15430550adae019a44d4b40c82cb53fc8cf95c6c4ea0a0ce0ecb183e5838",
+  "scope_sha256": "4d4af1f86f043d1cc2a8f56b049ff8a641d731723f9cee3ce0b68ac435da0194",
   "states_explored": 3,
   "unchecked_claim_ids": [
     "c1",

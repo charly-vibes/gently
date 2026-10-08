@@ -23,3 +23,9 @@ id = "c4"
 kind = "invariant"
 expr = "Edge labels occupy cells on their edge's routed path and never overlap node cells or other labels."
 traces_to = "[[ge.ascii_render]]"
+
+[[constraints]]
+id = "c5"
+kind = "invariant"
+expr = "A node label wraps into multiple interior rows exactly as upstream does, and each glyph occupies its display width (double-width glyphs take two columns); alignment never depends on byte length."
+traces_to = "[[ge.ascii_render]]"

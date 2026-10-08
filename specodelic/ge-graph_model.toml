@@ -9,7 +9,7 @@ traces_to = "[[ge.graph_model]]"
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "Every attribute assignment applies to exactly the object or class scope it targets, and its value is preserved verbatim (no normalization, no loss)."
+expr = "Every attribute assignment applies to exactly the object or class scope it targets, and its value is stored verbatim (no loss); derived border components (style, width, color) are computed at assignment time exactly as upstream Graph::Easy does."
 traces_to = "[[ge.graph_model]]"
 
 [[constraints]]

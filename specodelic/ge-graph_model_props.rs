@@ -16,10 +16,10 @@ macro_rules! todo_predicate {
 
 // id: p1
 // generator: arbitrary node names inserted into one graph, including duplicates
-// predicate: the model never exposes two distinct nodes with the same name; a duplicate insertion is rejected or merges into the existing node, never both
+// predicate: the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created)
 #[test]
 fn p1() {
-        todo_predicate!("the model never exposes two distinct nodes with the same name; a duplicate insertion is rejected or merges into the existing node, never both");
+        todo_predicate!("the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created)");
 }
 
 // id: p2

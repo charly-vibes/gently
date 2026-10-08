@@ -9,7 +9,7 @@ traces_to = "[[ge.html_render]]"
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label."
+expr = "Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label; label text and link URLs are HTML-escaped."
 traces_to = "[[ge.html_render]]"
 
 [[constraints]]

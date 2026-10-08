@@ -15,7 +15,7 @@ table plus CSS classes, the default output format of the Perl module.
 | id | kind | expr | traces_to | satisfies |
 |----|------|------|-----------|-----------|
 | c1 | invariant | Every grid cell maps to exactly one `td` element, with a CSS class derived from its content kind (node, edge, group, empty). | [[ge.html_render]] | [[ge.layout.c5]] |
-| c2 | invariant | Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label. | [[ge.html_render]] | |
+| c2 | invariant | Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label; label text and link URLs are HTML-escaped. | [[ge.html_render]] | |
 | c3 | invariant | Edge styles map to the documented border-image CSS classes, and edge labels render as text on the edge cells. | [[ge.html_render]] | |
 | c4 | invariant | The emitted document embeds the CSS rules for every class it uses, so the output is self-contained. | [[ge.html_render]] | |
 
@@ -40,6 +40,6 @@ table plus CSS classes, the default output format of the Perl module.
 | id | kind | derives_from | generator | predicate |
 |----|------|--------------|-----------|-----------|
 | p1 | unit | [[ge.html_render.c1]] | arbitrary laid-out graphs | cell count equals grid size and each td carries the right content class |
-| p2 | unit | [[ge.html_render.c2]] | nodes with plain labels and with link attributes | labels and links render as specified |
+| p2 | unit | [[ge.html_render.c2]] | nodes with plain labels, link attributes, and labels containing `&`, `<`, `>`, quotes | labels and links render as specified and fully escaped |
 | p3 | unit | [[ge.html_render.c3]] | graphs with every edge style | edge cells carry the documented CSS classes |
 | p4 | unit | [[ge.html_render.c4]] | rendered documents of arbitrary graphs | every class referenced in the table has a matching CSS rule in the document |

@@ -27,7 +27,7 @@ behavior of the port.
 - `reading`
 - `rendering`
 - `cli_done`
-- `cli_failed`
+- `cli_failed` emits: [[ge.cli.c4]]
 
 ### Transitions
 
@@ -36,7 +36,6 @@ behavior of the port.
 | t1 | reading | rendering | [[ge.cli.c1]] |
 | t2 | rendering | cli_done | [[ge.cli.c2]] |
 | t3 | rendering | cli_failed | [[ge.cli.c2]] |
-| t4 | cli_failed | reading | [[ge.cli.c3]] |
 
 ## Properties
 

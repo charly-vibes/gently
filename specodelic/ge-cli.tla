@@ -24,13 +24,13 @@ Next ==
   \/ vpc = "rendering" /\ vpc' = "cli_done"
   \* t3: rendering -> cli_failed (guard: [[ge.cli.c2]])
   \/ vpc = "rendering" /\ vpc' = "cli_failed"
-  \* t4: cli_failed -> reading (guard: [[ge.cli.c3]])
-  \/ vpc = "cli_failed" /\ vpc' = "reading"
   \* stuttering: guards are prose (uninterpreted) — a terminal
   \* state must not read as an engine-side deadlock
   \/ UNCHANGED vpc
 
-\* No state carries an `emits` field — Output is simply empty.
-Output == << >>
+\* One entry per state with an `emits` field — domain is exactly
+\* the emitting states; each value is the effect-Constraint's expr.
+Output ==
+"cli_failed" :> "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 2."
 
 ============================================================================

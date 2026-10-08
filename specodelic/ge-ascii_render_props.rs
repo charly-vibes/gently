@@ -46,3 +46,11 @@ fn p4() {
         todo_predicate!("no label cell coincides with a node cell or another label cell");
 }
 
+// id: p5
+// generator: node labels with long text, explicit line breaks, and double-width glyphs
+// predicate: wrapped lines each occupy one interior row and column counts follow display width, not byte count
+#[test]
+fn p5() {
+        todo_predicate!("wrapped lines each occupy one interior row and column counts follow display width, not byte count");
+}
+

@@ -31,19 +31,19 @@ fn p2() {
 }
 
 // id: p3
-// generator: graphs with all four flow directions
-// predicate: every edge's source precedes its target along the flow axis
+// generator: graphs with all four flow directions and self-loops
+// predicate: every edge's source precedes its target along the flow axis, self-loops excepted
 #[test]
 fn p3() {
-        todo_predicate!("every edge's source precedes its target along the flow axis");
+        todo_predicate!("every edge's source precedes its target along the flow axis, self-loops excepted");
 }
 
 // id: p4
-// generator: graphs with labelled, self-loop, and multi edges
-// predicate: each edge's routed path is orthogonal, connected, and passes through its label
+// generator: graphs with labelled, self-loop, and parallel multi-edges
+// predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell
 #[test]
 fn p4() {
-        todo_predicate!("each edge's routed path is orthogonal, connected, and passes through its label");
+        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell");
 }
 
 // id: p5

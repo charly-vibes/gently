@@ -23,11 +23,11 @@ fn p1() {
 }
 
 // id: p2
-// generator: nodes with plain labels and with link attributes
-// predicate: labels and links render as specified
+// generator: nodes with plain labels, link attributes, and labels containing `&`, `<`, `>`, quotes
+// predicate: labels and links render as specified and fully escaped
 #[test]
 fn p2() {
-        todo_predicate!("labels and links render as specified");
+        todo_predicate!("labels and links render as specified and fully escaped");
 }
 
 // id: p3

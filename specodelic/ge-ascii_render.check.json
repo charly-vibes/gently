@@ -5,19 +5,20 @@
     "version": "0.31.0"
   },
   "bound": {
-    "max_depth": 4
+    "max_depth": 100
   },
   "claim_schema_version": 1,
   "claims": [],
   "expected_claim_ids": [],
   "invariants_checked": [],
   "outcome": "exploration_only",
-  "scope_sha256": "083a15430550adae019a44d4b40c82cb53fc8cf95c6c4ea0a0ce0ecb183e5838",
+  "scope_sha256": "4d4af1f86f043d1cc2a8f56b049ff8a641d731723f9cee3ce0b68ac435da0194",
   "states_explored": 3,
   "unchecked_claim_ids": [
     "c1",
     "c2",
     "c3",
-    "c4"
+    "c4",
+    "c5"
   ]
 }

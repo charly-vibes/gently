@@ -15,13 +15,13 @@ traces_to = "[[ge.layout]]"
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "The configured flow direction (down, up, left, right) maps source nodes to strictly earlier positions along the flow axis than their targets."
+expr = "The configured flow direction (down, up, left, right) maps source nodes to strictly earlier positions along the flow axis than their targets; self-loops are exempt, since source and target coincide."
 traces_to = "[[ge.layout]]"
 
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "Every edge is routed along an orthogonal path of grid cells connecting its source port to its target port, passing through its label cell when the edge has a label."
+expr = "Every edge is routed along an orthogonal path of grid cells connecting its source port to its target port, passing through its label cell when the edge has a label; parallel edges between the same node pair are routed through distinct cells."
 traces_to = "[[ge.layout]]"
 
 [[constraints]]
@@ -33,5 +33,5 @@ traces_to = "[[ge.layout]]"
 [[constraints]]
 id = "c6"
 kind = "advisory"
-expr = "For typical inputs the layout completes without exponential blowup: the ranking, ordering, and routing stages each run in time polynomial in nodes times edge crossings."
+expr = "For typical inputs the layout completes without exponential blowup: ranking, ordering, and routing run as bounded, deterministic heuristic iterations over the graph."
 traces_to = "[[ge.layout]]"
