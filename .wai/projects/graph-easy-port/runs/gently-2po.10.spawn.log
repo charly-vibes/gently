@@ -1,0 +1,23 @@
+Working tree is clean of my files (only the orchestrator's own `.wai` artifacts remain untracked). Work complete — not pushing, not closing the bead, per the brief.
+
+## Report
+
+**Commits**
+- `b3653e6` test(tb.oracle): differential fixture tests first, red on missing corpus (gently-2po.10) — RED phase: three `tb::oracle` scenario tests (txt byte-identity, ascii byte-identity, stale-pin gate), all honestly failing on `NotFound` before the corpus existed.
+- `65def94` feat(tb.oracle): record tracer fixture from pinned oracle, wire real runner (gently-2po.10) — GREEN phase: fixture corpus recorded from the real pinned oracle, `tools/oracle.pl` runner, `just oracle-record`/`oracle-verify` replacing the honest-failure stubs.
+
+**Gates run**
+- `cargo test --workspace` → ok, all 5 test targets green (17 scenarios incl. 3 new `tb::oracle::*`); 3 consecutive clean runs
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `ah check` → 0 findings. Note: `ah check --run-tests` surfaces 67 pre-existing `no-tests-ran` findings across *every* spec — contract filters (`scenarios::<spec>::p*`) pre-date this ticket and never matched cargo's real test names; not touched (`.espectacular/` is out of scope)
+- `just oracle-verify` → green, exit 0. **Pin satisfied via the isolated checkout** (system perl carries Graph::Easy 0.76): `PERL5LIB=/var/tmp/ge069/Graph-Easy-0.69/lib` over the fetched Graph-Easy-0.69.tar.gz; recording went through that pin and companions carry the full-commit header
+- Bonus: `just ci` (lint + specodelic gates + ah check + clippy + test) → green
+
+**Deviations**
+- Brief's verify sketch assumed the CLI accepts `--format txt`; the CLI only wires ascii this slice (and CLI changes are out of scope). `just oracle-verify` verifies ascii through the built `gently` binary and txt through the `tb::oracle` scenario tests driving gently-core's pipeline — c3's input/format/first-differing-line contract holds for both paths. Documented in `tests/fixtures/graph-easy/README.md`.
+- Actual test filter is `tb::oracle::` (cargo doesn't include the file name in test paths, so the literal `scenarios::tb::oracle::` can't match anything); consistent with the repo's existing `tb.*` naming.
+- `oracle-record` on a fully pin-current corpus prints a per-companion refusal ("pin unchanged — refusing to overwrite", c5) and exits 0 rather than failing the whole run — keeps the recipe usable for recording new inputs; it never overwrites a matching companion.
+- One negative-path bug caught and fixed during verification: `cmp` under `pipefail`+`set -e` killed the recipe before printing the mismatch message; `where=$(cmp … | head -n1 || true)` restores the typed mismatch report.
+
+**Next**
+- Orchestrator: verify `65def94` against the gates and push. Follow-up worth filing: gently-q1x deepens the corpus toward ge.oracle.c6 and may want the `.espectacular/ge-oracle/*` contract filters reconciled with real test names.
