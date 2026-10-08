@@ -1,0 +1,29 @@
+# lefthook — git hooks for gently
+# Managed blocks (beads, specodelic) are appended by their tools;
+# never edit inside a "# BEGIN <tool>" / "# END" pair by hand.
+#
+# Note: the SPK managed gate lints openspec/ only; until the first
+# dual-format deltas exist there, `spk lint openspec` exits 2 ("nothing
+# to lint"), so the run line tolerates exit 2 and fails on exit 1.
+# Re-run `specodelic hooks install` to restore the canonical form once
+# deltas exist.
+
+pre-commit:
+  commands:
+    # <!-- SPK:START -->
+    specodelic-gates:
+      run: spk lint openspec || test $? -eq 2
+    # <!-- SPK:END -->
+    specodelic-lint:
+      run: specodelic lint --human
+      skip:
+        - merge
+        - rebase
+
+pre-push:
+  commands:
+    specodelic-compile:
+      run: specodelic compile specs --human && specodelic model-check specs --human
+      skip:
+        - merge
+        - rebase
