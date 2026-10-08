@@ -4,6 +4,7 @@ branch: main
 head_at_claim: ee67429
 brief_path: .wai/projects/graph-easy-port/briefs/gently-2po.8.md
 steps:
+  - spawn+verify @ 14debb0
   - brief @ ee67429
   - gates @ ee67429
   - claim @ ee67429

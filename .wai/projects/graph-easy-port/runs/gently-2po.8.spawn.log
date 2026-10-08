@@ -1,0 +1,20 @@
+Both commits landed, all authored files staged only by me, no push, no `bd close`. The remaining dirty files (`.wai/…`) are orchestrator-owned artifacts I did not touch.
+
+## Report
+
+**Commits**
+- `99321bc` test(tb.layout): red tests pinning tracer layout shape (gently-2po.8) — 4 failing tests in `scenarios::tb::layout` (determinism, eastward ranks/one row, no-overlap + grid containment, orthogonal node-free edge routing from a's east to b's west)
+- `14debb0` feat(tb.layout): deterministic tracer layout — eastward ranks, orthogonal edge routing (gently-2po.8) — new `crates/gently-core/src/layout.rs` (`Cell`, `Layout { node_cells, edge_paths, width, height }`, pure `fn layout(&Graph) -> Layout`) wired via `pub mod layout` in `lib.rs`
+
+**Gates run**
+- `cargo test --workspace` → all green (6 scenario tests incl. 4 new `tb::layout::*`; prior tb tests unbroken)
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean, 0 warnings
+- `ah check` → 0 findings (ok: true)
+
+**Deviations**
+- No model deepening performed: `Graph`'s existing public index-keyed fields (`nodes: Vec<Node>`, `edges: Vec<Edge>`) are exactly what layout consumes, and index order is what guarantees determinism — adding helpers would be unused code. Brief explicitly scoped model changes to "only what layout needs"; nothing is needed.
+- Node cell = single grid cell per node (gap column at odd x), consistent with the pinned oracle ascii's one-cell gap; exact gap width stays unpinned until the ascii renderer lands, as the brief directs.
+- No REFACTOR commit: the green implementation is a single small pure function; no genuinely untidy code to tidy.
+
+**Next**
+- Ticket complete — orchestrator can verify `gently-2po.8` (commits `99321bc`, `14debb0`), close the bead, and proceed to `gently-2po.9` (tb.cli end-to-end over the tracer shape, which can consume `gently_core::layout::layout`).
