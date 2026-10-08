@@ -1,0 +1,5 @@
+---
+tags: [pipeline-run:epic-orchestrator-2026-10-08-gently-2po-9-tb-cli-end-to-end-pipeline-over-the-tracer-shape, pipeline-step:verify]
+---
+
+SHIP: pushed through 4bebb41; gently-2po.9 closed
