@@ -12,7 +12,9 @@ outputs. This spec defines how oracle outputs are recorded, verified, and
 kept honest — it complements [[ge.txt_render]] c4 (canonical-text
 fixtures) by defining the mechanism and the environment contract.
 Scratch fixtures and the runner plumbing use the genesis-vibes `fixture`
-module; the recipes live in the repo justfile.
+module; the recipes live in the repo justfile. Byte-compatibility is not
+the universal comparison target: c7 scopes which claim classes the oracle
+gates at all (decision record gently-ghh, designs/2026-10-09-decision-byte-compat-scope.md).
 
 ## Purpose
 
@@ -22,7 +24,9 @@ outputs. This spec defines how oracle outputs are recorded, verified, and
 kept honest — it complements [[ge.txt_render]] c4 (canonical-text
 fixtures) by defining the mechanism and the environment contract.
 Scratch fixtures and the runner plumbing use the genesis-vibes `fixture`
-module; the recipes live in the repo justfile.
+module; the recipes live in the repo justfile. Byte-compatibility is not
+the universal comparison target: c7 scopes which claim classes the oracle
+gates at all (decision record gently-ghh, designs/2026-10-09-decision-byte-compat-scope.md).
 
 ## Constraints
 
@@ -34,6 +38,7 @@ module; the recipes live in the repo justfile.
 | c4 | effect | A missing or drifted oracle environment — perl absent, installed Graph::Easy version differs from the pin, or a stale pin header in a fixture — produces a typed error naming what is missing and the `just oracle-record` remediation. | [[ge.oracle]] | |
 | c5 | invariant | `just oracle-record` regenerates recorded outputs for new inputs and updates pin headers in one pass; re-recording without a pin change is rejected as a non-deliberate change. | [[ge.oracle]] | |
 | c6 | advisory | The fixture corpus exercises every edge style, border style, node shape, group form, flow direction, and label placement at least once. | [[ge.oracle]] | |
+| c7 | invariant | Byte-compatibility claims are admissible only for fixture classes the pinned oracle produces deterministically: an input is in scope exactly when the pinned oracle renders it identically across repeated runs under the pinned seed (hash-stable) and records it within 10 seconds wall time (envelope); claims over out-of-scope classes — hash-randomized inputs, beyond-envelope sizes, round-trip fidelity the oracle itself lacks — are verified structurally against gently's own invariants instead of byte-wise against the oracle, and no spec may state unqualified byte-equality with the oracle. | [[ge.oracle]] | |
 
 ## Model
 
@@ -67,6 +72,7 @@ module; the recipes live in the repo justfile.
 | p4 | unit | [[ge.oracle.c4]] | environments missing perl, with a drifted Graph::Easy, and with stale pins | each case yields a typed error naming the missing piece and the remediation |
 | p5 | unit | [[ge.oracle.c5]] | record runs with matching and mismatching pins | new inputs are recorded and headers updated atomically; pin-less re-recording is rejected |
 | p6 | unit | [[ge.oracle.c6]] | the recorded corpus coverage matrix | every style, shape, group, direction, and label class appears in at least one fixture |
+| p7 | unit | [[ge.oracle.c7]] | the corpus stability and envelope probes over every fixture input | each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness |
 
 ## Requirements
 
@@ -110,4 +116,10 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 - **WHEN** the recorded corpus coverage matrix
 - **THEN** every style, shape, group, direction, and label class appears in at least one fixture
 - **VERIFIES** [[ge.oracle.p6]]
+
+#### Scenario: p7
+
+- **WHEN** the corpus stability and envelope probes over every fixture input
+- **THEN** each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness
+- **VERIFIES** [[ge.oracle.p7]]
 
