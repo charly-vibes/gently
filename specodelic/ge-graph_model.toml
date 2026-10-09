@@ -3,19 +3,19 @@ source = "ge.graph_model"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "Within one graph, every named node is identified by a unique name; anonymous nodes are unnamed and cannot be referenced again after creation."
+expr = "Within one graph, every node — named or anonymous — is identified by a unique name; anonymous nodes receive generated `#N` names from the shared object-id counter (the text parser resets that counter at each parse, making parser-derived names deterministic) and are referenceable through those names exactly like named nodes."
 traces_to = "[[ge.graph_model]]"
 
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "Every attribute assignment applies to exactly the object or class scope it targets, and its value is stored verbatim (no loss); derived border components (style, width, color) are computed at assignment time exactly as upstream Graph::Easy does."
+expr = "Every attribute assignment applies to exactly the object or class scope it targets, and its value passes through the store-layer unquote before storage; the `border` attribute is decomposed at assignment time into border-style, border-width, and border-color (never stored verbatim) and recomposed on read, exactly as upstream Graph::Easy does."
 traces_to = "[[ge.graph_model]]"
 
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "Every edge references exactly two existing nodes as source and target at all times; self-loops (source == target) are legal."
+expr = "Every edge references exactly two existing endpoints as source and target at all times — usually nodes, but a group object is a legal endpoint (stored as the group object itself, never rewritten to the group's members); self-loops (source == target) are legal; deleting a node removes it and drops all its incident edges, and a later edge construction naming the deleted node succeeds by implicitly re-creating it as a fresh, attribute-less node (the deleted node's stored attributes and old edges are not revived)."
 traces_to = "[[ge.graph_model]]"
 
 [[constraints]]

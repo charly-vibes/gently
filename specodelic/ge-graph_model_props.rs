@@ -15,27 +15,27 @@ macro_rules! todo_predicate {
 }
 
 // id: p1
-// generator: arbitrary node names inserted into one graph, including duplicates
-// predicate: the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created)
+// generator: arbitrary node names inserted into one graph, including duplicates, plus parser-created anonymous nodes
+// predicate: the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created); every anonymous node carries a generated `#N` name and a lookup by that name resolves to the same node object
 #[test]
 fn p1() {
-        todo_predicate!("the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created)");
+        todo_predicate!("the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created); every anonymous node carries a generated `#N` name and a lookup by that name resolves to the same node object");
 }
 
 // id: p2
 // generator: arbitrary attribute assignments over nodes, edges, groups, and classes
-// predicate: for any assignment, reading the attribute back on the targeted scope yields exactly the assigned value and reads on other scopes are unchanged
+// predicate: for any assignment, reading the attribute back on the targeted scope yields the stored form — the assigned value after store-layer unquoting, or the recomposed `border` attribute for border assignments — and reads on other scopes are unchanged (class-scope assignments do not leak into instance reads, which override them)
 #[test]
 fn p2() {
-        todo_predicate!("for any assignment, reading the attribute back on the targeted scope yields exactly the assigned value and reads on other scopes are unchanged");
+        todo_predicate!("for any assignment, reading the attribute back on the targeted scope yields the stored form — the assigned value after store-layer unquoting, or the recomposed `border` attribute for border assignments — and reads on other scopes are unchanged (class-scope assignments do not leak into instance reads, which override them)");
 }
 
 // id: p3
-// generator: arbitrary edge constructions over existing nodes, including self-loops and attempts on dropped nodes
-// predicate: every stored edge resolves both endpoints to live nodes; no dangling edge ever escapes a mutation
+// generator: arbitrary edge constructions over existing nodes, groups, and group objects, including self-loops, plus node deletions followed by edge constructions referencing the deleted names
+// predicate: every stored edge resolves both endpoints to live model objects (nodes or group objects); edges constructed with a group as endpoint are stored with the group object itself, never rewritten to the group's members; after a node deletion no incident edge survives, and an edge construction naming the deleted node succeeds, re-creating the node with no stored instance attributes and none of the deleted node's old edges revived
 #[test]
 fn p3() {
-        todo_predicate!("every stored edge resolves both endpoints to live nodes; no dangling edge ever escapes a mutation");
+        todo_predicate!("every stored edge resolves both endpoints to live model objects (nodes or group objects); edges constructed with a group as endpoint are stored with the group object itself, never rewritten to the group's members; after a node deletion no incident edge survives, and an edge construction naming the deleted node succeeds, re-creating the node with no stored instance attributes and none of the deleted node's old edges revived");
 }
 
 // id: p4
