@@ -30,18 +30,18 @@ pub mod spec_gen {
 
 // id: p1
 // generator: DOT headers of both kinds
-// predicate: header kind matches model direction exactly
+// predicate: a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset
 #[test]
 fn p1() {
-        todo_predicate!("header kind matches model direction exactly");
+        todo_predicate!("a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset");
 }
 
 // id: p2
-// generator: DOT edge chains and single edge statements
-// predicate: one model edge per arrow with correct endpoints and direction
+// generator: DOT edge chains under all four header×operator combinations
+// predicate: one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header
 #[test]
 fn p2() {
-        todo_predicate!("one model edge per arrow with correct endpoints and direction");
+        todo_predicate!("one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header");
 }
 
 // id: p3
@@ -53,20 +53,20 @@ fn p3() {
 }
 
 // id: p4
-// generator: nested subgraphs with and without cluster names
-// predicate: named clusters become groups; anonymous subgraphs keep their nodes ungrouped
+// generator: named, nested, and bare-scope subgraphs
+// predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack
 #[test]
 fn p4() {
-        todo_predicate!("named clusters become groups; anonymous subgraphs keep their nodes ungrouped");
+        todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack");
 }
 
 proptest! {
     // id: p5
-    // generator: DOT snippets using out-of-scope constructs (records, HTML labels, ports)
-    // predicate: each construct is reported with its name and position, and no partial graph is returned
+    // generator: record labels with and without ports, HTML-like table labels, and the failing constructs (nameless `subgraph`, malformed HTML-like label, unresolvable port reference)
+    // predicate: record and HTML-like table labels split into `name.N` part nodes with port markers stripped and edges reattached to the referenced parts, while the failing constructs each produce the oracle's typed error — tokenizing failures quote the offending input, unresolvable port references name the `base:port` and edge id — and return no partial graph
     #[test]
     fn p5(v0 in spec_gen::constructs()) {
-        todo_predicate!("each construct is reported with its name and position, and no partial graph is returned");
+        todo_predicate!("record and HTML-like table labels split into `name.N` part nodes with port markers stripped and edges reattached to the referenced parts, while the failing constructs each produce the oracle's typed error — tokenizing failures quote the offending input, unresolvable port references name the `base:port` and edge id — and return no partial graph");
     }
 }
 

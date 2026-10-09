@@ -31,6 +31,6 @@ Next ==
 \* One entry per state with an `emits` field — domain is exactly
 \* the emitting states; each value is the effect-Constraint's expr.
 Output ==
-"dot_rejected" :> "An unsupported DOT construct produces a typed error naming the construct and its source position."
+"dot_rejected" :> "A record label — a `shape=record` node whose label contains a vertical bar — or an HTML-like table label parses into numbered part nodes named `name.N`, with port markers stripped and edges reattached to the referenced part; a construct the parser cannot tokenize — such as the `subgraph` keyword without a name or a malformed HTML-like label — and a port reference with no matching part fail with a typed error, and no partial graph is returned."
 
 ============================================================================

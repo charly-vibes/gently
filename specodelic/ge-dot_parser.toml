@@ -3,13 +3,13 @@ source = "ge.dot_parser"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "A `digraph` header maps to a directed model graph and a `graph` header maps to an undirected one."
+expr = "A `graph` header sets the model graph's `type` attribute to `undirected` and a `digraph` header leaves the model graph at its directed default; neither header fixes the direction of individual edges."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "An edge chain `a -> b -> c;` creates one directed edge per arrow, and `a -- b;` in a plain graph creates an undirected edge."
+expr = "An edge chain `a -> b -> c;` creates one model edge per arrow, and each edge's direction follows its operator — `->` yields a directed edge and `--` yields an undirected edge — independently of the graph header."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]
@@ -21,11 +21,11 @@ traces_to = "[[ge.dot_parser]]"
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "A subgraph block named `cluster_*` maps to a model group with that name containing the nodes declared inside it."
+expr = "A subgraph block with a name maps to a model group whose name is the subgraph's name verbatim, containing only the nodes declared directly inside it."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]
 id = "c5"
 kind = "effect"
-expr = "An unsupported DOT construct produces a typed error naming the construct and its source position."
+expr = "A record label — a `shape=record` node whose label contains a vertical bar — or an HTML-like table label parses into numbered part nodes named `name.N`, with port markers stripped and edges reattached to the referenced part; a construct the parser cannot tokenize — such as the `subgraph` keyword without a name or a malformed HTML-like label — and a port reference with no matching part fail with a typed error, and no partial graph is returned."
 traces_to = "[[ge.dot_parser]]"
