@@ -98,8 +98,8 @@ struct Rows {
 /// row above band 0, and a vertical edge reserves the gap row between its
 /// endpoint bands.
 pub fn layout(graph: &Graph) -> Layout {
-    let east = Flow::of(graph) == Flow::East;
-    let Some(placement) = arrange(graph, east) else {
+    let flow = Flow::of(graph);
+    let Some(placement) = arrange(graph, flow == Flow::East) else {
         return Layout {
             node_cells: Vec::new(),
             edge_paths: Vec::new(),
@@ -128,7 +128,7 @@ pub fn layout(graph: &Graph) -> Layout {
         width,
         height: rows.height,
     };
-    flow::realize(grid, Flow::of(graph))
+    flow::realize(grid, flow)
 }
 
 /// The label cell of each edge: the middle cell of its routed path when
