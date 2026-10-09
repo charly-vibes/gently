@@ -196,6 +196,12 @@ mod tb {
         }
     }
 
+    /// tb.corpus (gently-0of): the recorded fixture corpus — every input
+    /// re-renders byte-identically to its recorded oracle companion
+    /// (ge.oracle.c3). Split into scenarios/tb_corpus.rs (pretender gate).
+    #[path = "corpus.rs"]
+    mod corpus;
+
     /// tb.oracle (gently-2po.10): the first differential fixture proves the
     /// tracer end to end. `tests/fixtures/graph-easy/tracer.txt` is the
     /// input; each companion (`tracer.txt.expected` from `as_txt`,
