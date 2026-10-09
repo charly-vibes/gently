@@ -1,0 +1,30 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: dot-records-ports
+OK   [record label attr]
+     nodes: a,b
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ a ] { label: A|B; } |  | [ a ] --> [ b ]
+OK   [record autosplit]
+     nodes: a.0,b,a.1
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ A|B ] { basename: a; } |  | [ a.0 ] --> [ b ]
+OK   [record no pipe]
+     nodes: a
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ a ] { label: AB; shape: record; }
+OK   [record nested braces]
+     nodes: a.0,a.2,b,a.1
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ A|\{B|C\} ] { basename: a; } |  | [ a.0 ] --> [ b ]
+OK   [record w/ ports]
+     nodes: b,c,a.1,a.0
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ A|B ] { basename: a; } |  | [ a.0 ] --> [ b ] | [ c ] --> [ a.1 ]
+OK   [port resolved w/ compass]
+     nodes: b,a.1,a.0
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ A|B ] { basename: a; } |  | [ a.0 ] --> [ b ]
+OK   [html label table]
+     nodes: a.0,a.1,b
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ <<TABLE><TR><TD>one</TD><TD>two</TD></TR></TABLE>> ] | [ a.0 ] --> [ b ]
+ERR  [html label malformed]
+     '[label=<<table>...</table>>] }' not recognized by Graph::Easy::Parser::Graphviz at (eval 10) line 18.
+ERR  [port w/o record part]
+     Cannot find autosplit node for b:p1 on edge 2 at (eval 10) line 18.
+ERR  [record port unknown]
+     Cannot find autosplit node for a:zz on edge 3 at (eval 10) line 18.
+ERR  [compass on plain node]
+     Cannot find autosplit node for b:nw on edge 2 at (eval 10) line 18.

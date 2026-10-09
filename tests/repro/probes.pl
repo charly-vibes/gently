@@ -112,7 +112,9 @@ my %SERVES = (
     'group-syntax'           => 'gently-6j0, gently-bzx (text_parser c6)',
     'anon-reference'         => 'gently-6j0, gently-bzx (text_parser c1)',
     'layout-flow-direction'  => 'gently-89d (layout c3)',
-    'subgraph-handling'      => 'gently-13f (dot_parser c3)',
+    'subgraph-handling'      => 'gently-13f (dot_parser c4 — named/nested/bare-scope subgraphs)',
+    'dot-direction'          => 'gently-13f (dot_parser c1/c2 — header×operator direction matrix)',
+    'dot-records-ports'      => 'gently-13f (dot_parser c5 — records, HTML-like labels, port references)',
     'cli-flags'              => 'gently-0h9 (closed — kept as upstream evidence)',
     'node-unnamed'           => 'gently-r22 (graph_model c1)',
     'anon-numbering'         => 'gently-r22 (graph_model c1 — exact #N scheme)',
@@ -282,17 +284,104 @@ print "non-east arrow present: ", (defined $arrowhead_glyphs ? 'YES' : 'no'), "\
 PROBE
 
     'subgraph-handling' => <<'PROBE',
-# serves: gently-13f (dot_parser c3)
-# claim probed: dot_parser c3 — "only cluster_* subgraphs become groups;
-# records and ports rejected".
-# Observed: ANY named subgraph becomes a group (cluster_x AND 'named');
-# an anonymous subgraph {} is a parse ERROR, not a group.
+# serves: gently-13f (dot_parser c4)
+# claim probed: dot_parser c4 — "only cluster_* subgraphs become groups";
+# p4 — "anonymous subgraphs keep their nodes ungrouped".
+# Observed: ANY named subgraph becomes a group under its name VERBATIM
+# (cluster_x AND 'named'). The nameless 'subgraph { .. }' keyword form is a
+# tokenizing ERROR ('not recognized by Graph::Easy::Parser::Graphviz'), but
+# a bare '{ .. }' scope parses fine and keeps its nodes ungrouped — with one
+# caveat: the node preceding the scope is still linked by the scope's inner
+# edge chain (the left stack survives the scope boundary), so 'a -> b;
+# { c -> d }' yields a SPURIOUS 'b --> d' edge. A named subgraph is also a
+# valid edge endpoint: 'a -> foo' connects to the GROUP object. Nested
+# subgraphs: each level is its own group; nodes belong to the innermost
+# group only, and the inner group carries a 'group: outer' attribute. A
+# subgraph with an attribute list before '{' is a tokenizing error.
 use Graph::Easy::Parser::Graphviz;
 my $p = Graph::Easy::Parser::Graphviz->new();
-my $g = $p->from_text("digraph G { a -> b; subgraph cluster_x { c -> d } subgraph named { e -> f } }");
-print "named subgraphs parse; groups: ", join(', ', map { $_->name() } $g->groups()), "\n";
-eval { $p->from_text("digraph G { a -> b; subgraph { c -> d } }") };
-print "anonymous subgraph: ", ($@ ? "ERROR: $@" : "parsed ok"), "\n";
+my @cases = (
+  [ 'named subgraphs',        "digraph G { a -> b; subgraph cluster_x { c -> d } subgraph named { e -> f } }" ],
+  [ 'nameless subgraph kw',   "digraph G { a -> b; subgraph { c -> d } }" ],
+  [ 'bare {} scope',          "digraph G { a -> b; { c -> d } }" ],
+  [ 'subgraph as edge target',"digraph G { subgraph foo { x } ; a -> foo }" ],
+  [ 'nested subgraphs',       "digraph G { subgraph outer { subgraph inner { a } b } }" ],
+  [ 'subgraph with attrs',    "digraph G { subgraph foo [color=red] { x } }" ],
+);
+for my $c (@cases) {
+  my ($label, $text) = @$c;
+  my $g = eval { $p->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$label]\n     $m\n"; next; }
+  my $gs = join(';', map { $_->name()."=[".join(',', sort map {$_->name()} $_->nodes())."]" } $g->groups());
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$label]\n     groups: $gs\n     as_txt: $txt\n";
+}
+PROBE
+
+    'dot-direction' => <<'PROBE',
+# serves: gently-13f (dot_parser c1/c2)
+# claim probed: dot_parser c1 — "a digraph header maps to a directed model
+# graph and a graph header to an undirected one"; c2 — the edge rules.
+# Observed: the EDGE OPERATOR decides each edge's direction, not the
+# header: '->' yields a directed edge and '--' an undirected edge under
+# EITHER header. The header only sets the model graph's 'type' attribute —
+# a 'graph' header sets 'type: undirected', a 'digraph' header leaves the
+# model at its directed default.
+use Graph::Easy::Parser::Graphviz;
+my $p = Graph::Easy::Parser::Graphviz->new();
+my @cases = (
+  [ 'digraph header + ->', "digraph G { a -> b }" ],
+  [ 'digraph header + --', "digraph G { a -- b }" ],
+  [ 'graph header + --',   "graph G { a -- b }" ],
+  [ 'graph header + ->',   "graph G { a -> b }" ],
+);
+for my $c (@cases) {
+  my ($label, $text) = @$c;
+  my $g = eval { $p->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$label]\n     $m\n"; next; }
+  my $dir = join ';', map { $_->{undirected} ? 'undirected' : 'directed' } $g->edges();
+  my $type = $g->attribute('type') // 'unset';
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$label]\n     edges: $dir; graph type: $type\n     as_txt: $txt\n";
+}
+PROBE
+
+    'dot-records-ports' => <<'PROBE',
+# serves: gently-13f (dot_parser c5)
+# claim probed: dot_parser c5 — "records, HTML labels, and ports are
+# out-of-scope constructs producing typed errors".
+# Observed: they are PARSED. A record label ('|' inside the label of a
+# shape=record node) splits into numbered part nodes 'name.N' with the
+# '<port>' markers stripped from the composite label; a port reference
+# that resolves to a part ('a:f1') reattaches the edge to that part.
+# An HTML-like table label parses into the same part scheme. A port
+# reference with NO matching part fails with "Cannot find autosplit node
+# for <base>:<port> on edge <id>". A record-style label WITHOUT
+# shape=record stays a verbatim node attribute; shape=record without a
+# '|' in the label does not split.
+use Graph::Easy::Parser::Graphviz;
+my $p = Graph::Easy::Parser::Graphviz->new();
+my @cases = (
+  [ 'record label attr',       qq{digraph G { a [label="A|B"] -> b }} ],
+  [ 'record autosplit',        qq{digraph G { a [shape=record, label="A|B"] -> b }} ],
+  [ 'record no pipe',          qq{digraph G { a [shape=record, label="AB"] }} ],
+  [ 'record nested braces',    qq{digraph G { a [shape=record, label="A|{B|C}"] -> b }} ],
+  [ 'record w/ ports',         qq{digraph G { a [shape=record, label="<f1>A|<f2>B"] ; a:f1 -> b ; c -> a:f2 }} ],
+  [ 'port resolved w/ compass',qq{digraph G { a [shape=record, label="<f1>A|<f2>B"] ; a:f1:e -> b }} ],
+  [ 'html label table',        qq{digraph G { a [label=<<TABLE><TR><TD>one</TD><TD>two</TD></TR></TABLE>>] ; a -> b }} ],
+  [ 'html label malformed',    qq{digraph G { a [label=<<table>...</table>>] }} ],
+  [ 'port w/o record part',    qq{digraph G { a -> b:p1 }} ],
+  [ 'record port unknown',     qq{digraph G { a [shape=record, label="A|B"] ; a:zz -> b }} ],
+  [ 'compass on plain node',   qq{digraph G { a -> b:nw }} ],
+);
+for my $c (@cases) {
+  my ($label, $text) = @$c;
+  my $g = eval { $p->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$label]\n     $m\n"; next; }
+  my @n = map { $_->name() } $g->nodes();
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$label]\n     nodes: ", join(',', @n), "\n     as_txt: $txt\n";
+}
 PROBE
 
     'cli-flags' => <<'PROBE',

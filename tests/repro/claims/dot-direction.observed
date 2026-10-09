@@ -1,0 +1,13 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: dot-direction
+OK   [digraph header + ->]
+     edges: directed; graph type: directed
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ a ] --> [ b ]
+OK   [digraph header + --]
+     edges: undirected; graph type: directed
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ a ] -- [ b ]
+OK   [graph header + --]
+     edges: undirected; graph type: undirected
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; |   type: undirected; | } |  | [ a ] -- [ b ]
+OK   [graph header + ->]
+     edges: directed; graph type: undirected
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; |   type: undirected; | } |  | [ a ] --> [ b ]

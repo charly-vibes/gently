@@ -1,4 +1,17 @@
 # observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: subgraph-handling
-named subgraphs parse; groups: cluster_x, named
-anonymous subgraph: ERROR: ' subgraph { c -> d } }' not recognized by Graph::Easy::Parser::Graphviz at (eval 9) line 5.
-
+OK   [named subgraphs]
+     groups: cluster_x=[c,d];named=[e,f]
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } | group { |   align: center; |   fill: inherit; | } |  | ( cluster_x |   [ c ] |   [ d ] | ) |  | ( named |   [ e ] |   [ f ] | ) |  | [ a ] --> [ b ] | [ c ] --> [ d ] | [ e ] --> [ f ]
+ERR  [nameless subgraph kw]
+     ' subgraph { c -> d } }' not recognized by Graph::Easy::Parser::Graphviz at (eval 10) line 13.
+OK   [bare {} scope]
+     groups: 
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } |  | [ a ] --> [ b ] | [ c ] --> [ d ] | [ b ] --> [ d ]
+OK   [subgraph as edge target]
+     groups: foo=[x]
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } | group { |   align: center; |   fill: inherit; | } |  | ( foo |   [ x ] | ) |  | [ a ] --> [ foo ]
+OK   [nested subgraphs]
+     groups: inner=[a];outer=[b]
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } | group { |   align: center; |   fill: inherit; | } |  | ( inner |   [ a ] | ) { group: outer; } |  | ( outer |   [ b ] | )
+ERR  [subgraph with attrs]
+     ' subgraph foo [color=red] { x } }' not recognized by Graph::Easy::Parser::Graphviz at (eval 10) line 13.
