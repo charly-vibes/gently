@@ -82,7 +82,7 @@ oracle-verify:
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     for input in "$FIX"/*.txt; do
         base=$(basename "$input" .txt)
-        "$BIN" --format ascii < "$input" > "$tmp/out" \
+        "$BIN" --as ascii < "$input" > "$tmp/out" \
             || { echo "oracle: gently failed on $input — spec ge.oracle.c3"; exit 1; }
         awk 'done{print;next} /^# oracle: /{next} {done=1;print}' "$FIX/$base.ascii.expected" > "$tmp/body"
         if ! cmp -s "$tmp/out" "$tmp/body"; then
