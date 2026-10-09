@@ -1,0 +1,31 @@
+## Report: gently-6j0 complete
+
+**Commits** (all local, nothing pushed, bead left open for the orchestrator):
+- `dfb0ce3` — RED: 4 new claim probes + committed observed evidence + README table
+- `8ffadc9` — GREEN: spec amendments + redeployed mirror + regenerated specodelic artifacts, staged in the same commit (spec-drift-gate requirement, per the `87e79e4` precedent)
+- `d46f5cc` — fix: sorted group membership in `group-syntax` probe (output was hash-order dependent across seeds)
+
+### Findings grounded in committed probe evidence (`tests/repro/claims/*.observed`)
+
+| Class | Probe | Observed oracle behavior (v0.69 pin) |
+|---|---|---|
+| a) c7 | `sharp-label` (+ existing `sharp-escape`) | Unescaped `#` truncates the line at the `#` — **mid-line and even inside quotes** (`{ label: x # y }` and `{ label: "x # y" }` are parse errors); `\#` survives. Hex special case: a 3/6-digit hex token **immediately after the attribute separator** (`:`) is auto-escaped and accepted; the same token elsewhere acts as a comment. |
+| b) c9 | `operator-patterns` | A directed pattern is one-or-more unit tokens (`= `, `=`, `- `, `-`, `..-`, `.-`, `.`, `~`) + `>`; **style is determined solely by the last unit** — `..-..-..>` is a *valid dotted edge* (the upstream POD's own "entire pattern must be repeated" claim is contradicted by the code). Arrow-less: `.-`/`..-` valid with a **single** repetition; plain units need ≥2 (`.` and `=` errors at one). |
+| c) c6 | `group-syntax` | Colon joins the group NAME (`( G: … )` → group literally named `G:`); a node belongs to exactly one group — a later group reference MOVES it (earlier group empties); nested inner nodes stay out of the outer group (nesting recorded as a `group: A` attribute); anonymous group is named `Group #0`. |
+| d) c1 | `anon-reference` (+ `node-unnamed`) | Anonymous nodes ARE named `#N` (odd counter) and are REUSABLE via escaped `[ \#1 ]` (3 nodes, 2 edges — same node); bare `[ #1 ]` is a parse error. |
+| e) omissions | `operator-patterns` | Bidirectional operators `<->`, `<=>`, `<.>`, `<~>`, `<- >`, `<.->`, `<..->`, `<= >` map to the same styles bidirectional; a lone left arrow `<--` is a parse error; a missing endpoint on either side (`--> [ b ]`, `[ a ] -->`) is a parse error. |
+
+### Spec changes (`specs/ge-text_parser.md` + mirror `openspec/specs/ge-text_parser/spec.md`)
+- **c1**: "cannot be referenced again" → named `#N`, reusable via escaped reference; p1 updated.
+- **c2**: bidirectional operators + lone-`<` and missing-endpoint rejection folded in (no new row: a standalone c10/p10 triggered an `ah check` `no-toml` finding and `.espectacular/**` is off-limits); p2 updated.
+- **c6**: colon-in-name, one-group-per-node (later wins), nesting exclusion, `Group #N`; p6 updated.
+- **c7**: mid-line/quoted truncation, `\#` escape, hex-after-separator special case; p7 updated.
+- **c9**: last-unit style rule, single-rep `.-`/`..-`, ≥2-rep plain units; p9 updated.
+
+### Gates (all green)
+`spk lint specs/` 0 findings · `just gates` exit 0 (12 compiled, 12 model-checked) · `cargo test --workspace` 65 passed / 0 failed · `ah check` envelope ok, 0 findings · all 4 new probes reproduce cleanly and deterministically (verified across `PERL_HASH_SEED` values).
+
+### Out-of-scope deltas for the orchestrator to file
+1. **c4 (same file, not in my mandate):** the oracle only requires the right flank to repeat the left flank's *last unit* — `[ a ] -- label - -->` is VALID (`(\s+\5)` backreference in `_match_edge`), contradicting c4's "both flanking patterns match". Evidence is in `operator-patterns.observed`; c4 was left unamended.
+2. **Upstream doc/code skew:** the v0.69 POD claims `..-..-..>` and `.-` are invalid — worth noting for gently-bzx so implementation follows the code, not the POD.
+3. `_edge_style` maps a `#+` pattern to style `bold`, but it is unreachable in text_parser since comment stripping removes bare `#` first (cosmetic, no action needed).
