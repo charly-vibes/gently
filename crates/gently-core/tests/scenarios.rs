@@ -351,3 +351,10 @@ mod ge_graph_model;
 /// one test per property row of specs/ge-txt_render.md.
 #[path = "scenarios/ge_txt_render.rs"]
 mod ge_txt_render;
+
+/// ge.oracle (gently-mwo): tier-1 admission enforcement — the repro-probe
+/// harness (`tests/repro/probes.pl admit`) classifies every corpus fixture
+/// by hash-stability × envelope, and this module machine-checks that
+/// classification against the corpus (specs/ge-oracle.md p7).
+#[path = "scenarios/ge_oracle.rs"]
+mod ge_oracle;
