@@ -1,0 +1,192 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: html-css-rules
+== plain graph css ==
+table.graph .edge {
+  font-family: monospaced, courier-new, courier, sans-serif;
+  margin: 0.1em;
+  padding: 0.2em;
+  vertical-align: bottom;
+}
+table.graph {
+  empty-cells: show;
+  margin: 0.5em;
+  padding: 0.5em;
+}
+table.graph .group_anon {
+  border-style: none;
+}
+table.graph .node,table.graph .node_anon {
+  text-align: center;
+  border-color: #000000;
+  border-style: solid;
+  border-width: 1px;
+  background: #ffffff;
+  margin: 0.1em;
+  padding: 0.2em;
+  padding-left: 0.3em;
+  padding-right: 0.3em;
+}
+table.graph .node_anon {
+  border-style: none;
+}
+table.graph td {
+  padding: 2px;
+  background: inherit;
+  white-space: nowrap;
+  }
+table.graph span.l { float: left; }
+table.graph span.r { float: right; }
+table.graph .va {
+  vertical-align: middle;
+  line-height: 1em;
+  width: 0.4em;
+  }
+table.graph .el {
+  width: 0.1em;
+  max-width: 0.1em;
+  min-width: 0.1em;
+  }
+table.graph .lh, table.graph .lv {
+  font-size: 0.8em;
+  padding-left: 0.4em;
+  }
+table.graph .sv, table.graph .sh, table.graph .shl, table.graph .sa, table.graph .su {
+  max-height: 1em;
+  line-height: 1em;
+  position: relative;
+  top: 0.55em;
+  left: -0.3em;
+  overflow: visible;
+  }
+table.graph .sv, table.graph .su {
+  max-height: 0.5em;
+  line-height: 0.5em;
+  }
+table.graph .shl { left: 0.3em; }
+table.graph .sv { left: -0.5em; top: -0.4em; }
+table.graph .su { left: -0.5em; top: 0.4em; }
+table.graph .sa { left: -0.3em; top: 0; }
+table.graph .eb { max-height: 0; line-height: 0; height: 0; }
+
+== rounded-shape css ==
+table.graph .edge {
+  font-family: monospaced, courier-new, courier, sans-serif;
+  margin: 0.1em;
+  padding: 0.2em;
+  vertical-align: bottom;
+}
+table.graph {
+  empty-cells: show;
+  margin: 0.5em;
+  padding: 0.5em;
+}
+table.graph .group_anon {
+  border-style: none;
+}
+table.graph .node,table.graph .node_anon {
+  text-align: center;
+  border-color: #000000;
+  border-style: solid;
+  border-width: 1px;
+  background: #ffffff;
+  margin: 0.1em;
+  padding: 0.2em;
+  padding-left: 0.3em;
+  padding-right: 0.3em;
+}
+table.graph .node_anon {
+  border-style: none;
+}
+table.graph td {
+  padding: 2px;
+  background: inherit;
+  white-space: nowrap;
+  }
+table.graph span.l { float: left; }
+table.graph span.r { float: right; }
+table.graph span.c { position: relative; top: 1.5em; }
+table.graph div.c { -moz-border-radius: 100%; border-radius: 100%; }
+table.graph div.r { -moz-border-radius: 1em; border-radius: 1em; }
+
+== group css ==
+table.graph .edge {
+  font-family: monospaced, courier-new, courier, sans-serif;
+  margin: 0.1em;
+  padding: 0.2em;
+  vertical-align: bottom;
+}
+table.graph {
+  empty-cells: show;
+  margin: 0.5em;
+  padding: 0.5em;
+}
+table.graph .group,table.graph .group_anon {
+  text-align: left;
+  border-style: none;
+  border-width: 1px;
+  background: #a0d0ff;
+  font-size: 0.8em;
+  padding: 0.2em;
+}
+table.graph .group_anon {
+  border-style: none;
+}
+table.graph .node,table.graph .node_anon {
+  text-align: center;
+  border-color: #000000;
+  border-style: solid;
+  border-width: 1px;
+  background: #ffffff;
+  margin: 0.1em;
+  padding: 0.2em;
+  padding-left: 0.3em;
+  padding-right: 0.3em;
+}
+table.graph .node_anon {
+  border-style: none;
+}
+table.graph td[class|="group"] { padding: 0.2em; }
+table.graph td {
+  padding: 2px;
+  background: inherit;
+  white-space: nowrap;
+  }
+table.graph span.l { float: left; }
+table.graph span.r { float: right; }
+table.graph .va {
+  vertical-align: middle;
+  line-height: 1em;
+  width: 0.4em;
+  }
+table.graph .el {
+  width: 0.1em;
+  max-width: 0.1em;
+  min-width: 0.1em;
+  }
+table.graph .lh, table.graph .lv {
+  font-size: 0.8em;
+  padding-left: 0.4em;
+  }
+table.graph .sv, table.graph .sh, table.graph .shl, table.graph .sa, table.graph .su {
+  max-height: 1em;
+  line-height: 1em;
+  position: relative;
+  top: 0.55em;
+  left: -0.3em;
+  overflow: visible;
+  }
+table.graph .sv, table.graph .su {
+  max-height: 0.5em;
+  line-height: 0.5em;
+  }
+table.graph .shl { left: 0.3em; }
+table.graph .sv { left: -0.5em; top: -0.4em; }
+table.graph .su { left: -0.5em; top: 0.4em; }
+table.graph .sa { left: -0.3em; top: 0; }
+table.graph .eb { max-height: 0; line-height: 0; height: 0; }
+table.graph .gi { border: none;}
+table.graph .gr { border-right-style: dashed;}
+table.graph .gl { border-left-style: dashed;}
+table.graph .gt { border-top-style: dashed;}
+table.graph .gb { border-bottom-style: dashed;}
+table.graph .ga { border-style: dashed;}
+

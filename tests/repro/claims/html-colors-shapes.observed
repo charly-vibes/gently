@@ -1,0 +1,25 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: html-colors-shapes
+fill=red: <td colspan=4 rowspan=4 class='node' style="background: #ff0000">A</td>
+fill=blue: <td colspan=4 rowspan=4 class='node' style="background: #0000ff">A</td>
+fill=white: <td colspan=4 rowspan=4 class='node' style="background: #ffffff">A</td>
+fill=black: <td colspan=4 rowspan=4 class='node' style="background: #000000">A</td>
+fill=lime: <td colspan=4 rowspan=4 class='node' style="background: #00ff00">A</td>
+fill=fuchsia: <td colspan=4 rowspan=4 class='node' style="background: #ff00ff">A</td>
+fill=aqua: <td colspan=4 rowspan=4 class='node' style="background: #00ffff">A</td>
+fill=silver: <td colspan=4 rowspan=4 class='node' style="background: #c0c0c0">A</td>
+fill=gray: <td colspan=4 rowspan=4 class='node' style="background: #808080">A</td>
+fill=olive: <td colspan=4 rowspan=4 class='node' style="background: #808000">A</td>
+fill=purple: <td colspan=4 rowspan=4 class='node' style="background: #800080">A</td>
+fill=teal: <td colspan=4 rowspan=4 class='node' style="background: #008080">A</td>
+fill=navy: <td colspan=4 rowspan=4 class='node' style="background: #000080">A</td>
+color=blue: <td colspan=4 rowspan=4 class='node' style="color: #0000ff">A</td>
+background=#00ff00 (plain node): <td colspan=4 rowspan=4 class='node'>A</td>
+fill=rgb(10,20,30): <td colspan=4 rowspan=4 class='node' style="background: #0a141e">A</td>
+fill=notacolor: REJECTED
+shape=rounded: <td colspan=4 rowspan=4 class='node' style="border: none;background: inherit"><div class='r' style='background:#ffffff;border:solid 1px #000000;width: 3em; height: 3em'><span class='c' style="top: 1em">A</span></div></td>
+shape=circle: <td colspan=4 rowspan=4 class='node' style="border: none;background: inherit"><div class='c' style='background:#ffffff;border:solid 1px #000000;width: 3em; height: 3em'><span class='c' style="top: 1em">A</span></div></td>
+shape=ellipse: <td colspan=4 rowspan=4 class='node' style="border: none;background: inherit"><div class='c' style='background:#ffffff;border:solid 1px #000000;width: 3em; height: 3em'><span class='c' style="top: 1em">A</span></div></td>
+shape=point: <td colspan=4 rowspan=4 class='node' style="background: inherit; border: none">★</td>
+shape=invisible: <td colspan=4 rowspan=4 style="border: none; background: inherit;"></td>
+shape=diamond: <td colspan=4 rowspan=4 class='node'>A</td>
+edge color=red: <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 2px #ff0000;color: #ff0000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #ff0000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>

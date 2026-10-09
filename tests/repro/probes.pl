@@ -117,6 +117,9 @@ my %SERVES = (
     'node-unnamed'           => 'gently-r22 (graph_model c1)',
     'href-escaping'          => 'gently-dcp, gently-eyo (html_render c2)',
     'td-colspan'             => 'gently-dcp, gently-eyo (html_render c4)',
+    'html-edge-styles'       => 'gently-eyo (html_render c3)',
+    'html-css-rules'         => 'gently-eyo (html_render c4)',
+    'html-colors-shapes'     => 'gently-eyo (html_render c5)',
     'shape-outline-collapse' => 'gently-dcp, gently-css (ascii shapes; html border-styles)',
     'ascii-render-tables'    => 'gently-0cq (ascii_render c1/c2/c5/c6)',
     'boxart-render-tables'   => 'gently-css (boxart_render c1/c2/c3/c4)',
@@ -373,6 +376,95 @@ if ($status ne 'ok') {
 }
 else { print $out; }
 print "as_txt of the same node (does not hang):\n", $g->as_txt();
+PROBE
+
+    'html-edge-styles' => <<'PROBE',
+# serves: gently-eyo (html_render c3)
+# claim probed: c3 — edge cells in as_html: the border remap per edge
+# style, the orientation classes (lh horizontal / lv vertical / eb
+# padding-corner), the arrow spans per direction, and the label cell.
+use Graph::Easy;
+use Graph::Easy::Parser;
+sub edge_tds {
+  my ($g) = @_;
+  my $h = $g->as_html();
+  my @t = $h =~ /<td[^>]*class="edge[^"]*"[^>]*>.*?<\/td>/g;
+  for (@t) { s/\s+/ /g; s/^ //; }
+  @t;
+}
+for my $s (qw(solid dotted dashed double wave bold wide broad dot-dash dot-dot-dash double-dash bold-dash)) {
+  my $g = Graph::Easy->new(); $g->add_edge('a','b');
+  my @e = $g->edges(); $e[0]->set_attribute('style', $s);
+  print "== style $s ==\n  ", join(" ; ", edge_tds($g)), "\n";
+}
+my $gn = Graph::Easy->new(); $gn->add_edge('a','b');
+my @e = $gn->edges(); eval { $e[0]->set_attribute('style', 'none') };
+print "style none: ", ($@ ? 'REJECTED' : 'accepted'), "\n";
+for my $flow (qw(east south west north)) {
+  my $g = Graph::Easy->new(); $g->add_edge('a','b');
+  $g->set_attribute('flow', $flow);
+  print "== flow $flow (arrow direction) ==\n  ", join(" ; ", edge_tds($g)), "\n";
+}
+# arrowless: parsed from the arrowless operator (no arrowhead at all)
+my $g3 = Graph::Easy::Parser->new->from_text("[ a ] -- { style: dashed; } [ b ]\n");
+print "== arrowless dashed ==\n  ", join(" ; ", edge_tds($g3)), "\n";
+my $g4 = Graph::Easy->new(); $g4->add_edge('a','b');
+my @e4 = $g4->edges(); $e4[0]->set_attribute('label', 'go');
+print "== labelled edge ==\n  ", join(" ; ", edge_tds($g4)), "\n";
+PROBE
+
+    'html-css-rules' => <<'PROBE',
+# serves: gently-eyo (html_render c4)
+# claim probed: c4 — the CSS rules as_html documents embed (upstream
+# exposes them as ->css(); as_html itself emits only the table).
+use Graph::Easy;
+my $g = Graph::Easy->new(); $g->add_edge('a','b');
+print "== plain graph css ==\n", $g->css(), "\n";
+my $g2 = Graph::Easy->new();
+my $n = $g2->add_node('A'); $n->set_attribute('shape','rounded');
+print "== rounded-shape css ==\n", $g2->css(), "\n";
+my $g3 = Graph::Easy->new(); $g3->add_edge('a','b'); $g3->add_group('grp');
+print "== group css ==\n", $g3->css(), "\n";
+PROBE
+
+    'html-colors-shapes' => <<'PROBE',
+# serves: gently-eyo (html_render c5)
+# claim probed: c5 — the W3C color-name scheme and the shape classes as
+# observed in the node/edge td bytes (the node td is the first
+# <td colspan=4 rowspan=4 ...> of the as_html output).
+use Graph::Easy;
+sub node_td {
+  my ($g) = @_;
+  my $h = $g->as_html();
+  my ($t) = $h =~ /<td colspan=4 rowspan=4.*?<\/td>/gs;
+  return ($t // '(none)') =~ s/\s+/ /gr;
+}
+for my $c (qw(red blue white black lime fuchsia aqua silver gray olive purple teal navy)) {
+  my $g = Graph::Easy->new(); my $n = $g->add_node('A');
+  $n->set_attribute('fill', $c);
+  print "fill=$c: ", node_td($g), "\n";
+}
+my $g = Graph::Easy->new(); my $n = $g->add_node('A');
+$n->set_attribute('color', 'blue');
+print "color=blue: ", node_td($g), "\n";
+my $g2 = Graph::Easy->new(); my $n2 = $g2->add_node('A');
+$n2->set_attribute('background', '#00ff00');
+print "background=#00ff00 (plain node): ", node_td($g2), "\n";
+my $g3 = Graph::Easy->new(); my $n3 = $g3->add_node('A');
+$n3->set_attribute('fill', 'rgb(10,20,30)');
+print "fill=rgb(10,20,30): ", node_td($g3), "\n";
+my $g4 = Graph::Easy->new(); my $n4 = $g4->add_node('A');
+eval { $n4->set_attribute('fill', 'notacolor') };
+print "fill=notacolor: ", ($@ ? 'REJECTED' : node_td($g4)), "\n";
+for my $s (qw(rounded circle ellipse point invisible diamond)) {
+  my $g = Graph::Easy->new(); my $n = $g->add_node('A');
+  eval { $n->set_attribute('shape', $s) };
+  print "shape=$s: ", ($@ ? 'REJECTED' : node_td($g)), "\n";
+}
+my $g5 = Graph::Easy->new(); $g5->add_edge('a','b');
+my @e = $g5->edges(); $e[0]->set_attribute('color', 'red');
+my @t = $g5->as_html() =~ /<td[^>]*class="edge[^"]*"[^>]*>.*?<\/td>/g;
+print "edge color=red: ", join(" ; ", map { s/\s+/ /gr } @t), "\n";
 PROBE
 
     'shape-outline-collapse' => <<'PROBE',

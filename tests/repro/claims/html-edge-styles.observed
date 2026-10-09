@@ -1,0 +1,38 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: html-edge-styles
+== style solid ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style dotted ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: dotted 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style dashed ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: dashed 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style double ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: double #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style wave ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: wave 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style bold ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 4px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style wide ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 1em #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style broad ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 0.5em #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style dot-dash ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: dot-dash 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style dot-dot-dash ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: dot-dot-dash 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style double-dash ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: double #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== style bold-dash ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: dashed 4px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+style none: REJECTED
+== flow east (arrow direction) ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 2px #000000;">&nbsp;</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
+== flow south (arrow direction) ==
+  <td colspan=4 class="edge eb"></td> ; <td colspan=2 rowspan=2 class="edge el">&nbsp;</td> ; <td colspan=2 rowspan=2 class="edge lv" style="border-left: solid 2px #000000;">&nbsp;</td> ; <td colspan=2 class="edge eb" style=" color: #000000;">&nbsp;</td> ; <td colspan=2 class="edge eb" style=" color: #000000;"><span class="sv">∨</span></td>
+== flow west (arrow direction) ==
+  <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="shl"><</span></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 2px #000000;">&nbsp;</td> ; <td rowspan=4 class="edge el"></td> ; <td rowspan=2 class="edge eb">&nbsp;</td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td>
+== flow north (arrow direction) ==
+  <td colspan=2 class="edge eb" style=" color: #000000;">&nbsp;</td> ; <td colspan=2 class="edge eb" style=" color: #000000;"><span class="su">∧</span></td> ; <td colspan=2 rowspan=2 class="edge el">&nbsp;</td> ; <td colspan=2 rowspan=2 class="edge lv" style="border-left: solid 2px #000000;">&nbsp;</td> ; <td colspan=4 class="edge eb"></td>
+== arrowless dashed ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: dashed 2px #000000;">&nbsp;</td> ; <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td>
+== labelled edge ==
+  <td rowspan=4 class="edge el"></td> ; <td colspan=2 rowspan=2 class="edge lh" style="border-bottom: solid 2px #000000;">go</td> ; <td rowspan=2 class="edge eb" style=" color: #000000;"><span class="sh">></span></td> ; <td colspan=2 rowspan=2 class="edge eb">&nbsp;</td> ; <td rowspan=2 class="edge eb"></td>
