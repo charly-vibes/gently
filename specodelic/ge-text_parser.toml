@@ -3,13 +3,13 @@ source = "ge.text_parser"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "A bracketed token `[ Name ]` creates a named node; the bare token `[ ]` creates an anonymous node that cannot be referenced again after creation."
+expr = 'A bracketed token `[ Name ]` creates a named node, and later `[ Name ]` tokens reuse the existing node; the bare token `[ ]` creates an anonymous node that the oracle names `#N` (N an odd counter), which is findable and reusable by that generated name — in text only written escaped (`[ \#N ]`), since an unescaped `#` begins a comment (c7).'
 traces_to = "[[ge.text_parser]]"
 
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "The edge operators `->`, `=>`, `.>`, `~>`, `- >`, `.->`, `..->`, `= >` map to styles solid, double, dotted, wave, dashed, dot-dash, dot-dot-dash, and double-dash; the styles bold, wide, and broad are settable only via the `style` attribute."
+expr = "The edge operators `->`, `=>`, `.>`, `~>`, `- >`, `.->`, `..->`, `= >` map to styles solid, double, dotted, wave, dashed, dot-dash, dot-dot-dash, and double-dash; the styles bold, wide, and broad are settable only via the `style` attribute. A `<` prefix before any of these operators makes the edge bidirectional (`<->` solid, `<=>` double, `<.>` dotted, `<~>` wave, `<- >` dashed, `<.->` dot-dash, `<..->` dot-dot-dash, `<= >` double-dash); the `<` requires a closing `>`, so a lone left arrow is a parse error; the operator further requires a node token on both sides — a missing left node (`--> [ b ]`) or missing right node (`[ a ] -->`) is a parse error."
 traces_to = "[[ge.text_parser]]"
 
 [[constraints]]
@@ -33,13 +33,13 @@ traces_to = "[[ge.text_parser]]"
 [[constraints]]
 id = "c6"
 kind = "invariant"
-expr = "A group block `( Name: ... )` or an anonymous group `( [ A ] )` produces a group containing exactly the nodes declared inside it, and later `[ Name ]` references reuse the existing node."
+expr = "A group block `( Name: ... )` produces a group whose name includes the colon (the oracle names it literally `G:`); a node declared inside belongs to exactly one group — referencing the node again inside a later group moves it there (the earlier group empties). Nested groups: a node declared in an inner group belongs only to that inner group, and the outer group contains only its directly declared nodes. An anonymous group `( [ A ] )` is named `Group #N` by the oracle."
 traces_to = "[[ge.text_parser]]"
 
 [[constraints]]
 id = "c7"
 kind = "invariant"
-expr = "Comment lines beginning with `#` are ignored everywhere outside of quoted strings."
+expr = 'An unescaped `#` starts a comment running to the end of the line, everywhere — mid-line and inside quoted attribute values — so `{ label: x # y }` is a parse error and `\#` escapes it; a line that is only a comment is dropped. As a special case, a 3- or 6-digit hex colour token (`#rgb`/`#rrggbb`) immediately following an attribute separator is auto-escaped and accepted.'
 traces_to = "[[ge.text_parser]]"
 
 [[constraints]]
@@ -51,5 +51,5 @@ traces_to = "[[ge.text_parser]]"
 [[constraints]]
 id = "c9"
 kind = "invariant"
-expr = "Repeated edge patterns must repeat their unit fully (e.g. `..-..-..->` is valid dot-dot-dash while `..-..-..>` is a parse error); arrow-less patterns (`---`, `.-.-`, `= =`) require at least two full repetitions, and single-character arrow-less patterns (`-`, `~`, `.-`) are parse errors."
+expr = "A directed edge pattern is one or more unit tokens (each of `= `, `=`, `- `, `-`, `..-`, `.-`, `.`, `~`) followed by `>`, and the edge's style is determined solely by the last unit token — repetitions and mixed units are accepted, so `..-..-..->` is dot-dot-dash while `..-..-..>` is a valid dotted edge. Arrow-less patterns: `.-` and `..-` are valid with a single repetition (dot-dash, dot-dot-dash), while the plain units (`=`, `= `, `-`, `- `, `.`, `~`) require at least two repetitions, and single-character arrow-less patterns are parse errors."
 traces_to = "[[ge.text_parser]]"

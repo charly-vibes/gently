@@ -16,26 +16,26 @@ macro_rules! todo_predicate {
 
 // id: p1
 // generator: arbitrary node tokens, named and anonymous
-// predicate: every named bracket token yields a model node with that name; every bare `[ ]` yields a node that is never reused by a later reference
+// predicate: every named bracket token yields a model node with that name, reused by later references; every bare `[ ]` yields an anonymous node named `#N` (odd counter) that `node('#N')` finds and that a later escaped `[ \#N ]` reference reuses as the same node
 #[test]
 fn p1() {
-        todo_predicate!("every named bracket token yields a model node with that name; every bare `[ ]` yields a node that is never reused by a later reference");
+        todo_predicate!("every named bracket token yields a model node with that name, reused by later references; every bare `[ ]` yields an anonymous node named `#N` (odd counter) that `node('#N')` finds and that a later escaped `[ \\#N ]` reference reuses as the same node");
 }
 
 // id: p2
-// generator: arbitrary operator patterns from the style grammar
-// predicate: each valid operator maps to the documented style; style-only styles are accepted via the attribute and rejected as operators
+// generator: arbitrary operator patterns from the style grammar, directed and bidirectional, with and without both endpoint nodes
+// predicate: each valid operator maps to the documented style; `<`-prefixed operators map to the same style with the edge marked bidirectional; a `<` without a closing `>` and an operator with a missing endpoint node are rejected; style-only styles are accepted via the attribute and rejected as operators
 #[test]
 fn p2() {
-        todo_predicate!("each valid operator maps to the documented style; style-only styles are accepted via the attribute and rejected as operators");
+        todo_predicate!("each valid operator maps to the documented style; `<`-prefixed operators map to the same style with the edge marked bidirectional; a `<` without a closing `>` and an operator with a missing endpoint node are rejected; style-only styles are accepted via the attribute and rejected as operators");
 }
 
 // id: p9
-// generator: repeated and arrow-less operator patterns, valid and invalid
-// predicate: each invalid repetition is rejected and each valid repetition parses to the right style
+// generator: directed and arrow-less unit-token patterns, single and repeated
+// predicate: the style follows the last unit token; single-unit arrow-less `.-`/`..-` are accepted; plain units are rejected below two repetitions
 #[test]
 fn p9() {
-        todo_predicate!("each invalid repetition is rejected and each valid repetition parses to the right style");
+        todo_predicate!("the style follows the last unit token; single-unit arrow-less `.-`/`..-` are accepted; plain units are rejected below two repetitions");
 }
 
 // id: p3
@@ -63,19 +63,19 @@ fn p5() {
 }
 
 // id: p6
-// generator: group blocks, nested groups, and anonymous groups
-// predicate: group membership in the model equals the nodes declared inside the block
+// generator: group blocks, nested groups, anonymous groups, and multi-group references
+// predicate: the group name includes the colon; a node's membership equals the directly declared group it was last declared in; nested inner nodes belong only to the inner group; anonymous groups are named `Group #N`
 #[test]
 fn p6() {
-        todo_predicate!("group membership in the model equals the nodes declared inside the block");
+        todo_predicate!("the group name includes the colon; a node's membership equals the directly declared group it was last declared in; nested inner nodes belong only to the inner group; anonymous groups are named `Group #N`");
 }
 
 // id: p7
-// generator: inputs with interleaved comments and quoted strings containing `#`
-// predicate: comments are dropped and in-string `#` characters survive into attribute values
+// generator: inputs with interleaved comments, quoted strings containing `#`, and hex colour values
+// predicate: an unescaped `#` truncates the line to a parse error even inside quotes; `\#` survives into attribute values; a hex colour token after an attribute separator is accepted
 #[test]
 fn p7() {
-        todo_predicate!("comments are dropped and in-string `#` characters survive into attribute values");
+        todo_predicate!("an unescaped `#` truncates the line to a parse error even inside quotes; `\\#` survives into attribute values; a hex colour token after an attribute separator is accepted");
 }
 
 // id: p8
