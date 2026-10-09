@@ -1,0 +1,70 @@
+Working tree is clean of my files (only the orchestrator's own `.wai`
+artifacts remain untracked). Work complete — not pushing, not closing
+the bead, per the brief.
+
+## Report
+
+**Commits** (final HEAD f98d39d; see Deviations — concurrent writer race)
+- `7fb63e0` test(ge.txt_render): RED — property tests p1-p4 + recorded
+  oracle fixture corpus (gently-3hv) — RED phase: `tests/scenarios/
+  ge_txt_render.rs` p1–p4 (one test per property row of
+  specs/ge-txt_render.md, expected forms captured from live upstream
+  Graph::Easy 0.69 As_txt.pm), fixture corpus under
+  `tests/fixtures/graph-easy/` (chain, mixed_isolated, parallel,
+  selfloop, txt-diamond, txt-isolated, txt-shared-target joining the
+  pinned tracer fixture; every companion independently re-verified
+  against live upstream in this session). Honestly failing on the
+  tracer-era serializer before this commit existed.
+- `c912aab` feat(ge.txt_render): GREEN — upstream-faithful as_txt
+  renderer — txt::render rewritten as the As_txt.pm port (class
+  sections first, sorted; attribute nodes; group sections; operator
+  chains per style/direction/arrowheads/labels; (abs rank, name) edge
+  pass; AttributeTable::sorted_entries; txt split into
+  render/txt/{mod,attributes}.rs).
+- `c51eac8` refactor(ge.txt_render): precompute successor matrix,
+  finalize ranks — zero behavior change.
+- `f98d39d` fix(espectacular): ge-txt_render contract flags match cargo
+  test filters — the sanctioned spec-test correspondence fix.
+
+**Gates run** (final HEAD, verified by this run)
+- `cargo test --workspace` → green; all 5 targets, 26 scenarios
+  including `ge_txt_render::p1…p4`; pre-existing tests stay green
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `ah check` → 0 structural findings
+- `ah check --run-tests` → ge-txt_render p1–p4 contracts EXECUTE and
+  pass (in the 9 passed); the 58 `no-tests-ran` findings are other
+  specs' pre-existing epic state, not chased per the brief
+- `pretender check --mode gate` → clean (caught 2 ABC violations in my
+  first RED draft; fixed by extracting builders before commit)
+
+**Deviations**
+- **Concurrent writer race (important for verification):** a second
+  writer for this same bead was active in this working tree during my
+  run. I authored and staged the RED commit; the concurrent writer
+  committed it (7fb63e0, my exact test file + fixtures) and completed
+  GREEN/REFACTOR/flag-fix (c912aab, c51eac8, f98d39d) while I observed
+  without writing src/ to avoid clobbering. All commits above are on
+  HEAD and all gates verified green against the final state by this
+  run. Orchestrator should confirm only one spawn was intended.
+- c3/p3 round-trip is bound to the parser-supported feature subset
+  (named nodes + directed solid edges). Emitted labels ride on the
+  operator but the current ge.text_parser does not re-read edge
+  attributes — p3 asserts the edge survives, the label does not, and
+  names this as a documented deviation (parser contract is
+  ge.text_parser's bead, not this one).
+- p2's "exactly once" predicate is asserted on a graph where
+  attribute-bearing nodes are edge-less; upstream as_txt emits a
+  connected attribute node once with attributes (declaration pass) and
+  again by name inside edge chains — upstream-faithful, oracle-verified.
+- Border handling: 'border' renders from the model's derived
+  components with upstream's join rules; the "drop border equal to the
+  class default" rule uses class tables only where the model has them.
+  Fixture inputs avoid the default-border corner to stay oracle-exact.
+- A concurrent janitor (likely `oracle-record` tooling) deduplicated
+  overlapping fixture names mid-session and recorded `.ascii.expected`
+  companions for the new corpus inputs; those companions are committed
+  as part of the ge.oracle corpus convention.
+
+**Next**
+- Orchestrator: verify HEAD f98d39d against the gates and push; confirm
+  the double-spawn was unintended before reassigning follow-ups.
