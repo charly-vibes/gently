@@ -311,8 +311,8 @@ my @cases = (
 for my $c (@cases) {
   my ($label, $text) = @$c;
   my $g = eval { $p->from_text($text) };
-  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$label]\n     $m\n"; next; }
-  my $gs = join(';', map { $_->name()."=[".join(',', sort map {$_->name()} $_->nodes())."]" } $g->groups());
+  if ($@) { my ($m) = split /\n/, $@; $m =~ s/ at \(eval \d+\) line \d+\.//; print "ERR  [$label]\n     $m\n"; next; }
+  my $gs = join(';', map { $_->name()."=[".join(',', sort map {$_->name()} $_->nodes())."]" } sort { $a->name() cmp $b->name() } $g->groups());
   my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
   print "OK   [$label]\n     groups: $gs\n     as_txt: $txt\n";
 }
@@ -338,7 +338,7 @@ my @cases = (
 for my $c (@cases) {
   my ($label, $text) = @$c;
   my $g = eval { $p->from_text($text) };
-  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$label]\n     $m\n"; next; }
+  if ($@) { my ($m) = split /\n/, $@; $m =~ s/ at \(eval \d+\) line \d+\.//; print "ERR  [$label]\n     $m\n"; next; }
   my $dir = join ';', map { $_->{undirected} ? 'undirected' : 'directed' } $g->edges();
   my $type = $g->attribute('type') // 'unset';
   my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
@@ -377,8 +377,8 @@ my @cases = (
 for my $c (@cases) {
   my ($label, $text) = @$c;
   my $g = eval { $p->from_text($text) };
-  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$label]\n     $m\n"; next; }
-  my @n = map { $_->name() } $g->nodes();
+  if ($@) { my ($m) = split /\n/, $@; $m =~ s/ at \(eval \d+\) line \d+\.//; print "ERR  [$label]\n     $m\n"; next; }
+  my @n = sort map { $_->name() } $g->nodes();
   my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
   print "OK   [$label]\n     nodes: ", join(',', @n), "\n     as_txt: $txt\n";
 }
