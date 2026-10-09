@@ -62,3 +62,11 @@ fn p6() {
         todo_predicate!("every style, shape, group, direction, and label class appears in at least one fixture");
 }
 
+// id: p7
+// generator: the corpus stability and envelope probes over every fixture input
+// predicate: each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness
+#[test]
+fn p7() {
+        todo_predicate!("each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness");
+}
+
