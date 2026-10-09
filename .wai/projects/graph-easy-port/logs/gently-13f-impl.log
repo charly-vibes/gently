@@ -1,0 +1,29 @@
+All gates green. The regenerated `specodelic/*` compile artifacts correctly track my spec change but, per the r22 precedent, I leave them uncommitted for the orchestrator's ship decision.
+
+## Report
+
+**Commits**
+- `84fe037` test(repro): pin dot-oracle evidence for gently-13f findings (gently-13f) — new probes `dot-direction`, `dot-records-ports`, extended `subgraph-handling` + recorded `.observed` bytes + README probe table (evidence-before-amendment)
+- `0dc2f36` docs(spec): re-derive ge-dot_parser rows against pinned oracle (gently-13f) — amended c1/c2/c4/c5 + p1/p2/p4/p5 + intent statement/prose; mirror `openspec/specs/ge-dot_parser/spec.md` redeployed and staged in the same commit (spec-drift-gate green)
+- `5050b2f` test(repro): make dot probes hash-order deterministic (gently-13f) — sort node/group name lists, strip run-dependent `at (eval N) line M` suffix; message shapes unchanged
+
+**Gates run**
+- `spk lint specs/` → 0 findings, 0 warnings (12 files)
+- `just gates` → exit 0
+- `cargo test --workspace` → exit 0, all pass (43+67+4 across suites)
+- `ah check` → ok: 0 structural, 0 execution
+- probe re-runs → all three (`dot-direction`, `dot-records-ports`, `subgraph-handling`) reproduce cleanly and are byte-deterministic across repeated runs
+
+**Key re-derivations (grounded in committed observed bytes)**
+- **Direction (c1/c2):** the EDGE OPERATOR decides direction, not the header — `graph G { a -> b }` yields a *directed* edge; `digraph G { a -- b }` an *undirected* one. The header only sets the model graph's `type` attribute (`graph` → `type: undirected`; `digraph` → default `directed`).
+- **Subgraphs (c4/p4):** any named subgraph becomes a group named verbatim; nested nodes belong to the innermost group only; a named subgraph is a valid edge endpoint (edge to the GROUP object). The nameless `subgraph { … }` keyword form is a tokenizing error, but a bare `{ … }` scope parses and keeps nodes ungrouped — *caveat*: it emits a spurious edge linking the pre-scope node (`a -> b; { c -> d }` ⇒ extra `b --> d`) because the left-edge stack survives the scope boundary.
+- **Records/HTML/ports (c5/p5):** parsed, not rejected — record labels (with `|`) and HTML-like table labels autosplit into part nodes `name.N` (port markers stripped, edges reattached to referenced parts); unresolvable port refs error `Cannot find autosplit node for <base>:<port> on edge <id>`; malformed HTML-like labels / nameless `subgraph` are tokenizing errors quoting the input; no partial graph returned. `shape=record` without `|` and record-style labels without `shape=record` don't split.
+
+**Deviations**
+- Probe names: used `dot-direction` / `dot-records-ports` rather than probing inline in `subgraph-handling`, per one-probe-per-finding-family style; `subgraph-handling` was extended (not just re-pointed) and re-recorded.
+- New spec rows were NOT added (e.g. no separate "records parse" invariant row): `.espectacular/p1–p5` stubs are out of subagent scope, so the records/HTML/port success behavior is folded into c5/p5. A follow-up row split is possible once stubs are minted.
+- The bare-`{}`-scope spurious edge (outside the four finding classes) is pinned in the `subgraph-handling` observed bytes and noted in p4's predicate — orchestrator may want it reflected in gently-89p's implementation notes.
+- Regenerated `specodelic/*` compile artifacts (`.tla`/`.toml`/`_props.rs`/`.check.json`, incl. ge-dot_parser) are modified but **left uncommitted** per the r22 precedent — orchestrator decides on ship.
+
+**Next**
+- Ticket complete for 13f spec work: close `gently-13f` at orchestrator discretion, then brief gently-89p from the amended c1/c2/c4/c5 + p1/p2/p4/p5 rows and the three committed observed files; also decide whether to commit the regenerated `specodelic/*` artifacts.
