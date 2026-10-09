@@ -119,6 +119,7 @@ my %SERVES = (
     'td-colspan'             => 'gently-dcp, gently-eyo (html_render c4)',
     'shape-outline-collapse' => 'gently-dcp, gently-css (ascii shapes; html border-styles)',
     'ascii-render-tables'    => 'gently-0cq (ascii_render c1/c2/c5/c6)',
+    'boxart-render-tables'   => 'gently-css (boxart_render c1/c2/c3/c4)',
     'graphviz-round-trip'    => 'gently-0kg, gently-b4v (graphviz c2/c4, txt_render c3)',
     'size-envelope'          => 'gently-k4u (perf c2/c5)',
     'perl5lib-pin'           => 'gently-ikm, gently-liz (oracle pin contract)',
@@ -479,6 +480,74 @@ print "== label long ==\n", render("[ this is a very long node label that must w
 print "== label wide glyph ==\n", render("[ \x{e4}\x{b8}\x{ad} ]\n"), "\n";
 PROBE
 
+    'boxart-render-tables' => <<'PROBE',
+# serves: gently-css (boxart_render c1/c2/c3/c4)
+# claim probed: the boxart renderer's tables (as_boxart — the same render
+# path as as_ascii with _ascii_style=1) — node border styles, edge styles
+# (arrowed/arrowless), junction/neighbourhood combinations (edge styles
+# meeting node borders, mixed-style edge chains, bends), shapes, and wide
+# labels (repeat units), observed as bytes.
+use Graph::Easy;
+use Graph::Easy::Parser;
+binmode(STDOUT, ':utf8');
+my $bound = 5;
+sub render {
+  my ($text) = @_;
+  my $out;
+  eval {
+    local $SIG{ALRM} = sub { die "alarm\n" };
+    alarm $bound;
+    my $g = Graph::Easy::Parser->new->from_text($text);
+    $out = $g->as_boxart();
+    alarm 0;
+  };
+  alarm 0;
+  return $@ ? "HANG-OR-ERROR: " . (split /\n/, $@)[0] : $out;
+}
+for my $style (qw(solid dotted dashed double wave bold wide broad dot-dash dot-dot-dash double-dash bold-dash none)) {
+  print "== border $style ==\n", render("[ x ] { border: $style; }\n"), "\n";
+  print "== border $style wide label ==\n", render("[ xxxxxxxxxx ] { border: $style; }\n"), "\n";
+}
+for my $style (qw(solid double dotted wave dashed bold dot-dash dot-dot-dash double-dash bold-dash)) {
+  print "== edge $style ==\n", render("[ a ] --> { style: $style; } [ b ]\n"), "\n";
+  print "== edge $style arrowless ==\n", render("[ a ] -- { style: $style; } [ b ]\n"), "\n";
+}
+print "== junction: dashed border + solid edge ==\n", render("[ a ] { border: dashed; } --> [ b ]\n"), "\n";
+print "== junction: bold border + solid edge ==\n", render("[ a ] { border: bold; } --> [ b ]\n"), "\n";
+print "== junction: solid border + dashed edge ==\n", render("[ a ] --> { style: dashed; } [ b ]\n"), "\n";
+print "== junction: solid border + double edge ==\n", render("[ a ] --> { style: double; } [ b ]\n"), "\n";
+print "== junction: mixed chain dashed->a->double->b->dotted->c ==\n", render("[ x ] --> { style: dashed; } [ a ] --> { style: double; } [ b ] --> { style: dotted; } [ c ]\n"), "\n";
+print "== junction: bend (cycle) solid ==\n", render("[ a ] --> [ b ] --> [ a ]\n"), "\n";
+print "== junction: bend (cycle) mixed dashed/double ==\n", render("[ a ] --> { style: dashed; } [ b ] --> { style: double; } [ a ]\n"), "\n";
+print "== junction: crossing edges ==\n", render("[ a ] --> [ c ]\n[ b ] --> [ d ]\n"), "\n";
+for my $shape (qw(box rounded point circle ellipse diamond triangle pentagon hexagon octagon parallelogram house invisible img)) {
+  print "== shape $shape ==\n", render("[ x ] { shape: $shape; }\n"), "\n";
+}
+print "== shape rounded + border double ==\n", render("[ x ] { shape: rounded; border: double; }\n"), "\n";
+print "== shape rounded + border dotted ==\n", render("[ x ] { shape: rounded; border: dotted; }\n"), "\n";
+print "== shape rounded + border wave ==\n", render("[ x ] { shape: rounded; border: wave; }\n"), "\n";
+print "== shape rounded + border bold ==\n", render("[ x ] { shape: rounded; border: bold; }\n"), "\n";
+print "== shape rounded + border dot-dot-dash ==\n", render("[ x ] { shape: rounded; border: dot-dot-dash; }\n"), "\n";
+print "== edge wide ==\n", render("[ a ] --> { style: wide; } [ b ]\n"), "\n";
+print "== edge broad ==\n", render("[ a ] --> { style: broad; } [ b ]\n"), "\n";
+print "== edge wide arrowless ==\n", render("[ a ] -- { style: wide; } [ b ]\n"), "\n";
+print "== bend (cycle) bold ==\n", render("[ a ] --> { style: bold; } [ b ] --> { style: bold; } [ a ]\n"), "\n";
+print "== bend (cycle) dashed ==\n", render("[ a ] --> { style: dashed; } [ b ] --> { style: dashed; } [ a ]\n"), "\n";
+print "== bend (cycle) dot-dash ==\n", render("[ a ] --> { style: dot-dash; } [ b ] --> { style: dot-dash; } [ a ]\n"), "\n";
+print "== bend (cycle) double-dash ==\n", render("[ a ] --> { style: double-dash; } [ b ] --> { style: double-dash; } [ a ]\n"), "\n";
+print "== bend (cycle) dot-dot-dash ==\n", render("[ a ] --> { style: dot-dot-dash; } [ b ] --> { style: dot-dot-dash; } [ a ]\n"), "\n";
+print "== selfloop solid ==\n", render("[ a ] --> [ a ]\n"), "\n";
+print "== selfloop long label ==\n", render("[ abcdefgh ] --> [ abcdefgh ]\n"), "\n";
+print "== selfloop arrowless ==\n", render("[ a ] -- [ a ]\n"), "\n";
+print "== selfloop double ==\n", render("[ a ] --> { style: double; } [ a ]\n"), "\n";
+print "== selfloop dotted ==\n", render("[ a ] { border: dotted; } --> { style: dotted; } [ a ]\n"), "\n";
+print "== labelled edge solid ==\n", render("[ a ] --> { label: go; } [ b ]\n"), "\n";
+print "== labelled edge dotted ==\n", render("[ a ] --> { style: dotted; label: go; } [ b ]\n"), "\n";
+print "== labelled edge dot-dot-dash ==\n", render("[ a ] --> { style: dot-dot-dash; label: go; } [ b ]\n"), "\n";
+print "== arrowless bend (cycle) ==\n", render("[ a ] -- [ b ] -- [ a ]\n"), "\n";
+print "== bend arrows all four directions ==\n", render("[ a ] --> [ b ] --> [ c ] --> [ d ]\n"), "\n";
+PROBE
+
     'perl5lib-pin' => 'PROBE_PERL5LIB_PIN',
 );
 
@@ -566,9 +635,13 @@ if ($mode eq 'claim') {
         $observed = probe_perl5lib_pin();
     }
     else {
-        # capture the probe body's stdout so it can be both shown and recorded
+        # capture the probe body's stdout so it can be both shown and
+        # recorded. The :utf8 layer is REQUIRED for the boxart probes —
+        # their output is Unicode box-drawing — and a no-op for the
+        # pure-ASCII probes.
         my $buf = '';
         open my $cap, '>>', \$buf or die "probes: cannot capture output: $!\n";
+        binmode $cap, ':encoding(UTF-8)';
         my $old = select($cap);
         eval $body;
         my $err = $@;

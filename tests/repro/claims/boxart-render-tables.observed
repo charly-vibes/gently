@@ -1,0 +1,490 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: boxart-render-tables
+== border solid ==
+┌───┐
+│ x │
+└───┘
+
+== border solid wide label ==
+┌────────────┐
+│ xxxxxxxxxx │
+└────────────┘
+
+== border dotted ==
+┌⋯⋯⋯┐
+⋮ x ⋮
+└⋯⋯⋯┘
+
+== border dotted wide label ==
+┌⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯┐
+⋮ xxxxxxxxxx ⋮
+└⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯┘
+
+== border dashed ==
+┌−−−┐
+╎ x ╎
+└−−−┘
+
+== border dashed wide label ==
+┌−−−−−−−−−−−−┐
+╎ xxxxxxxxxx ╎
+└−−−−−−−−−−−−┘
+
+== border double ==
+╔═══╗
+║ x ║
+╚═══╝
+
+== border double wide label ==
+╔════════════╗
+║ xxxxxxxxxx ║
+╚════════════╝
+
+== border wave ==
+┌∼∼∼┐
+≀ x ≀
+└∼∼∼┘
+
+== border wave wide label ==
+┌∼∼∼∼∼∼∼∼∼∼∼∼┐
+≀ xxxxxxxxxx ≀
+└∼∼∼∼∼∼∼∼∼∼∼∼┘
+
+== border bold ==
+┏━━━┓
+┃ x ┃
+┗━━━┛
+
+== border bold wide label ==
+┏━━━━━━━━━━━━┓
+┃ xxxxxxxxxx ┃
+┗━━━━━━━━━━━━┛
+
+== border wide ==
+█████
+█ x █
+█████
+
+== border wide wide label ==
+██████████████
+█ xxxxxxxxxx █
+██████████████
+
+== border broad ==
+▛▀▀▀▜
+▌ x ▐
+▙▄▄▄▟
+
+== border broad wide label ==
+▛▀▀▀▀▀▀▀▀▀▀▀▀▜
+▌ xxxxxxxxxx ▐
+▙▄▄▄▄▄▄▄▄▄▄▄▄▟
+
+== border dot-dash ==
+┌-·-┐
+! x !
+└-·-┘
+
+== border dot-dash wide label ==
+┌-·-·-·-·-·-·┐
+! xxxxxxxxxx !
+└-·-·-·-·-·-·┘
+
+== border dot-dot-dash ==
+┌·-·┐
+│ x │
+└·-·┘
+
+== border dot-dot-dash wide label ==
+┌·-··-··-··-·┐
+│ xxxxxxxxxx │
+└·-··-··-··-·┘
+
+== border double-dash ==
+╔ ═ ╗
+∥ x ∥
+╚ ═ ╝
+
+== border double-dash wide label ==
+╔ ═ ═ ═ ═ ═ ═╗
+∥ xxxxxxxxxx ∥
+╚ ═ ═ ═ ═ ═ ═╝
+
+== border bold-dash ==
+┏ ━ ┓
+╻ x ╻
+┗ ━ ┛
+
+== border bold-dash wide label ==
+┏ ━ ━ ━ ━ ━ ━┓
+╻ xxxxxxxxxx ╻
+┗ ━ ━ ━ ━ ━ ━┛
+
+== border none ==
+
+ x
+
+== border none wide label ==
+
+ xxxxxxxxxx
+
+== edge solid ==
+┌───┐     ┌───┐
+│ a │ ──> │ b │
+└───┘     └───┘
+
+== edge solid arrowless ==
+┌───┐     ┌───┐
+│ a │ ─── │ b │
+└───┘     └───┘
+
+== edge double ==
+┌───┐     ┌───┐
+│ a │ ══> │ b │
+└───┘     └───┘
+
+== edge double arrowless ==
+┌───┐     ┌───┐
+│ a │ ═══ │ b │
+└───┘     └───┘
+
+== edge dotted ==
+┌───┐     ┌───┐
+│ a │ ··> │ b │
+└───┘     └───┘
+
+== edge dotted arrowless ==
+┌───┐     ┌───┐
+│ a │ ··· │ b │
+└───┘     └───┘
+
+== edge wave ==
+┌───┐     ┌───┐
+│ a │ ∼∼> │ b │
+└───┘     └───┘
+
+== edge wave arrowless ==
+┌───┐     ┌───┐
+│ a │ ∼∼∼ │ b │
+└───┘     └───┘
+
+== edge dashed ==
+┌───┐     ┌───┐
+│ a │ ╴╴> │ b │
+└───┘     └───┘
+
+== edge dashed arrowless ==
+┌───┐     ┌───┐
+│ a │ ╴╴╴ │ b │
+└───┘     └───┘
+
+== edge bold ==
+┌───┐     ┌───┐
+│ a │ ━━> │ b │
+└───┘     └───┘
+
+== edge bold arrowless ==
+┌───┐     ┌───┐
+│ a │ ━━━ │ b │
+└───┘     └───┘
+
+== edge dot-dash ==
+┌───┐     ┌───┐
+│ a │ ·-> │ b │
+└───┘     └───┘
+
+== edge dot-dash arrowless ==
+┌───┐     ┌───┐
+│ a │ -·- │ b │
+└───┘     └───┘
+
+== edge dot-dot-dash ==
+┌───┐      ┌───┐
+│ a │ ··-> │ b │
+└───┘      └───┘
+
+== edge dot-dot-dash arrowless ==
+┌───┐      ┌───┐
+│ a │ -··- │ b │
+└───┘      └───┘
+
+== edge double-dash ==
+┌───┐     ┌───┐
+│ a │ ═ > │ b │
+└───┘     └───┘
+
+== edge double-dash arrowless ==
+┌───┐     ┌───┐
+│ a │  ═  │ b │
+└───┘     └───┘
+
+== edge bold-dash ==
+┌───┐     ┌───┐
+│ a │ ━ > │ b │
+└───┘     └───┘
+
+== edge bold-dash arrowless ==
+┌───┐     ┌───┐
+│ a │  ━  │ b │
+└───┘     └───┘
+
+== junction: dashed border + solid edge ==
+┌−−−┐     ┌───┐
+╎ a ╎ ──> │ b │
+└−−−┘     └───┘
+
+== junction: bold border + solid edge ==
+┏━━━┓     ┌───┐
+┃ a ┃ ──> │ b │
+┗━━━┛     └───┘
+
+== junction: solid border + dashed edge ==
+┌───┐     ┌───┐
+│ a │ ╴╴> │ b │
+└───┘     └───┘
+
+== junction: solid border + double edge ==
+┌───┐     ┌───┐
+│ a │ ══> │ b │
+└───┘     └───┘
+
+== junction: mixed chain dashed->a->double->b->dotted->c ==
+┌───┐     ┌───┐     ┌───┐     ┌───┐
+│ x │ ╴╴> │ a │ ══> │ b │ ··> │ c │
+└───┘     └───┘     └───┘     └───┘
+
+== junction: bend (cycle) solid ==
+
+  ┌─────────┐
+  ∨         │
+┌───┐     ┌───┐
+│ a │ ──> │ b │
+└───┘     └───┘
+
+== junction: bend (cycle) mixed dashed/double ==
+
+  ╔═════════╗
+  ∨         ║
+┌───┐     ┌───┐
+│ a │ ╴╴> │ b │
+└───┘     └───┘
+
+== junction: crossing edges ==
+┌───┐     ┌───┐
+│ a │ ──> │ c │
+└───┘     └───┘
+┌───┐     ┌───┐
+│ b │ ──> │ d │
+└───┘     └───┘
+
+== shape box ==
+HANG-OR-ERROR: Error in attribute: 'box' is not a valid shape for a node at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 1299.
+== shape rounded ==
+╭───╮
+│ x │
+╰───╯
+
+== shape point ==
+
+  ★
+
+== shape circle ==
+┌───┐
+│ x │
+└───┘
+
+== shape ellipse ==
+┌───┐
+│ x │
+└───┘
+
+== shape diamond ==
+┌───┐
+│ x │
+└───┘
+
+== shape triangle ==
+┌───┐
+│ x │
+└───┘
+
+== shape pentagon ==
+┌───┐
+│ x │
+└───┘
+
+== shape hexagon ==
+┌───┐
+│ x │
+└───┘
+
+== shape octagon ==
+┌───┐
+│ x │
+└───┘
+
+== shape parallelogram ==
+┌───┐
+│ x │
+└───┘
+
+== shape house ==
+┌───┐
+│ x │
+└───┘
+
+== shape invisible ==
+
+
+== shape img ==
+┌───┐
+│ x │
+└───┘
+
+== shape rounded + border double ==
+ ═══
+║ x ║
+ ═══
+
+== shape rounded + border dotted ==
+╭⋯⋯⋯╮
+⋮ x ⋮
+╰⋯⋯⋯╯
+
+== shape rounded + border wave ==
+┌∼∼∼┐
+≀ x ≀
+└∼∼∼┘
+
+== shape rounded + border bold ==
+ ━━━
+┃ x ┃
+ ━━━
+
+== shape rounded + border dot-dot-dash ==
+╭·-·╮
+│ x │
+╰·-·╯
+
+== edge wide ==
+┌───┐     ┌───┐
+│ a │ ██> │ b │
+└───┘     └───┘
+
+== edge broad ==
+┌───┐     ┌───┐
+│ a │ ▬▬> │ b │
+└───┘     └───┘
+
+== edge wide arrowless ==
+┌───┐     ┌───┐
+│ a │ ███ │ b │
+└───┘     └───┘
+
+== bend (cycle) bold ==
+
+  ┏━━━━━━━━━┓
+  ∨         ┃
+┌───┐     ┌───┐
+│ a │ ━━> │ b │
+└───┘     └───┘
+
+== bend (cycle) dashed ==
+
+  ┌╴╴╴╴╴╴╴╴╴┐
+  ∨         ╵
+┌───┐     ┌───┐
+│ a │ ╴╴> │ b │
+└───┘     └───┘
+
+== bend (cycle) dot-dash ==
+
+  ┌-·-·-·-·-┐
+  ∨         !
+┌───┐     ┌───┐
+│ a │ ·-> │ b │
+└───┘     └───┘
+
+== bend (cycle) double-dash ==
+
+  ╔ ═ ═ ═ ═ ╗
+  ∨         ∥
+┌───┐     ┌───┐
+│ a │ ═ > │ b │
+└───┘     └───┘
+
+== bend (cycle) dot-dot-dash ==
+
+  ┌··-··-··-··┐
+  ∨           !
+┌────┐      ┌────┐
+│ a  │ ··-> │ b  │
+└────┘      └────┘
+
+== selfloop solid ==
+
+  ┌──┐
+  ∨  │
+┌──────┐
+│  a   │
+└──────┘
+
+== selfloop long label ==
+
+  ┌──────┐
+  ∨      │
+┌──────────┐
+│ abcdefgh │
+└──────────┘
+
+== selfloop arrowless ==
+
+  ┌──┐
+  │  │
+┌──────┐
+│  a   │
+└──────┘
+
+== selfloop double ==
+
+  ╔══╗
+  ∨  ║
+┌──────┐
+│  a   │
+└──────┘
+
+== selfloop dotted ==
+
+  ┌··┐
+  ∨  :
+┌⋯⋯⋯⋯⋯⋯┐
+⋮  a   ⋮
+└⋯⋯⋯⋯⋯⋯┘
+
+== labelled edge solid ==
+┌───┐  go   ┌───┐
+│ a │ ────> │ b │
+└───┘       └───┘
+
+== labelled edge dotted ==
+┌───┐  go   ┌───┐
+│ a │ ····> │ b │
+└───┘       └───┘
+
+== labelled edge dot-dot-dash ==
+┌───┐  go    ┌───┐
+│ a │ ··-··> │ b │
+└───┘        └───┘
+
+== arrowless bend (cycle) ==
+
+  ┌─────────┐
+  │         │
+┌───┐     ┌───┐
+│ a │ ─── │ b │
+└───┘     └───┘
+
+== bend arrows all four directions ==
+┌───┐     ┌───┐     ┌───┐     ┌───┐
+│ a │ ──> │ b │ ──> │ c │ ──> │ d │
+└───┘     └───┘     └───┘     └───┘
+
