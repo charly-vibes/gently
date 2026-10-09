@@ -6,4 +6,4 @@ superseded_by = ""
 authored_with = "0.9.3"
 
 [tests]
-cargo = [{flags = "scenarios::ge-txt_render::p1"}]
+cargo = [{flags = "scenarios::ge_txt_render::p1"}]

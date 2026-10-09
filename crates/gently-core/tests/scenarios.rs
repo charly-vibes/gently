@@ -339,3 +339,8 @@ mod tb {
 /// property row of specs/ge-graph_model.md.
 #[path = "scenarios/ge_graph_model.rs"]
 mod ge_graph_model;
+
+/// ge.txt_render (gently-3hv): the canonical txt serialization contract,
+/// one test per property row of specs/ge-txt_render.md.
+#[path = "scenarios/ge_txt_render.rs"]
+mod ge_txt_render;
