@@ -1,0 +1,4 @@
+ticket: gently-eyo
+branch: main
+brief_path: 
+steps:  - claim @ 87aced3b70d116bb1489a9521128b6aaf888fc64  - gates @ 87aced3b70d116bb1489a9521128b6aaf888fc64  - brief @ c556f5097e9a0df964d00c8d7d040947665085a6  - spawn @ c556f5097e9a0df964d00c8d7d040947665085a6

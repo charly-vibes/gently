@@ -7,3 +7,5 @@ steps:
   - brief @ bf7fbcef98d415f63bac3d22ebeec6808f9a948e
   - spawn @ bf7fbcef98d415f63bac3d22ebeec6808f9a948e
   - verify @ d0e995ef0aef4b23508efabc006fd7327cb01eb4
+  - ship @ 87aced3b70d116bb1489a9521128b6aaf888fc64
+  - stop @ 87aced3b70d116bb1489a9521128b6aaf888fc64
