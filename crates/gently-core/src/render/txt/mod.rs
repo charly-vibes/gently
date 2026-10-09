@@ -110,23 +110,24 @@ fn group_pass(graph: &Graph) -> String {
     let mut out = String::new();
     for &i in &groups {
         let group = &graph.groups[i];
-        out.push_str(&format!("( {} )", escape_group_name(&group.name)));
+        out.push_str(&group_line(&group.name));
         out.push_str(&instance_attributes(&group.attributes, ObjectKind::Group));
         out.push_str("\n\n");
     }
     out
 }
 
-/// Pass 4: edges as operator chains + isolated nodes, in (abs rank, name)
-/// order of their from-node (upstream's `sorted_nodes('rank','name')` pass).
-fn edge_pass(
-    graph: &Graph,
-    ranks: &[Option<isize>],
-    declared: &std::collections::HashSet<usize>,
-) -> String {
+
+/// Pass 4: edges as operator chains + isolated nodes, in upstream
+/// `(abs rank, name)` order of their from-node.
+fn edge_pass(graph: &Graph, ranks: &[isize], declared: &std::collections::HashSet<usize>) -> String {
+    // successor lists computed once, shared by ordering and emission
+    let succs: Vec<Vec<usize>> = (0..graph.nodes.len())
+        .map(|i| successors(graph, i))
+        .collect();
     let mut out = String::new();
     for &i in &ordered_nodes(graph, ranks) {
-        out.push_str(&node_pass(graph, i, declared));
+        out.push_str(&node_pass(graph, i, &succs, declared));
     }
     out
 }
@@ -134,17 +135,22 @@ fn edge_pass(
 /// One node's contribution to pass 4: an isolated bare line when the node
 /// has neither edges nor a declaration, then one chain line per outgoing
 /// edge in model order.
-fn node_pass(graph: &Graph, node: usize, declared: &std::collections::HashSet<usize>) -> String {
-    let succs = sorted_successors(graph, node);
+fn node_pass(
+    graph: &Graph,
+    node: usize,
+    succs: &[Vec<usize>],
+    declared: &std::collections::HashSet<usize>,
+) -> String {
+    let succ = sorted_successors(graph, &succs[node], succs);
     let mut out = String::new();
     let name = &graph.nodes[node].name;
-    if succs.is_empty() && !has_predecessors(graph, node) && !declared.contains(&node) {
+    if succ.is_empty() && !has_predecessors(graph, node) && !declared.contains(&node) {
         // a single node without any connection
         out.push_str(&node_line(name));
         out.push('\n');
     }
     let first = node_line(name);
-    for &other in &succs {
+    for &other in &succ {
         out.push_str(&edge_lines(graph, &first, node, other));
     }
     out
@@ -164,9 +170,9 @@ fn edge_lines(graph: &Graph, first: &str, from: usize, to: usize) -> String {
 
 /// The upstream operator mapping (Edge::_as_txt `$styles`) plus the
 /// arrowheads from the per-end arrow bits: `<` at the start end, `>` at
-/// the end, neither = undirected form (undirected styles with a trailing
-/// space double, exactly as upstream). Unknown styles keep `--` plus a
-/// visible `style:` attribute (upstream dies; gently renders).
+/// the end, neither = undirected form (trailing-space styles double).
+/// Unknown styles keep `--` plus a visible `style:` attribute (upstream
+/// dies; gently renders).
 fn edge_chain(edge: &crate::graph::Edge) -> String {
     let label = edge.attributes.get("label").unwrap_or("");
     let style = edge.attributes.get("style").unwrap_or("solid");
@@ -194,28 +200,21 @@ fn edge_chain(edge: &crate::graph::Edge) -> String {
     } else {
         format!("{operator} {label} ")
     };
+    // upstream: `$a = attributes_as_txt . ' '; $a =~ s/^\s//` — the
+    // leading brace-space becomes a trailing space
     let attrs = instance_attributes(&edge.attributes, ObjectKind::Edge);
-    // upstream: `$a = attributes_as_txt . ' '; $a =~ s/^\s//` — the leading
-    // brace-space becomes a trailing space
-    let attrs = if attrs.is_empty() {
-        String::new()
-    } else {
-        format!("{} ", attrs.trim_start())
-    };
-    format!("{left}{mid}{operator}{right}{attrs}")
+    let tail = if attrs.is_empty() { String::new() } else { format!("{} ", attrs.trim_start()) };
+    format!("{left}{mid}{operator}{right}{tail}")
 }
 
 /// `[ name ]` with the upstream name escaping (`[\]\|\{\}\#]`).
 fn node_line(name: &str) -> String {
-    format!("[ {} ]", escape_node_name(name))
+    format!("[ {} ]", escape_chars(name, &['[', ']', '|', '{', '}', '#']))
 }
 
-fn escape_node_name(name: &str) -> String {
-    escape_chars(name, &['[', ']', '|', '{', '}', '#'])
-}
-
-fn escape_group_name(name: &str) -> String {
-    escape_chars(name, &['[', ']', '(', ')', '{', '}', '#'])
+/// Group names escape the group specials (`[`, `]`, `(`, `)`, `{`, `}`, `#`).
+fn group_line(name: &str) -> String {
+    format!("( {} )", escape_chars(name, &['[', ']', '(', ')', '{', '}', '#']))
 }
 
 fn escape_chars(name: &str, specials: &[char]) -> String {
@@ -234,7 +233,7 @@ fn escape_chars(name: &str, specials: &[char]) -> String {
 /// per hop (-2, -3, …); mid-graph nodes are picked up from the `also`
 /// queue at rank -1. The todo list stays sorted ascending by rank with
 /// FIFO tie order (upstream Graph::Easy::Heap).
-fn assign_ranks(graph: &Graph) -> Vec<Option<isize>> {
+fn assign_ranks(graph: &Graph) -> Vec<isize> {
     let n = graph.nodes.len();
     let mut rank: Vec<Option<isize>> = vec![None; n];
     let mut todo: Vec<(isize, usize)> = Vec::new();
@@ -251,7 +250,9 @@ fn assign_ranks(graph: &Graph) -> Vec<Option<isize>> {
         propagate_ranks(graph, &mut todo, &mut rank);
         promote_from_also(&mut also, &mut todo, &mut rank);
     }
-    rank
+    // every node is ranked when both queues drain: propagation covers
+    // reachable nodes, promotion seeds the rest
+    rank.into_iter().map(|r| r.unwrap_or(-1)).collect()
 }
 
 /// Drain the todo list, deepening every unranked successor by one hop.
@@ -311,27 +312,26 @@ fn has_predecessors(graph: &Graph, node: usize) -> bool {
 }
 
 /// Upstream `sorted_successors`: successors with more successors first,
-/// ties by name.
-fn sorted_successors(graph: &Graph, node: usize) -> Vec<usize> {
-    let mut succs = successors(graph, node);
-    succs.sort_by(|x, y| {
-        successors(graph, *y)
+/// ties by name (counts from the precomputed successor matrix).
+fn sorted_successors(graph: &Graph, succ: &[usize], succs: &[Vec<usize>]) -> Vec<usize> {
+    let mut succ = succ.to_vec();
+    succ.sort_by(|x, y| {
+        succs[*y]
             .len()
-            .cmp(&successors(graph, *x).len())
+            .cmp(&succs[*x].len())
             .then(graph.nodes[*x].name.cmp(&graph.nodes[*y].name))
     });
-    succs
+    succ
 }
 
 /// The edge/isolated-node pass order (upstream `sorted_nodes('rank','name')`):
 /// ascending by absolute rank, ties by name.
-fn ordered_nodes(graph: &Graph, ranks: &[Option<isize>]) -> Vec<usize> {
+fn ordered_nodes(graph: &Graph, ranks: &[isize]) -> Vec<usize> {
     let mut order: Vec<usize> = (0..graph.nodes.len()).collect();
     order.sort_by(|x, y| {
         ranks[*x]
-            .unwrap_or(0)
             .abs()
-            .cmp(&ranks[*y].unwrap_or(0).abs())
+            .cmp(&ranks[*y].abs())
             .then(graph.nodes[*x].name.cmp(&graph.nodes[*y].name))
     });
     order

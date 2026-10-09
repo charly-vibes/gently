@@ -19,7 +19,8 @@ mod tb {
     ///   perl -IGraph-Easy-0.69/lib -MGraph::Easy \
     ///     -e 'my $g = Graph::Easy->new; $g->add_edge("a","b"); print $g->as_txt'
     ///   → "[ a ] --> [ b ]\n"
-    /// Deepened by gently-3hv (capability contracts p1–p4).
+    /// Deepened by gently-3hv: the full capability contracts (p1–p4) live
+    /// in `mod ge_txt_render` below; this smoke test pins the tracer bytes.
     mod txt_render {
         use gently_core::{graph::Graph, render::txt};
 
