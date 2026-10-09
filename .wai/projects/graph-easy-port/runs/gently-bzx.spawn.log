@@ -1,0 +1,22 @@
+**gently-bzx complete.** The full `ge.text_parser` capability is implemented, all gates green, three commits (red → green → refactor), nothing pushed, bead left open for the orchestrator.
+
+## Delivered
+
+- **`9a16b49` (RED)** — `tests/scenarios/ge_text_parser.rs`: one test per property id p1–p9, honestly failing; `Group.members` field + `Graph::set_node_group` on the model (compile-enabling surface for c6); honest updates to the two superseded tracer-era assertions (`[ ]` is now an anon node; labeled edges now round-trip in ge_txt_render p3).
+- **`e6060b5` (GREEN)** — `src/parse/text.rs` grew into `src/parse/text/{mod,clean,edge,attrs,node,tests}.rs` (each file/function within the pretender ratchet limits):
+  - c1/p1: token interning; bare `[ ]` → `#N` (odd counter 1,3,5), reusable via `[ \#N ]`
+  - c2/c9: the unit-token operator grammar as an ordered backtracking search replicating upstream's regex alternatives — directed + `<`-family, arrow-less branches, missing endpoints as errors
+  - c3/p3 chains, c4/p4 matching-flank labels, c5/p5 attr blocks + class sections, c6/p6 groups (colon names, move-on-redeclare, inner-only nesting, `Group #N`), c7/p7 comment truncation + `\#` + hex-after-separator, c8/p8 typed errors
+- **`eaf3bca` (REFACTOR)** — `.espectacular/ge-text_parser/p1–p9.toml` flags → real cargo paths (`ge_text_parser::pN`), `src/parse.rs` header refreshed.
+
+## Gates (all green at HEAD)
+
+`cargo test --workspace` (73 tests) · `cargo clippy -D warnings` · `spk lint specs/` · `ah check` (0 findings) · `ah check --run-tests` (**zero ge-text_parser findings** — backlog shrank by the nine) · `just gates` · pretender gate.
+
+## Findings recorded for the orchestrator (no spec rows amended)
+
+1. **Oracle observation on c9/p9, committed-evidence-consistent but worth knowing:** the oracle's anon/`_edge_style` rules are quirkier than the spec prose. Verified under the pinned oracle: directed edges follow the last unit ✓, but arrow-less styles come from `_edge_style`'s whole-pattern homogeneity regexes — including an **unescaped `(..-)+`** that matches *any two chars ending in `-`*, so `- -[ b ]` is dot-dot-dash and `== [ b ]` (trailing space absorbed as a `= ` unit) is solid while `==[ b ]` is double. My p9 pins these; the spec's "style follows the last unit token" reads true for directed patterns only.
+2. **Anon-node `#N` is the global object-id counter upstream** (saw `#0`, `#1`, `#3`, `#4` across multi-anon inputs — not always odd). The spec's odd-counter simplification matches all committed probe evidence; implemented as a dedicated odd counter. A left-edge anon (`[ ] --> [ a ]`) can yield `#0` upstream.
+3. **Attr-block targets:** a standalone `{ … }` targets the oracle's stack-top = last **node** or closed **group**, never an edge (upstream errors on node-invalid keys like `style`; my parser stores verbatim per the ge.graph_model contract); `{ … }` before any object is silently dropped upstream — replicated.
+4. **Deliberately unsupported (typed errors, follow-up candidates):** comma-separated node lists (`[ a ], [ b ] => [ c ]`), `|` autosplit, group-endpoint edges (`( G: [ a ] ) --> [ b ]` creates a group→node edge upstream), subclass class sections (`node.city { … }`), and the upstream `#+`→bold operator (unreachable post-comment-pass). All are outside c1–c9; none affect the txt_render round-trip.
+5. Minor: pretender logs a cosmetic "Parse errors detected in edge.rs" warning (its Rust parser choking on char-literal unions) while reporting all green.
