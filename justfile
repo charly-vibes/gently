@@ -44,6 +44,22 @@ oracle-record:
     [ -d "$FIX" ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2 (remediation: create it, see $FIX/README.md)"; exit 1; }
     perl tools/oracle.pl record "$FIX"
 
+# Tier-1 admission sweep (spec ge-oracle.c7/p7): recompute the per-fixture
+# hash-stability × envelope classification into tests/repro/admission.tsv.
+# Needs the pinned oracle on PERL5LIB (see tests/repro/README.md); the
+# runner itself types the remediation on a drifted environment.
+repro:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v perl >/dev/null || { echo "repro: perl not found — spec ge.oracle.c4 (remediation: install perl)"; exit 1; }
+    FIX=tests/fixtures/graph-easy
+    [ -d "$FIX" ] || { echo "repro: no fixture corpus at $FIX — spec ge.oracle.c2"; exit 1; }
+    perl tests/repro/probes.pl admit "$FIX"
+
+# List the claim probes and the beads each serves
+repro-claims:
+    perl tests/repro/probes.pl claims
+
 # Verify gently output byte-identically against recorded oracle outputs
 # (spec: ge.oracle.c3). Needs no perl: ascii goes through the built
 # gently binary, txt through the tb::oracle differential tests driving

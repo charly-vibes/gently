@@ -1,0 +1,7 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: node-unnamed
+node names: #1, #3, a, b
+node('#1'): FOUND
+node('#0'): undef
+as_txt:
+[ ] --> [ b ]
+[ a ] --> [ ]

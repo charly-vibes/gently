@@ -1,0 +1,9 @@
+# admission: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 perl=v5.44.0 seeds=4 seed-pin=UNPINNED envelope=10s
+chain	stable	0.006
+mixed_isolated	stable	0.007
+parallel	stable	0.010
+selfloop	stable	0.011
+tracer	stable	0.012
+txt-diamond	hash-dependent	0.008
+txt-isolated	stable	0.006
+txt-shared-target	stable	0.008

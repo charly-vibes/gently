@@ -1,0 +1,16 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: shape-outline-collapse
+shape=rect html-class=graph
+shape=rounded html-class=graph
+shape=ellipse html-class=graph
+shape=circle html-class=graph
+shape=diamond html-class=graph
+shape=hexagon html-class=graph
+shape=house html-class=graph
+shape=parallelogram html-class=graph
+shape=parallelogram_alt REJECTED
+shape=trapezoid REJECTED
+shape=trapezoid_alt REJECTED
+shape=triangle html-class=graph
+border-style=bold style=border: solid 4px #000000
+border-style=wide style=border: solid 1em #000000
+border-style=broad style=border: solid 0.5em #000000

@@ -1,0 +1,4 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: size-envelope
+nodes=50 edges=141: 0.597 s (30977 bytes)
+nodes=100 edges=291: 2.744 s (81197 bytes)
+nodes=200: ERROR: layout did not finish in time

@@ -1,0 +1,12 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: perl5lib-pin
+# claim probed: the pin chain — version+commit only, no Perl version,
+# no PERL_HASH_SEED, no PERL5LIB/source contract.
+perl: v5.44.0
+Graph::Easy version: 0.69 (pin: v0.69)
+loaded from: /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy.pm
+PERL_HASH_SEED: (unset — hash randomization is LIVE)
+commit verification: NOT POSSIBLE from an installed dist — the pin names
+  commit ededa3d787ad89ac532c578c06390e8a7b270499, but neither cpanm nor a backpan tarball exposes the
+  git commit; the tarball may or may not be byte-identical to that
+  commit. This is the open pin-contract question gently-ikm redesigns
+  (source checkout vs cpanm, commit verification mechanism).
