@@ -24,6 +24,15 @@ enum Dir {
 /// A point in char space: `(x, line)`.
 type Pt = (usize, usize);
 
+/// The polyline-drawing context for one edge: its routed cell path, the
+/// target cell it must reach, and its model index (for typed errors).
+struct Ctx<'a> {
+    path: &'a [Cell],
+    tc: usize,
+    tr: usize,
+    edge_index: usize,
+}
+
 /// Draw one bent or multi-band edge as a char polyline through its routed
 /// path cells.
 pub(super) fn draw(
@@ -35,46 +44,52 @@ pub(super) fn draw(
     tc: usize,
     tr: usize,
 ) -> Result<(), RenderError> {
-    let path = &layout.edge_paths[edge_index];
-    let Some(&first) = path.first() else {
+    let ctx = Ctx {
+        path: &layout.edge_paths[edge_index],
+        tc,
+        tr,
+        edge_index,
+    };
+    let Some(&first) = ctx.path.first() else {
         return Err(RenderError::unsupported(format!(
             "edge {edge_index} has an empty path"
         )));
     };
-    let last = *path.last().expect("path has a first cell");
-    let exit = exit_dir(first, sc, sr, edge_index)?;
-    let (entry, arrow) = entry_dir(last, tc, tr, edge_index)?;
+    let last = *ctx.path.last().expect("path has a first cell");
+    let exit = exit_dir(&ctx, first, sc, sr)?;
+    let (entry, arrow) = entry_dir(&ctx, last)?;
     let a0 = exit_attachment(canvas, exit, sc, sr, edge_index)?;
     let a_end = entry_attachment(canvas, entry, tc, tr, edge_index)?;
-    let waypoints = waypoints(canvas, path, exit, entry, a0, a_end, tc, tr, edge_index)?;
+    let waypoints = waypoints(canvas, &ctx, exit, entry, a0, a_end)?;
     draw_runs(canvas, &waypoints, a0, a_end, arrow);
     Ok(())
 }
 
 /// How the path leaves the source box, judged from the first path cell's
 /// position relative to the source cell.
-fn exit_dir(first: Cell, sc: usize, sr: usize, ei: usize) -> Result<Dir, RenderError> {
+fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderError> {
     if first.1 == sr {
         match first.0.cmp(&sc) {
             std::cmp::Ordering::Greater => Ok(Dir::East),
             std::cmp::Ordering::Less => Ok(Dir::West),
-            std::cmp::Ordering::Equal => Err(unsupported_side(ei, "leaves")),
+            std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "leaves")),
         }
     } else if first.0 == sc {
         Ok(if first.1 < sr { Dir::North } else { Dir::South })
     } else {
-        Err(unsupported_side(ei, "leaves"))
+        Err(unsupported_side(ctx, "leaves"))
     }
 }
 
 /// How the path arrives at the target box, and the matching arrowhead
 /// char, judged from the last path cell's position.
-fn entry_dir(last: Cell, tc: usize, tr: usize, ei: usize) -> Result<(Dir, char), RenderError> {
+fn entry_dir(ctx: &Ctx, last: Cell) -> Result<(Dir, char), RenderError> {
+    let (tc, tr) = (ctx.tc, ctx.tr);
     if last.1 == tr {
         match last.0.cmp(&tc) {
             std::cmp::Ordering::Less => Ok((Dir::East, '>')),
             std::cmp::Ordering::Greater => Ok((Dir::West, '<')),
-            std::cmp::Ordering::Equal => Err(unsupported_side(ei, "enters")),
+            std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "enters")),
         }
     } else if last.0 == tc {
         if last.1 < tr {
@@ -85,7 +100,7 @@ fn entry_dir(last: Cell, tc: usize, tr: usize, ei: usize) -> Result<(Dir, char),
             Ok((Dir::North, '^'))
         }
     } else {
-        Err(unsupported_side(ei, "enters"))
+        Err(unsupported_side(ctx, "enters"))
     }
 }
 
@@ -151,27 +166,23 @@ fn attachment(
 
 /// Walk the path, collecting waypoints: the source attachment, a corner
 /// wherever the run direction turns, and the target attachment.
-#[allow(clippy::too_many_arguments)]
 fn waypoints(
     canvas: &Canvas,
-    path: &[Cell],
+    ctx: &Ctx,
     exit: Dir,
     entry: Dir,
     a0: Pt,
     a_end: Pt,
-    tc: usize,
-    tr: usize,
-    ei: usize,
 ) -> Result<Vec<Pt>, RenderError> {
     let mut wps = vec![a0];
     let mut dir = exit;
-    for (i, &cell) in path.iter().enumerate() {
-        let next_dir = match path.get(i + 1) {
-            Some(&next) => dir_between(cell, next, ei)?,
+    for (i, &cell) in ctx.path.iter().enumerate() {
+        let next_dir = match ctx.path.get(i + 1) {
+            Some(&next) => dir_between(cell, next, ctx.edge_index)?,
             None => entry,
         };
         if next_dir != dir {
-            push_corner(canvas, &mut wps, dir, next_dir, path.get(i + 1).copied(), tc, tr, ei)?;
+            push_corner(canvas, ctx, &mut wps, dir, next_dir, ctx.path.get(i + 1).copied())?;
         }
         dir = next_dir;
     }
@@ -181,31 +192,29 @@ fn waypoints(
 
 /// Push the corner where a horizontal run on one line meets a vertical run
 /// on one column (or vice versa): their intersection point.
-#[allow(clippy::too_many_arguments)]
 fn push_corner(
     canvas: &Canvas,
+    ctx: &Ctx,
     wps: &mut Vec<Pt>,
     dir: Dir,
     next_dir: Dir,
     next_cell: Option<Cell>,
-    tc: usize,
-    tr: usize,
-    ei: usize,
 ) -> Result<(), RenderError> {
     let corner = match (dir, next_dir) {
         (Dir::East | Dir::West, Dir::North | Dir::South) => {
             // Vertical run's column: the next cell's, or the target's when
             // the turn happens at the last cell.
-            let col = next_cell.map_or(tc, |next| next.0);
+            let col = next_cell.map_or(ctx.tc, |next| next.0);
             (canvas.center(col), wps.last().expect("seeded").1)
         }
         (Dir::North | Dir::South, Dir::East | Dir::West) => {
-            let row = next_cell.map_or(tr, |next| next.1);
+            let row = next_cell.map_or(ctx.tr, |next| next.1);
             (wps.last().expect("seeded").0, canvas.mid(row))
         }
         _ => {
             return Err(RenderError::unsupported(format!(
-                "edge {ei} turns without changing axis"
+                "edge {} turns without changing axis",
+                ctx.edge_index
             )))
         }
     };
@@ -267,8 +276,9 @@ fn dir_between(p: Cell, q: Cell, ei: usize) -> Result<Dir, RenderError> {
     }
 }
 
-fn unsupported_side(ei: usize, verb: &str) -> RenderError {
+fn unsupported_side(ctx: &Ctx, verb: &str) -> RenderError {
     RenderError::unsupported(format!(
-        "edge {ei} {verb} its box through an unsupported side"
+        "edge {} {verb} its box through an unsupported side",
+        ctx.edge_index
     ))
 }
