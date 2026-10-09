@@ -2,7 +2,7 @@ run_id: epic-orchestrator-2026-10-09-gently-0cq
 pipeline: epic-orchestrator
 topic: gently-0cq
 created_at: '2026-10-09T19:43:46.246838832+00:00'
-current_step: 3
+current_step: 5
 approvals: {}
 epic: null
 child_issues: []

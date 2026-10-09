@@ -1,0 +1,43 @@
+All gates green, ticket closed, pushed. Report per the brief:
+
+## Report — gently-0cq: ge.ascii_render implementation
+
+### Commits (pushed to `origin/main`)
+| sha | message |
+|---|---|
+| `4ab4eba` | `test:` probe the ascii render tables against the pinned oracle (probes.pl + ascii-render-tables.observed) |
+| `35b3d93` | `feat:` implement ge.ascii_render — styles.rs/canvas.rs split, scenarios p1–p6 (12 files) |
+| `3d00ca0` | `chore:` subagent brief for the gently-0cq run (split out of the original brief commit 0e0f4ec, which had bundled probe+observed — history reworked pre-push to restore the brief's two-commit atomicity) |
+| `9f7de85` | `chore:` wai/whisper bookkeeping for the gently-0cq run |
+
+### Compile repair (all six errors fixed)
+- `mod.rs`: dropped duplicate `use crate::graph::Graph`, tidied mod/use block
+- `canvas.rs`: pruned `blank_corners`/`centered`/`mirror_run` from the `styles` use-line (they are local fns), imported `shape`, added `use super::polyline`, made `Canvas` + `grid`/`offsets`/`mid`/`center`/`new`/`draw_nodes`/`draw_edge`/`into_string` `pub(super)` (polyline is a sibling module)
+- clippy nit: `format!`-in-`format!` in `centered_point_row` collapsed to one `format!`
+
+### Pretender gate
+`Canvas::new` (was 62 lines / abc 30.03) split into free helpers: `selfloops`, `node_styles`, `edge_styles`, `column_geometry` — `pretender check --mode gate` exit 0, `canvas.rs — all green`.
+
+### Scenarios p1–p6
+All six green against the probed bytes (`.observed` file is binding): p1 12 border styles, p2 12 edge runs, p3 order-independence, p4 label cells + `---->` fill runs, p5 display-width (中 → 6-wide box, c5 letter rule; oracle's byte-length CJK divergence recorded for gently-dcp), p6 shapes incl. trimmed rounded bytes and collapsed vocabulary shapes. No expectations needed hand-ratcheting — the staged scenario bytes matched `.observed` exactly once the split compiled.
+
+### Gate results
+| gate | result |
+|---|---|
+| `cargo test --workspace` | exit 0 (57 + 34 + 4 tests, p1–p6 ok) |
+| `cargo clippy --workspace --all-targets -- -D warnings` | exit 0 |
+| `pretender check --mode gate` | exit 0 |
+| `ah check` | exit 0 |
+| `ah check --run-tests` | 35 passed incl. all 6 ge_ascii_render scenarios; 33 `no-tests-ran` findings are **pre-existing on baseline** (verified via worktree at HEAD: 39 before my change → 33 after) — all on future-ticket specs (cli p5–p8, boxart, dot_parser, graphviz, html, oracle, perf), out of scope per brief |
+| `just gates` | exit 0 |
+| `spk lint openspec` | exit 0, 0 findings |
+| `git status --short` | clean |
+| `git log origin/main..HEAD` | empty (pushed) |
+
+### Housekeeping
+- Resolved the unmerged brief file (stash-pop conflict from the orchestrator session) — took the upstream side (includes the pretender item).
+- Dropped the applied `0cq-wip-during-brief-commit` stash; kept `stash@{0}` (gently-0of insurance — not mine to judge).
+- Spec unchanged & already deployed (openspec copy is the proper Purpose/Requirements superset) — no spec-drift staging needed.
+
+### Follow-up beads filed
+None — no new oracle probe was needed, no scenario disagreed with the observed bytes.
