@@ -377,3 +377,9 @@ mod ge_layout;
 /// classification against the corpus (specs/ge-oracle.md p7).
 #[path = "scenarios/ge_oracle.rs"]
 mod ge_oracle;
+
+/// ge.boxart_render (gently-css): the Unicode boxart renderer — border
+/// styles, edge styles, junctions, shapes, one test per property row of
+/// specs/ge-boxart_render.md.
+#[path = "scenarios/ge_boxart_render.rs"]
+mod ge_boxart_render;

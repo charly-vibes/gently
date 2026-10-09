@@ -8,4 +8,5 @@
 //! second (ge-ascii_render).
 
 pub mod ascii;
+pub mod boxart;
 pub mod txt;
