@@ -16,10 +16,12 @@
 //! c2 (no node-cell overlap, grid containment) hold; the full property
 //! contracts stay with gently-4nx (ge.layout pN).
 
+mod flow;
 mod placement;
 
-use crate::graph::Graph;
-use placement::place;
+use crate::graph::{Graph, ObjectKind, Scope};
+use flow::Flow;
+use placement::arrange;
 
 /// A grid cell: `(column, row)` — column grows eastward, row southward.
 pub type Cell = (usize, usize);
@@ -76,11 +78,13 @@ struct Placement {
     bands: usize,
 }
 
-/// Assembled grid rows: which grid row each band occupies, which grid row
-/// (if any) is the gap above a band, and the total grid height.
+/// Assembled grid rows: which grid row each band occupies, the gap rows
+/// at each boundary (boundary `b` is the space above band `b`; boundary
+/// `bands` trails the last band — parallel bends and multi-channel
+/// routes take more than one), and the total grid height.
 struct Rows {
     row_of_band: Vec<usize>,
-    gap_above: Vec<Option<usize>>,
+    gap_rows: Vec<Vec<usize>>,
     height: usize,
 }
 
@@ -94,7 +98,8 @@ struct Rows {
 /// row above band 0, and a vertical edge reserves the gap row between its
 /// endpoint bands.
 pub fn layout(graph: &Graph) -> Layout {
-    let Some(placement) = place(graph) else {
+    let east = Flow::of(graph) == Flow::East;
+    let Some(placement) = arrange(graph, east) else {
         return Layout {
             node_cells: Vec::new(),
             edge_paths: Vec::new(),
@@ -115,21 +120,43 @@ pub fn layout(graph: &Graph) -> Layout {
         .collect();
     let width = 2 * placement.cell.iter().filter_map(|c| c.map(|p| p.0)).max().unwrap_or(0) + 1;
     let edge_paths = route_edges(graph, &placement, &node_cells, &rows);
-    Layout {
+    let labels = label_cells(graph, &edge_paths);
+    let grid = Layout {
         node_cells,
-        label_cells: edge_paths.iter().map(|_| None).collect(),
+        label_cells: labels,
         edge_paths,
         width,
         height: rows.height,
-    }
+    };
+    flow::realize(grid, Flow::of(graph))
 }
 
-/// Which gap slots (the gap row above band `k`; `k == bands` is the
-/// trailing gap below the last band) the edges need. Only edges that route
+/// The label cell of each edge: the middle cell of its routed path when
+/// the edge carries a `label` (per-edge attribute, falling back to the
+/// base edge class), `None` otherwise (ge.layout.c4). Paths are
+/// non-empty for every routed edge, so the middle cell always exists.
+fn label_cells(graph: &Graph, edge_paths: &[Vec<Cell>]) -> Vec<Option<Cell>> {
+    graph.edges.iter().enumerate().map(|(ei, _)| {
+        let labelled = graph.get_attr(Scope::Edge(ei), "label").is_some()
+            || graph
+                .get_attr(Scope::Class(ObjectKind::Edge, String::new()), "label")
+                .is_some();
+        if labelled {
+            let path = &edge_paths[ei];
+            Some(path[(path.len() - 1) / 2])
+        } else {
+            None
+        }
+    })
+    .collect()
+}
+
+/// How many gap rows each boundary needs (boundary `k` is the gap above
+/// band `k`; `k == bands` trails the last band). Only edges that route
 /// vertically or bend need one; a plain chain row stays gap-free (oracle:
-/// mixed_isolated).
-fn required_slots(graph: &Graph, placement: &Placement) -> Vec<bool> {
-    let mut slot = vec![false; placement.bands + 1];
+/// mixed_isolated). Parallel multi-edges take one gap per extra channel.
+fn required_slots(graph: &Graph, placement: &Placement) -> Vec<usize> {
+    let mut slot = vec![0usize; placement.bands + 1];
     for (ei, e) in graph.edges.iter().enumerate() {
         let pu = placement.cell[e.from].unwrap();
         let pv = placement.cell[e.to].unwrap();
@@ -138,50 +165,74 @@ fn required_slots(graph: &Graph, placement: &Placement) -> Vec<bool> {
     slot
 }
 
-/// Mark the gap slots one edge needs.
-fn mark_slot(slot: &mut [bool], route: Route, pu: Cell, pv: Cell) {
-    match route {
-        Route::Selfloop => slot[pu.1] = true,
-        Route::Parallel(prior) => {
-            let k = if prior % 2 == 1 { pu.1 } else { pu.1 + 1 };
-            slot[k] = true;
-        }
-        Route::Grew | Route::Around => {
-            let (b1, b2) = (pu.1.min(pv.1), pu.1.max(pv.1));
-            if b1 != b2 {
-                for mark in slot.iter_mut().take(b2 + 1).skip(b1 + 1) {
-                    *mark = true;
-                }
-            } else if pu.0.abs_diff(pv.0) != 1 {
-                // Same band but not adjacent ranks: bend above the band.
-                slot[pu.1] = true;
-            }
-        }
+/// Raise a boundary's gap count to `count` when lower.
+fn raise(slot: &mut [usize], boundary: usize, count: usize) {
+    if slot[boundary] < count {
+        slot[boundary] = count;
     }
 }
 
-/// Assemble the grid rows: gap rows exactly at the required slots, node
-/// bands everywhere else, in band order.
-fn assemble_rows(bands: usize, slots: &[bool]) -> Rows {
+/// Mark the gap slots one edge needs.
+fn mark_slot(slot: &mut [usize], route: Route, pu: Cell, pv: Cell) {
+    match route {
+        Route::Selfloop => raise(slot, pu.1, 1),
+        Route::Parallel(prior) => {
+            let (boundary, k) = parallel_channel(prior, pu.1);
+            raise(slot, boundary, k + 1);
+        }
+        Route::Grew | Route::Around => mark_travel(slot, pu, pv),
+    }
+}
+
+/// The boundary and 0-based gap index a parallel edge with `prior` prior
+/// edges on its pair travels: odd priors bend above the band (first,
+/// second, ... gap above), even priors below it — channels 1/2 keep the
+/// recorded two-parallel oracle shape (above, then below).
+fn parallel_channel(prior: usize, band: usize) -> (usize, usize) {
+    if prior % 2 == 1 {
+        (band, (prior - 1) / 2)
+    } else {
+        (band + 1, prior / 2 - 1)
+    }
+}
+
+/// Mark the gap slots one vertical or bending route needs.
+fn mark_travel(slot: &mut [usize], pu: Cell, pv: Cell) {
+    let (b1, b2) = (pu.1.min(pv.1), pu.1.max(pv.1));
+    if b1 != b2 {
+        for boundary in b1 + 1..=b2 {
+            raise(slot, boundary, 1);
+        }
+    } else if pu.0.abs_diff(pv.0) != 1 {
+        // Same band but not adjacent ranks: bend above the band.
+        raise(slot, pu.1, 1);
+    }
+}
+
+/// Assemble the grid rows: `count` gap rows at each required boundary,
+/// node bands everywhere else, in band order.
+fn assemble_rows(bands: usize, slots: &[usize]) -> Rows {
     let mut row_of_band = vec![0usize; bands];
-    let mut gap_above = vec![None; bands + 1];
+    let mut gap_rows: Vec<Vec<usize>> = vec![Vec::new(); bands + 1];
     let mut row = 0usize;
     for b in 0..bands {
-        if slots[b] {
-            gap_above[b] = Some(row);
-            row += 1;
-        }
+        push_gaps(&mut gap_rows[b], slots[b], &mut row);
         row_of_band[b] = row;
         row += 1;
     }
-    if slots[bands] {
-        gap_above[bands] = Some(row);
-        row += 1;
-    }
+    push_gaps(&mut gap_rows[bands], slots[bands], &mut row);
     Rows {
         row_of_band,
-        gap_above,
+        gap_rows,
         height: row,
+    }
+}
+
+/// Append `count` consecutive gap rows to one boundary's list.
+fn push_gaps(gaps: &mut Vec<usize>, count: usize, row: &mut usize) {
+    for _ in 0..count {
+        gaps.push(*row);
+        *row += 1;
     }
 }
 
@@ -233,25 +284,26 @@ fn edge_path(route: Route, su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) 
     }
 }
 
-/// One gap-row cell directly above the selfloop node.
+/// The first gap-row cell directly above the selfloop node.
 fn selfloop_path(su: Cell, gu: Cell, rows: &Rows) -> Vec<Cell> {
-    match rows.gap_above[su.1] {
+    match rows.gap_rows[su.1].first().copied() {
         Some(g) => vec![(gu.0, g)],
         None => Vec::new(),
     }
 }
 
-/// Band of a same-band bend's gap row: above the band for a first extra
-/// parallel edge (or any non-parallel bend), below it for the second.
+/// Band of a same-band bend's gap row: above the band for odd parallel
+/// channels (or any non-parallel bend), below it for even channels —
+/// each channel takes its own gap row.
 fn bend_gap_row(route: Route, band: usize, rows: &Rows, fallback: usize) -> usize {
-    let k = match route {
-        Route::Parallel(prior) if prior % 2 == 0 => band + 1,
-        _ => band,
+    let (boundary, k) = match route {
+        Route::Parallel(prior) => parallel_channel(prior, band),
+        _ => (band, 0),
     };
-    rows.gap_above
-        .get(k)
+    rows.gap_rows
+        .get(boundary)
+        .and_then(|v| v.get(k))
         .copied()
-        .flatten()
         .unwrap_or(fallback)
 }
 
@@ -286,7 +338,7 @@ fn multiband_path(su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) -> Vec<Ce
     path.extend(
         slots
             .into_iter()
-            .filter_map(|k| rows.gap_above[k].map(|g| (gv.0, g))),
+            .filter_map(|k| rows.gap_rows[k].first().map(|&g| (gv.0, g))),
     );
     path
 }

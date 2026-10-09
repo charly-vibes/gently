@@ -15,6 +15,93 @@ use std::collections::HashMap;
 use super::{Placement, Route};
 use crate::graph::Graph;
 
+/// Arrange the placement for the configured flow: the oracle-compatible
+/// insertion-order pipeline for the default east flow, the strictly-
+/// ranked layering for every other flow (whose outputs no tier-1 fixture
+/// pins). `None` for the empty graph.
+pub(super) fn arrange(graph: &Graph, east: bool) -> Option<Placement> {
+    if east {
+        place(graph)
+    } else {
+        Some(layered(graph))
+    }
+}
+
+/// The strictly-ranked layering (ge.layout.c3): rank = longest-path
+/// layer over the non-selfloop edges (cycle edges capped by the round
+/// bound — they route against the flow, as the probed oracle does),
+/// bands = first-seen order within each rank. Node indices order the
+/// bands, so the pass stays a pure function (ge.layout.c1).
+pub(super) fn layered(graph: &Graph) -> Placement {
+    let n = graph.nodes.len();
+    let ranks = rank_pass(graph);
+    let max_rank = ranks.iter().max().copied().unwrap_or(0);
+    let mut cell = vec![None; n];
+    let mut next_band = vec![0usize; max_rank + 1];
+    let mut bands = 0usize;
+    for (node, &rank) in ranks.iter().enumerate() {
+        let band = next_band[rank];
+        next_band[rank] = band + 1;
+        bands = bands.max(band + 1);
+        cell[node] = Some((rank, band));
+    }
+    let route = classify(graph, &cell);
+    Placement {
+        cell,
+        route,
+        bands,
+    }
+}
+
+/// Longest-path ranks over the non-selfloop edges: relax in model edge
+/// order for at most `n` rounds — a DAG converges strictly earlier, and
+/// cycle edges hit the round cap and simply stop inflating (deterministic
+/// pure function, ge.layout.c1).
+fn rank_pass(graph: &Graph) -> Vec<usize> {
+    let n = graph.nodes.len();
+    let mut rank = vec![0usize; n];
+    for _ in 0..n {
+        let mut changed = false;
+        for e in &graph.edges {
+            if e.from != e.to && rank[e.from] + 1 > rank[e.to] {
+                rank[e.to] = rank[e.from] + 1;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    rank
+}
+
+/// Classify every edge's travel over pre-assigned cells: self-loop,
+/// parallel bend (same band, prior edge on the pair), or grew (straight
+/// when the bands align, bend/multi-band otherwise — the routing pass
+/// decides by geometry).
+fn classify(graph: &Graph, cell: &[Option<(usize, usize)>]) -> Vec<Route> {
+    let mut pairs: HashMap<(usize, usize), usize> = HashMap::new();
+    graph
+        .edges
+        .iter()
+        .map(|e| {
+            let key = (e.from.min(e.to), e.from.max(e.to));
+            let prior = pairs.entry(key).or_insert(0);
+            let count = *prior;
+            *prior += 1;
+            let pu = cell[e.from].unwrap();
+            let pv = cell[e.to].unwrap();
+            if e.from == e.to {
+                Route::Selfloop
+            } else if count >= 1 && pu.1 == pv.1 {
+                Route::Parallel(count)
+            } else {
+                Route::Grew
+            }
+        })
+        .collect()
+}
+
 /// Place every node: one insertion-order pass over the edges, then the
 /// isolated nodes. `None` for the empty graph.
 pub(super) fn place(graph: &Graph) -> Option<Placement> {
