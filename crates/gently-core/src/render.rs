@@ -9,4 +9,5 @@
 
 pub mod ascii;
 pub mod boxart;
+pub mod html;
 pub mod txt;
