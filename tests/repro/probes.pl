@@ -118,6 +118,7 @@ my %SERVES = (
     'href-escaping'          => 'gently-dcp, gently-eyo (html_render c2)',
     'td-colspan'             => 'gently-dcp, gently-eyo (html_render c4)',
     'shape-outline-collapse' => 'gently-dcp, gently-css (ascii shapes; html border-styles)',
+    'ascii-render-tables'    => 'gently-0cq (ascii_render c1/c2/c5/c6)',
     'graphviz-round-trip'    => 'gently-0kg, gently-b4v (graphviz c2/c4, txt_render c3)',
     'size-envelope'          => 'gently-k4u (perf c2/c5)',
     'perl5lib-pin'           => 'gently-ikm, gently-liz (oracle pin contract)',
@@ -441,6 +442,41 @@ for my $n (50, 100, 200) {
   if ($@) { printf "nodes=%d: ERROR: %s", $n, $@; }
   else { printf "nodes=%d edges=%d: %.3f s (%d bytes)\n", scalar($g->nodes()), scalar($g->edges()), $t1 - $t0, length $art; }
 }
+PROBE
+
+    'ascii-render-tables' => <<'PROBE',
+# serves: gently-0cq (ascii_render c1/c2/c5/c6)
+# claim probed: the ASCII renderer's tables — node border styles, node
+# shapes, edge styles, and label wrapping/display-width, observed as
+# bytes. Multiline labels are alarm-bounded: upstream can hang on them.
+use Graph::Easy;
+use Graph::Easy::Parser;
+my $bound = 5;
+sub render {
+  my ($text) = @_;
+  my $out;
+  eval {
+    local $SIG{ALRM} = sub { die "alarm\n" };
+    alarm $bound;
+    my $g = Graph::Easy::Parser->new->from_text($text);
+    $out = $g->as_ascii();
+    alarm 0;
+  };
+  alarm 0;
+  return $@ ? "HANG-OR-ERROR: " . (split /\n/, $@)[0] : $out;
+}
+for my $style (qw(solid dotted dashed double wave bold wide broad dot-dash dot-dot-dash double-dash none)) {
+  print "== border $style ==\n", render("[ x ] { border: $style; }\n"), "\n";
+}
+for my $style (qw(solid double dotted wave dashed bold)) {
+  print "== edge $style ==\n", render("[ a ] --> { style: $style; } [ b ]\n"), "\n";
+  print "== edge $style arrowless ==\n", render("[ a ] -- { style: $style; } [ b ]\n"), "\n";
+}
+for my $shape (qw(box rounded point circle ellipse diamond triangle pentagon hexagon octagon parallelogram house invisible img)) {
+  print "== shape $shape ==\n", render("[ x ] { shape: $shape; }\n"), "\n";
+}
+print "== label long ==\n", render("[ this is a very long node label that must wrap somewhere ]\n"), "\n";
+print "== label wide glyph ==\n", render("[ \x{e4}\x{b8}\x{ad} ]\n"), "\n";
 PROBE
 
     'perl5lib-pin' => 'PROBE_PERL5LIB_PIN',

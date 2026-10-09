@@ -1,0 +1,194 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: ascii-render-tables
+== border solid ==
++---+
+| x |
++---+
+
+== border dotted ==
+.....
+: x :
+:...:
+
+== border dashed ==
++ - +
+' x '
++ - +
+
+== border double ==
+#===#
+H x H
+#===#
+
+== border wave ==
++~~~+
+{ x {
++~~~+
+
+== border bold ==
+#####
+# x #
+#####
+
+== border wide ==
+#####
+# x #
+#####
+
+== border broad ==
+#####
+# x #
+#####
+
+== border dot-dash ==
++-.-+
+! x !
++-.-+
+
+== border dot-dot-dash ==
++.-.+
+| x |
++.-.+
+
+== border double-dash ==
+# = #
+" x "
+# = #
+
+== border none ==
+
+ x
+
+== edge solid ==
++---+     +---+
+| a | --> | b |
++---+     +---+
+
+== edge solid arrowless ==
++---+     +---+
+| a | --- | b |
++---+     +---+
+
+== edge double ==
++---+     +---+
+| a | ==> | b |
++---+     +---+
+
+== edge double arrowless ==
++---+     +---+
+| a | === | b |
++---+     +---+
+
+== edge dotted ==
++---+     +---+
+| a | ..> | b |
++---+     +---+
+
+== edge dotted arrowless ==
++---+     +---+
+| a | ... | b |
++---+     +---+
+
+== edge wave ==
++---+     +---+
+| a | ~~> | b |
++---+     +---+
+
+== edge wave arrowless ==
++---+     +---+
+| a | ~~~ | b |
++---+     +---+
+
+== edge dashed ==
++---+     +---+
+| a | - > | b |
++---+     +---+
+
+== edge dashed arrowless ==
++---+     +---+
+| a |  -  | b |
++---+     +---+
+
+== edge bold ==
++---+     +---+
+| a | ##> | b |
++---+     +---+
+
+== edge bold arrowless ==
++---+     +---+
+| a | ### | b |
++---+     +---+
+
+== shape box ==
+HANG-OR-ERROR: Error in attribute: 'box' is not a valid shape for a node at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 1299.
+== shape rounded ==
+ ---
+| x |
+ ---
+
+== shape point ==
+
+  *
+
+== shape circle ==
++---+
+| x |
++---+
+
+== shape ellipse ==
++---+
+| x |
++---+
+
+== shape diamond ==
++---+
+| x |
++---+
+
+== shape triangle ==
++---+
+| x |
++---+
+
+== shape pentagon ==
++---+
+| x |
++---+
+
+== shape hexagon ==
++---+
+| x |
++---+
+
+== shape octagon ==
++---+
+| x |
++---+
+
+== shape parallelogram ==
++---+
+| x |
++---+
+
+== shape house ==
++---+
+| x |
++---+
+
+== shape invisible ==
+
+
+== shape img ==
++---+
+| x |
++---+
+
+== label long ==
++---------------------------------------------------------+
+| this is a very long node label that must wrap somewhere |
++---------------------------------------------------------+
+
+== label wide glyph ==
++-----+
+| 中 |
++-----+
+
