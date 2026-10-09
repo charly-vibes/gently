@@ -360,6 +360,11 @@ mod ge_txt_render;
 #[path = "scenarios/ge_text_parser.rs"]
 mod ge_text_parser;
 
+/// ge.layout (gently-4nx): the deterministic grid layout capability —
+/// one test per property row of specs/ge-layout.md.
+#[path = "scenarios/ge_layout.rs"]
+mod ge_layout;
+
 /// ge.oracle (gently-mwo): tier-1 admission enforcement — the repro-probe
 /// harness (`tests/repro/probes.pl admit`) classifies every corpus fixture
 /// by hash-stability × envelope, and this module machine-checks that

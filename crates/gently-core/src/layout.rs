@@ -36,6 +36,10 @@ pub struct Layout {
     /// Routed path of each edge — orthogonal, grid-connected, never
     /// entering a node cell — by edge index.
     pub edge_paths: Vec<Vec<Cell>>,
+    /// The label cell of each edge, by edge index — `Some(cell)` when the
+    /// edge carries a `label` (the cell the label is drawn on, always on
+    /// the edge's routed path), `None` otherwise. (ge.layout.c4.)
+    pub label_cells: Vec<Option<Cell>>,
     /// Grid extent: `width` columns.
     pub width: usize,
     /// Grid extent: `height` rows.
@@ -94,6 +98,7 @@ pub fn layout(graph: &Graph) -> Layout {
         return Layout {
             node_cells: Vec::new(),
             edge_paths: Vec::new(),
+            label_cells: Vec::new(),
             width: 0,
             height: 0,
         };
@@ -112,6 +117,7 @@ pub fn layout(graph: &Graph) -> Layout {
     let edge_paths = route_edges(graph, &placement, &node_cells, &rows);
     Layout {
         node_cells,
+        label_cells: edge_paths.iter().map(|_| None).collect(),
         edge_paths,
         width,
         height: rows.height,
