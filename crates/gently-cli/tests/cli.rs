@@ -1,10 +1,15 @@
 //! Integration tests for the `gently` binary — the end-to-end tracer
 //! pipeline (epic gently-2po, tb.cli / gently-2po.9).
 //!
-//! Binding constraints: `specs/cli.md` c3 (rendered output to stdout,
-//! diagnostics to stderr, exit 0 on success / nonzero on parse or render
-//! errors) and c4 (unknown format → diagnostic naming the requested and
-//! valid formats, exit 2). The ascii oracle is pinned from Graph::Easy
+//! Binding constraints: `specs/cli.md` c3 (rendered output to stdout or the
+//! `--output` file, diagnostics to stderr, exit 0 on success / nonzero on
+//! parse or render errors) and c4 (unknown format → diagnostic naming the
+//! requested and valid formats, exit 255 — bug-for-bug with the upstream
+//! script's uncaught `die`, re-derived under the ge.oracle.c7 scope
+//! contract, gently-ghh). Flag roles follow upstream bin/graph-easy v0.69:
+//! `--as <fmt>` selects the format, `--output <file>` names the output
+//! file, positionals are `[inputfile [outputfile]]`, extras are ignored
+//! (cli.c1/c2, gently-0h9). The ascii oracle is pinned from Graph::Easy
 //! v0.69 @ ededa3d7 (`add_edge("a","b"); as_ascii`).
 //!
 //! Deepened by gently-ef5 (--json envelope, verbosity surface, init/doctor)
@@ -72,17 +77,67 @@ fn tracer_end_to_end_ascii_matches_oracle() {
     let _ = std::fs::remove_file(&path);
 }
 
-/// cli.c4: an unknown output format exits 2 with a diagnostic on stderr
+/// cli.c4: an unknown output format exits 255 with a diagnostic on stderr
 /// naming both the requested format and the valid formats; stdout stays
-/// empty (cli.c3: diagnostics go to stderr).
+/// empty (cli.c3: diagnostics go to stderr). Exit 255 is bug-for-bug with
+/// the upstream script, whose unknown `--as` dies calling the missing
+/// `as_<fmt>` method (re-derived against upstream v0.69, gently-0h9).
 #[test]
-fn unknown_format_exits_2_naming_formats() {
-    let r = run_gently(&["--format", "html"], b"[ a ] --> [ b ]\n");
-    assert_eq!(Some(2), r.code, "unknown format must exit 2");
+fn unknown_format_exits_255_naming_formats() {
+    let r = run_gently(&["--as", "html"], b"[ a ] --> [ b ]\n");
+    assert_eq!(Some(255), r.code, "unknown format must exit 255");
     assert!(r.stdout.is_empty(), "diagnostics must not touch stdout");
     let err = String::from_utf8_lossy(&r.stderr);
     assert!(err.contains("html"), "diagnostic must name the requested format: {err}");
     assert!(err.contains("ascii"), "diagnostic must name the valid formats: {err}");
+}
+
+/// cli.c2: `--as` selects the renderer; `--output` names the output file
+/// and receives the rendered bytes (upstream bug-for-bug, gently-0h9).
+#[test]
+fn output_flag_writes_rendered_bytes_to_file() {
+    let dir = std::env::temp_dir().join(format!("gently-out-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let input = dir.join("in.txt");
+    let out = dir.join("out");
+    std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture");
+    let r = run_gently(
+        &["--as", "ascii", "--output", out.to_str().unwrap(), input.to_str().unwrap()],
+        b"",
+    );
+    assert_eq!(Some(0), r.code, "file output must exit 0");
+    assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
+    assert_eq!(ORACLE, std::fs::read(&out).expect("read output file").as_slice());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// cli.c1/c2: a second positional argument names the output file (upstream
+/// `graph-easy [options] [inputfile [outputfile]]`), and format defaults to
+/// ascii when neither `--as` nor a mapped extension applies (gently-0h9).
+#[test]
+fn second_positional_is_output_file() {
+    let dir = std::env::temp_dir().join(format!("gently-pos-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let input = dir.join("in.txt");
+    let out = dir.join("out");
+    std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture");
+    let r = run_gently(&[input.to_str().unwrap(), out.to_str().unwrap()], b"");
+    assert_eq!(Some(0), r.code, "positional output must exit 0");
+    assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
+    assert_eq!(ORACLE, std::fs::read(&out).expect("read output file").as_slice());
+
+    // cli.c1 bug-for-bug: positional arguments beyond input+output are
+    // silently ignored by the upstream script.
+    let extra = dir.join("extra.txt");
+    std::fs::write(&extra, b"garbage that must be ignored\n").expect("write extra");
+    let out2 = dir.join("out2");
+    let r = run_gently(
+        &[input.to_str().unwrap(), out2.to_str().unwrap(), extra.to_str().unwrap()],
+        b"",
+    );
+    assert_eq!(Some(0), r.code, "extra positionals are ignored, not parsed");
+    assert_eq!(ORACLE, std::fs::read(&out2).expect("read output file").as_slice());
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 /// cli.c3: unparseable input fails with a nonzero exit and a diagnostic on
