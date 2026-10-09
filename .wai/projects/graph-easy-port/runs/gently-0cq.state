@@ -1,0 +1,8 @@
+ticket: gently-0cq
+branch: main
+brief_path: .wai/projects/graph-easy-port/briefs/gently-0cq.md
+steps:
+  - claim @ 150759f5789df4796467b9641acdbf038b14f090
+  - gates @ 150759f5789df4796467b9641acdbf038b14f090
+  - brief @ 0e0f4ec657a940671fb4897110c8dfd03c64e449
+  - spawn @ 0e0f4ec657a940671fb4897110c8dfd03c64e449
