@@ -111,8 +111,9 @@ pub(super) fn edge_fill(style: &str) -> String {
 
 /// Display width of `s`: double-width glyphs (East Asian Wide/Fullwidth)
 /// count two columns, everything else one — alignment never follows byte
-/// length (ge.ascii_render.c5; probed: 中 renders a 5-wide box).
-pub(super) fn display_width(s: &str) -> usize {
+/// length (ge.ascii_render.c5; probed: 中 renders a 5-wide box). Shared
+/// with the boxart renderer, whose boxes and labels follow the same rule.
+pub(in crate::render) fn display_width(s: &str) -> usize {
     s.chars().map(|c| if is_wide(c) { 2 } else { 1 }).sum()
 }
 

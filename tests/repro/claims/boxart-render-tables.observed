@@ -420,6 +420,44 @@ HANG-OR-ERROR: Error in attribute: 'box' is not a valid shape for a node at /var
 │ a  │ ··-> │ b  │
 └────┘      └────┘
 
+== westward solid ==
+HANG-OR-ERROR: ' <-- [ a ]' not recognized by Graph::Easy::Parser at (eval 10) line 11.
+== westward solid arrowless ==
+┌───┐     ┌───┐
+│ b │ ─── │ a │
+└───┘     └───┘
+
+== westward double ==
+HANG-OR-ERROR: ' <= { style: double; } [ a ]' not recognized by Graph::Easy::Parser at (eval 10) line 11.
+== westward dot-dash ==
+HANG-OR-ERROR: ' <-- { style: dot-dash; } [ a ]' not recognized by Graph::Easy::Parser at (eval 10) line 11.
+== westward dot-dot-dash ==
+HANG-OR-ERROR: ' <-- { style: dot-dot-dash; } [ a ]' not recognized by Graph::Easy::Parser at (eval 10) line 11.
+== westward labelled ==
+HANG-OR-ERROR: ' <-- { label: go; } [ a ]' not recognized by Graph::Easy::Parser at (eval 10) line 11.
+== bidi solid ==
+┌───┐      ┌───┐
+│ a │ <──> │ b │
+└───┘      └───┘
+
+== bidi double ==
+┌───┐      ┌───┐
+│ a │ <══> │ b │
+└───┘      └───┘
+
+== junction: none border + edge ==
+        ┌───┐
+ a  ──> │ b │
+        └───┘
+
+== junction: none border + bend ==
+
+  ┌─────────┐
+  ∨         │
+          ┌───┐
+  a   ──> │ b │
+          └───┘
+
 == selfloop solid ==
 
   ┌──┐

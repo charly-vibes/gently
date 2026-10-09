@@ -14,6 +14,8 @@ mod canvas;
 mod polyline;
 mod styles;
 
+pub(in crate::render) use styles::display_width;
+
 use canvas::Canvas;
 use crate::graph::Graph;
 use crate::layout::Layout;

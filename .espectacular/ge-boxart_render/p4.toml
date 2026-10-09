@@ -6,4 +6,4 @@ superseded_by = ""
 authored_with = "0.9.3"
 
 [tests]
-cargo = [{flags = "scenarios::ge-boxart_render::p4"}]
+cargo = [{flags = "ge_boxart_render::p4"}]

@@ -536,6 +536,16 @@ print "== bend (cycle) dashed ==\n", render("[ a ] --> { style: dashed; } [ b ] 
 print "== bend (cycle) dot-dash ==\n", render("[ a ] --> { style: dot-dash; } [ b ] --> { style: dot-dash; } [ a ]\n"), "\n";
 print "== bend (cycle) double-dash ==\n", render("[ a ] --> { style: double-dash; } [ b ] --> { style: double-dash; } [ a ]\n"), "\n";
 print "== bend (cycle) dot-dot-dash ==\n", render("[ a ] --> { style: dot-dot-dash; } [ b ] --> { style: dot-dot-dash; } [ a ]\n"), "\n";
+print "== westward solid ==\n", render("[ b ] <-- [ a ]\n"), "\n";
+print "== westward solid arrowless ==\n", render("[ b ] -- [ a ]\n"), "\n";
+print "== westward double ==\n", render("[ b ] <= { style: double; } [ a ]\n"), "\n";
+print "== westward dot-dash ==\n", render("[ b ] <-- { style: dot-dash; } [ a ]\n"), "\n";
+print "== westward dot-dot-dash ==\n", render("[ b ] <-- { style: dot-dot-dash; } [ a ]\n"), "\n";
+print "== westward labelled ==\n", render("[ b ] <-- { label: go; } [ a ]\n"), "\n";
+print "== bidi solid ==\n", render("[ a ] <-> [ b ]\n"), "\n";
+print "== bidi double ==\n", render("[ a ] <=> { style: double; } [ b ]\n"), "\n";
+print "== junction: none border + edge ==\n", render("[ a ] { border: none; } --> [ b ]\n"), "\n";
+print "== junction: none border + bend ==\n", render("[ a ] { border: none; } --> [ b ] --> [ a ]\n"), "\n";
 print "== selfloop solid ==\n", render("[ a ] --> [ a ]\n"), "\n";
 print "== selfloop long label ==\n", render("[ abcdefgh ] --> [ abcdefgh ]\n"), "\n";
 print "== selfloop arrowless ==\n", render("[ a ] -- [ a ]\n"), "\n";
