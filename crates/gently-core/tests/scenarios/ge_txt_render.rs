@@ -101,30 +101,62 @@ fn p2() {
     assert_eq!(out, expected);
 }
 
-/// Model equality for the round-trip (c3): the same node-name set and the
-/// same edge multiset (by endpoint names). This is the model-equality
-/// predicate for the parser-supported feature subset (see the documented
-/// deviation in p3).
+/// Model equality for the round-trip (c3): the same node-name set with
+/// equal attribute tables and the same edge multiset keyed by endpoint
+/// names, direction and per-end arrows with equal attribute tables — the
+/// model-equality predicate for the parser-supported feature subset (see
+/// the documented deviation in p3).
 fn model_equivalent(a: &Graph, b: &Graph) -> bool {
-    fn names(g: &Graph) -> Vec<&str> {
-        let mut v: Vec<&str> = g.nodes.iter().map(|n| n.name.as_str()).collect();
+    let node_names = |g: &Graph| -> Vec<String> {
+        let mut v: Vec<String> = g.nodes.iter().map(|n| n.name.clone()).collect();
         v.sort();
         v
-    }
-    fn edges(g: &Graph) -> Vec<(&str, &str)> {
-        let mut v: Vec<(&str, &str)> = g
+    };
+    let node_attrs =
+        |g: &Graph| -> Vec<(String, gently_core::graph::AttributeTable)> {
+            let mut v: Vec<_> = g
+                .nodes
+                .iter()
+                .map(|n| (n.name.clone(), n.attributes.clone()))
+                .collect();
+            v.sort_by(|x, y| x.0.cmp(&y.0));
+            v
+        };
+    let edge_keys = |g: &Graph| -> Vec<(String, String, bool, bool, bool)> {
+        let mut v: Vec<_> = g
             .edges
             .iter()
-            .map(|e| (g.nodes[e.from].name.as_str(), g.nodes[e.to].name.as_str()))
+            .map(|e| {
+                (
+                    g.nodes[e.from].name.clone(),
+                    g.nodes[e.to].name.clone(),
+                    e.directed,
+                    e.arrows.start,
+                    e.arrows.end,
+                )
+            })
             .collect();
         v.sort();
         v
-    }
-    names(a) == names(b) && edges(a) == edges(b)
+    };
+    node_names(a) == node_names(b)
+        && node_attrs(a) == node_attrs(b)
+        && edge_keys(a) == edge_keys(b)
+        && a.attributes == b.attributes
+        && a.class_attributes == b.class_attributes
+        && a.groups == b.groups
 }
 
 /// The round-trip sources: shapes within the parser-supported feature set.
 fn round_trip_sources() -> Vec<Graph> {
+    let mut sources = connected_shapes();
+    sources.push(diamond_shape());
+    sources
+}
+
+/// Chain-derived shapes: a chain, an isolated node appended, parallel
+/// duplicate edges, a self-loop, and a two-node cycle.
+fn connected_shapes() -> Vec<Graph> {
     let mut chain = Graph::default();
     let a = chain.add_node("a");
     let b = chain.add_node("b");
@@ -150,14 +182,21 @@ fn round_trip_sources() -> Vec<Graph> {
     cycle.add_edge(a, b, true);
     cycle.add_edge(b, a, true);
 
-    vec![
-        Graph::tracer(),
-        chain,
-        mixed,
-        parallel,
-        looped,
-        cycle,
-    ]
+    vec![Graph::tracer(), chain, mixed, parallel, looped, cycle]
+}
+
+/// A diamond: two parallel branches merging into one target.
+fn diamond_shape() -> Graph {
+    let mut diamond = Graph::default();
+    let a = diamond.add_node("a");
+    let b = diamond.add_node("b");
+    let c = diamond.add_node("c");
+    let d = diamond.add_node("d");
+    diamond.add_edge(a, b, true);
+    diamond.add_edge(a, c, true);
+    diamond.add_edge(b, d, true);
+    diamond.add_edge(c, d, true);
+    diamond
 }
 
 /// ge.txt_render.p3 (c3): parsing the emitted text with ge.text_parser
@@ -178,22 +217,19 @@ fn p3() {
     labels_do_not_survive_the_supported_subset();
 }
 
-/// Labels ride along verbatim on the emitted edge; on the
-/// parser-supported subset the re-parsed model keeps the edge but not the
-/// label (documented deviation — the binding parser contract is
-/// ge.text_parser's, not this spec's).
+/// Labels render in the upstream form (`-- go -->`); the parser-supported
+/// subset cannot read that form back yet (documented deviation — the
+/// binding parser contract is ge.text_parser's, not this spec's).
 fn labels_do_not_survive_the_supported_subset() {
     let mut g = Graph::default();
     let e = chain_edge(&mut g, "a", "b", true);
     g.set_attr(Scope::Edge(e), "label", "go");
     let txt = txt::render(&g);
     assert_eq!(txt, "[ a ] -- go --> [ b ]\n");
-    let back = text::parse(&txt).expect("re-parse");
-    assert_eq!(back.edges.len(), 1);
-    assert_eq!(
-        back.get_attr(Scope::Edge(0), "label"),
-        None,
-        "the parser-supported subset does not carry edge labels (documented deviation)"
+    assert!(
+        text::parse(&txt).is_err(),
+        "the parser-supported subset does not carry edge labels (documented \
+         deviation)"
     );
 }
 
@@ -226,6 +262,10 @@ fn p4() {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/graph-easy")
     }
 
+    /// The pinned oracle (ge.txt_render.c4): every recorded companion
+    /// names exactly this revision in its header.
+    const PIN: &str = "Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499";
+
     let mut names: Vec<String> = std::fs::read_dir(fixture_dir())
         .expect("fixture dir")
         .map(|e| e.expect("dir entry").file_name().to_string_lossy().into_owned())
@@ -238,6 +278,19 @@ fn p4() {
         let companion = fixture_dir().join(format!("{name}.expected"));
         let expected = std::fs::read(&companion)
             .unwrap_or_else(|e| panic!("missing recorded companion {}: {e}", companion.display()));
+        // the pin header is recorder metadata: verify it names the pinned
+        // revision, then strip it before the byte-identical comparison
+        let header = std::str::from_utf8(&expected)
+            .expect("companion must be utf-8")
+            .lines()
+            .next()
+            .unwrap_or("")
+            .to_string();
+        assert_eq!(
+            header,
+            format!("# oracle: {PIN}"),
+            "{name}.expected must carry the pinned-revision header (ge.txt_render.c4)"
+        );
         let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
             .unwrap_or_else(|e| panic!("fixture {name} must parse: {e}"));
         let got = txt::render(&g);

@@ -40,6 +40,19 @@ impl AttributeTable {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+
+    /// All `(key, value)` entries sorted by key (keys are unique — last-set
+    /// wins — so the order is total). Consumers that must emit attributes in
+    /// sorted order (the txt renderer) read through this view.
+    pub fn sorted_entries(&self) -> Vec<(&str, &str)> {
+        let mut v: Vec<(&str, &str)> = self
+            .entries
+            .iter()
+            .map(|(k, val)| (k.as_str(), val.as_str()))
+            .collect();
+        v.sort_unstable_by(|x, y| x.0.cmp(y.0));
+        v
+    }
 }
 
 /// Overwrite or append `(key, value)` preserving first-seen position.
