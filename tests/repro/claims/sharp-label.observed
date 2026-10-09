@@ -1,0 +1,15 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: sharp-label
+ERR  [[ a ] { label: x # y; } --> [ b ]]
+     ' { label: x' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+OK   [[ a ] { label: x \# y; } --> [ b ]]
+     as_txt: [ a ] { label: x # y; } |  | [ a ] --> [ b ]
+ERR  [[ a ] { label: "x # y"; } --> [ b ]]
+     ' { label: "x' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+OK   [[ a ] { label: "x \# y"; } --> [ b ]]
+     as_txt: [ a ] { label: x # y; } |  | [ a ] --> [ b ]
+OK   [[ a ] { color: #ff0000; } --> [ b ]]
+     as_txt: [ a ] { color: #ff0000; } |  | [ a ] --> [ b ]
+OK   [[ a ] { color: #f00; } --> [ b ]]
+     as_txt: [ a ] { color: #f00; } |  | [ a ] --> [ b ]
+ERR  [[ a ] { color: red #ff0000; } --> [ b ]]
+     ' { color: red' not recognized by Graph::Easy::Parser at (eval 9) line 12.

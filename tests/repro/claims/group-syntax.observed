@@ -1,0 +1,17 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: group-syntax
+OK   [( G: [ a ] --> [ b ] )]
+     as_txt: ( G: |   [ a ] |   [ b ] | ) |  | [ a ] --> [ b ]
+     groups: G:=[b,a]
+OK   [( A: [ a ] )]
+     as_txt: ( A: |   [ a ] | )
+     groups: A:=[a]
+OK   [( A: [ a ] )
+( B: [ a ] )]
+     as_txt: ( A: ) |  | ( B: |   [ a ] | )
+     groups: A:=[];B:=[a]
+OK   [( A [ a ] ( B: [ b ] ) [ c ] )]
+     as_txt: ( A |   [ a ] |   [ c ] | ) |  | ( B: |   [ b ] | ) { group: A; }
+     groups: A=[c,a];B:=[b]
+OK   [( [ a ] ) --> [ b ]]
+     as_txt: ( |   [ a ] | )
+     groups: Group #0=[a]

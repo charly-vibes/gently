@@ -107,6 +107,10 @@ EOF
 # probe -> beads served (the claims listing reads this)
 my %SERVES = (
     'sharp-escape'           => 'gently-6j0, gently-bzx (text_parser c7)',
+    'sharp-label'            => 'gently-6j0, gently-bzx (text_parser c7)',
+    'operator-patterns'      => 'gently-6j0, gently-bzx (text_parser c9, c2)',
+    'group-syntax'           => 'gently-6j0, gently-bzx (text_parser c6)',
+    'anon-reference'         => 'gently-6j0, gently-bzx (text_parser c1)',
     'layout-flow-direction'  => 'gently-89d (layout c3)',
     'subgraph-handling'      => 'gently-13f (dot_parser c3)',
     'cli-flags'              => 'gently-0h9 (closed — kept as upstream evidence)',
@@ -132,6 +136,121 @@ $g->add_edge('#a', 'b');
 print "as_txt:\n", $g->as_txt();
 my $rt = Graph::Easy::Parser->new->from_text($g->as_txt());
 print "round-trip node('#a'): ", (defined $rt->node('#a') ? 'found' : 'LOST'), "\n";
+PROBE
+
+    'sharp-label' => <<'PROBE',
+# serves: gently-6j0, gently-bzx (text_parser c7)
+# claim probed: c7 — the in-string sharp rule and the hex-colour special case.
+# Observed: an UNescaped in-string '#' truncates the line at the '#' (it
+# acts as a comment to end-of-line) even inside QUOTED attribute values —
+# '{ label: x # y }' is a parse error. '\#' escapes it and the value
+# round-trips back to '#'. Special case: a 3- or 6-digit hex colour token
+# immediately after the attribute separator is AUTO-ESCAPED by the oracle
+# and accepted; the same token NOT after a separator acts as a comment.
+use Graph::Easy::Parser;
+my @cases = (
+  '[ a ] { label: x # y; } --> [ b ]',
+  '[ a ] { label: x \# y; } --> [ b ]',
+  '[ a ] { label: "x # y"; } --> [ b ]',
+  '[ a ] { label: "x \# y"; } --> [ b ]',
+  '[ a ] { color: #ff0000; } --> [ b ]',
+  '[ a ] { color: #f00; } --> [ b ]',
+  '[ a ] { color: red #ff0000; } --> [ b ]',
+);
+for my $c (@cases) {
+  my $g = eval { Graph::Easy::Parser->new->from_text($c) };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$c]\n     $m\n"; next; }
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$c]\n     as_txt: $txt\n";
+}
+PROBE
+
+    'operator-patterns' => <<'PROBE',
+# serves: gently-6j0, gently-bzx (text_parser c9, c2)
+# claim probed: c9 — the repetition/arrow-less rules; c2 — bidirectional
+# operators and the no-left-only-edges rule.
+# Observed: a directed pattern is ONE OR MORE unit tokens (each of '= ',
+# '=', '- ', '-', '..-', '.-', '.', '~') followed by '>', and the STYLE is
+# determined solely by the LAST unit — mixed repetitions are accepted, so
+# '..-..-..>' is a VALID dotted edge (the upstream POD's claim that the
+# whole pattern must be repeated is contradicted by the oracle itself).
+# Arrow-less: '.-' and '..-' are valid with a SINGLE repetition (dot-dash,
+# dot-dot-dash); the plain units need at least TWO repetitions ('.' and
+# '=' are errors with one). Bidirectional: a '<' prefix before any
+# directed pattern ('<->' renders '<-->', '<= >' stays '<= >'); a lone
+# left arrow without the closing '>' is a parse error, and an operator
+# with a node missing on either side is a parse error.
+use Graph::Easy::Parser;
+my @wrapped = (   # wrapped as '[ a ] X [ b ]'
+  '..-..-..>', '..-..-..->', '.-..-..>', '.--->', '--.>',
+  '.', '..', '=', '==', '= =', '-', '- -', '---', '.-', '.-.-', '..-', '~', '~~',
+  '<->', '<=>', '<.>', '<~>', '<= >', '<- >', '<.->', '<..->', '<--',
+);
+my @lines = (     # used verbatim (missing-endpoint cases)
+  '--> [ b ]', '[ a ] -->',
+);
+for my $c (@wrapped) {
+  my $text = "[ a ] $c [ b ]\n";
+  my $g = eval { Graph::Easy::Parser->new->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$c]  $m\n"; next; }
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$c]  as_txt: $txt\n";
+}
+for my $c (@lines) {
+  my $g = eval { Graph::Easy::Parser->new->from_text("$c\n") };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$c]  $m\n"; next; }
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$c]  as_txt: $txt\n";
+}
+PROBE
+
+    'group-syntax' => <<'PROBE',
+# serves: gently-6j0, gently-bzx (text_parser c6)
+# claim probed: c6 — the group colon, single-group membership, nesting,
+# and anonymous groups.
+# Observed: the colon after the group name is part of the NAME — '( G: ... )'
+# creates a group literally named 'G:'. A node belongs to exactly ONE
+# group: re-referencing it inside a later group MOVES it (the earlier
+# group empties). Nested groups: a node declared inside the inner group
+# belongs only to the inner group; the outer group contains only its
+# directly declared nodes (nesting is recorded as a 'group: A' attribute
+# on the inner group). An anonymous group '( [ a ] )' is NAMED 'Group #0'
+# by the oracle.
+use Graph::Easy::Parser;
+my @cases = (
+  '( G: [ a ] --> [ b ] )',
+  '( A: [ a ] )',
+  "( A: [ a ] )\n( B: [ a ] )",
+  '( A [ a ] ( B: [ b ] ) [ c ] )',
+  '( [ a ] ) --> [ b ]',
+);
+for my $c (@cases) {
+  my $g = eval { Graph::Easy::Parser->new->from_text($c) };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$c]\n     $m\n"; next; }
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  my $gs = join ';', map { $_->name()."=[".join(',',map{$_->name()}$_->nodes())."]" } $g->groups();
+  print "OK   [$c]\n     as_txt: $txt\n     groups: $gs\n";
+}
+PROBE
+
+    'anon-reference' => <<'PROBE',
+# serves: gently-6j0, gently-bzx (text_parser c1; supports gently-r22)
+# claim probed: c1 — anonymous nodes and the 'cannot be referenced again'
+# wording.
+# Observed: anonymous nodes ARE named — '#1' (odd counter) — and CAN be
+# referenced again by that generated name, written escaped as '\#1' (an
+# unescaped '#' is a comment): the escaped reference REUSES the same node
+# (3 nodes, 2 edges). node('#1') finds them; as_txt renders anonymous
+# nodes back unnamed as '[ ]'. The bare token '[ #1 ]' is a parse error.
+use Graph::Easy::Parser;
+my $g = Graph::Easy::Parser->new->from_text("[ a ] --> [ ]\n[ \\#1 ] --> [ b ]\n");
+print "nodes: ", join(', ', sort map { $_->name() } $g->nodes()), "\n";
+my @e = $g->edges(); print "edges: ", scalar(@e), "\n";
+print "node('#1'): ", (defined $g->node('#1') ? 'FOUND' : 'undef'), "\n";
+print "as_txt:\n", $g->as_txt();
+print "bare [ #1 ]: ";
+my $g2 = eval { Graph::Easy::Parser->new->from_text("[ #1 ] --> [ b ]\n") };
+print ($@ ? "ERROR: ".(split /\n/, $@)[0]."\n" : "parsed ok\n");
 PROBE
 
     'layout-flow-direction' => <<'PROBE',

@@ -1,0 +1,30 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: operator-patterns
+OK   [..-..-..>]  as_txt: [ a ] ..> [ b ]
+OK   [..-..-..->]  as_txt: [ a ] ..-> [ b ]
+OK   [.-..-..>]  as_txt: [ a ] ..> [ b ]
+OK   [.--->]  as_txt: [ a ] --> [ b ]
+OK   [--.>]  as_txt: [ a ] ..> [ b ]
+ERR  [.]  ' . [ b ]' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+OK   [..]  as_txt: [ a ] .. [ b ]
+ERR  [=]  ' = [ b ]' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+OK   [==]  as_txt: [ a ] -- [ b ]
+OK   [= =]  as_txt: [ a ] = =  [ b ]
+ERR  [-]  ' - [ b ]' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+OK   [- -]  as_txt: [ a ] - -  [ b ]
+OK   [---]  as_txt: [ a ] -- [ b ]
+OK   [.-]  as_txt: [ a ] .- [ b ]
+OK   [.-.-]  as_txt: [ a ] .- [ b ]
+OK   [..-]  as_txt: [ a ] ..- [ b ]
+ERR  [~]  ' ~ [ b ]' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+OK   [~~]  as_txt: [ a ] ~~ [ b ]
+OK   [<->]  as_txt: [ a ] <--> [ b ]
+OK   [<=>]  as_txt: [ a ] <==> [ b ]
+OK   [<.>]  as_txt: [ a ] <..> [ b ]
+OK   [<~>]  as_txt: [ a ] <~~> [ b ]
+OK   [<= >]  as_txt: [ a ] <= > [ b ]
+OK   [<- >]  as_txt: [ a ] <- > [ b ]
+OK   [<.->]  as_txt: [ a ] <.-> [ b ]
+OK   [<..->]  as_txt: [ a ] <..-> [ b ]
+ERR  [<--]  ' <-- [ b ]' not recognized by Graph::Easy::Parser at (eval 9) line 12.
+ERR  [--> [ b ]]  '--> [ b ]' not recognized by Graph::Easy::Parser at (eval 9) line 18.
+ERR  [[ a ] -->]  ' -->' not recognized by Graph::Easy::Parser at (eval 9) line 18.

@@ -71,6 +71,10 @@ claim and the observed bytes, and amends the row in the same commit.
 | probe | serves | observed delta |
 |-------|--------|----------------|
 | `sharp-escape` | gently-6j0/bzx (text_parser c7) | `#` escapes as `\#` in as_txt and round-trips |
+| `sharp-label` | gently-6j0/bzx (text_parser c7) | unescaped in-string `#` truncates the line (even quoted); hex colours after the separator auto-escape |
+| `operator-patterns` | gently-6j0/bzx (text_parser c9, c2) | style follows the LAST unit token; `..-..-..>` is a valid dotted edge; `.-` valid undirected; bidirectional `<...>`; lone `<` and missing endpoints are errors |
+| `group-syntax` | gently-6j0/bzx (text_parser c6) | colon joins the group NAME (`G:`); node belongs to one group (later group wins); nested inner nodes stay out of the outer group; anonymous group named `Group #0` |
+| `anon-reference` | gently-6j0/bzx (text_parser c1) | anon nodes are named `#N` and REUSABLE via escaped `[ \#N ]`; bare `[ #N ]` is a parse error |
 | `layout-flow-direction` | gently-89d (layout c3) | cycle under flow=east renders an against-flow edge |
 | `subgraph-handling` | gently-13f (dot_parser c3) | any named subgraph becomes a group; anonymous `{}` is an error |
 | `cli-flags` | gently-0h9 (closed, upstream evidence) | `--as`/`--output`/positional roles; unknown format exits 255 |
