@@ -139,13 +139,20 @@ impl Edge {
     }
 }
 
-/// A group stub — membership semantics are out of scope for v1
-/// (see specs/ge-graph_model.md); groups exist as attribute-bearing
-/// objects so class-scoped group attributes have a home.
+/// A group — a named membership container for nodes plus an attribute
+/// table. Membership semantics (exactly one group per node, move on
+/// redeclare, nested inner-only containment) are the ge.text_parser c6
+/// contract (gently-bzx); the `members` list is the model's home for it,
+/// in first-declared order. Upstream keeps the membership on the group
+/// object the same way; the txt renderer's empty `( name )` stub form is
+/// unchanged.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Group {
     pub name: String,
     pub attributes: AttributeTable,
+    /// Node indices belonging to this group, in first-declared order.
+    /// A node belongs to at most one group; assignment moves it.
+    pub members: Vec<usize>,
 }
 
 /// A graph: unique named nodes, live-endpoint edges, a group stub, and
@@ -212,10 +219,25 @@ impl Graph {
                 self.groups.push(Group {
                     name: name.to_string(),
                     attributes: AttributeTable::default(),
+                    members: Vec::new(),
                 });
                 self.groups.len() - 1
             }
         }
+    }
+
+    /// Assign `node` to `group` (ge.text_parser c6 membership semantics):
+    /// the node is removed from every other group (a node belongs to
+    /// exactly one group — a later declaration MOVES it, the earlier group
+    /// empties) and appended to `group`'s member list. Panics when either
+    /// index is out of range.
+    pub fn set_node_group(&mut self, node: usize, group: usize) {
+        assert!(node < self.nodes.len(), "node index out of range");
+        assert!(group < self.groups.len(), "group index out of range");
+        for grp in &mut self.groups {
+            grp.members.retain(|&m| m != node);
+        }
+        self.groups[group].members.push(node);
     }
 
     /// Add an edge between two **live** nodes (c3): both indices must be

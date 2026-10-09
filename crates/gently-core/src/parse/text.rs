@@ -147,7 +147,9 @@ mod tests {
     #[test]
     fn missing_to_node_is_an_error() {
         assert!(parse("[ a ] -->\n").is_err());
-        assert!(parse("[ a ] --> [ ]\n").is_err(), "empty node name");
+        // ge.text_parser c1 (gently-bzx): the bare [ ] is an anonymous node
+        let g = parse("[ a ] --> [ ]\n").expect("bare [] is an anon node");
+        assert_eq!(g.nodes[1].name, "#1");
     }
 
     #[test]

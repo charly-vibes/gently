@@ -217,19 +217,22 @@ fn p3() {
     labels_do_not_survive_the_supported_subset();
 }
 
-/// Labels render in the upstream form (`-- go -->`); the parser-supported
-/// subset cannot read that form back yet (documented deviation — the
-/// binding parser contract is ge.text_parser's, not this spec's).
+/// Labels render in the upstream form (`-- go -->`) and round-trip through
+/// the full ge.text_parser grammar (gently-bzx implemented c4 — the
+/// earlier tracer-era deviation, "labels cannot be read back", is gone).
 fn labels_do_not_survive_the_supported_subset() {
     let mut g = Graph::default();
     let e = chain_edge(&mut g, "a", "b", true);
     g.set_attr(Scope::Edge(e), "label", "go");
     let txt = txt::render(&g);
     assert_eq!(txt, "[ a ] -- go --> [ b ]\n");
-    assert!(
-        text::parse(&txt).is_err(),
-        "the parser-supported subset does not carry edge labels (documented \
-         deviation)"
+    let reparsed = text::parse(&txt)
+        .unwrap_or_else(|err| panic!("labeled edges must re-parse: {err}\n{txt}"));
+    assert!(model_equivalent(&g, &reparsed), "the model must round-trip");
+    assert_eq!(
+        reparsed.get_attr(Scope::Edge(0), "label"),
+        Some("go"),
+        "the label must survive the round-trip"
     );
 }
 

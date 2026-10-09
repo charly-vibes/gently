@@ -146,7 +146,9 @@ mod tb {
             let err = text::parse("this is not graph text\n").expect_err("junk must error");
             assert_eq!(err.line, 1);
             assert!(text::parse("[ a ] -->\n").is_err());
-            assert!(text::parse("[ ] --> [ b ]\n").is_err(), "empty node name errors");
+            // ge.text_parser c1 (gently-bzx): a bare [ ] is an anonymous node
+            let g = text::parse("[ ] --> [ b ]\n").expect("bare [] is an anon node");
+            assert_eq!(g.nodes[0].name, "#1");
             assert!(text::parse("[ a ] junk [ b ]\n").is_err());
             assert!(text::parse("]]][[[\n").is_err(), "no panic on bracket soup");
             // empty input is a valid (empty) graph
@@ -351,6 +353,12 @@ mod ge_graph_model;
 /// one test per property row of specs/ge-txt_render.md.
 #[path = "scenarios/ge_txt_render.rs"]
 mod ge_txt_render;
+
+/// ge.text_parser (gently-bzx): the Graph::Easy text-format grammar — the
+/// full capability (operators, labels, attributes, groups, comments), one
+/// test per property row of specs/ge-text_parser.md.
+#[path = "scenarios/ge_text_parser.rs"]
+mod ge_text_parser;
 
 /// ge.oracle (gently-mwo): tier-1 admission enforcement — the repro-probe
 /// harness (`tests/repro/probes.pl admit`) classifies every corpus fixture
