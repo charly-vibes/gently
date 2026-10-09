@@ -126,7 +126,7 @@ fn p3() {
     assert_eq!(g.nodes.len(), 2, "repeated names share nodes");
     assert_eq!(g.edges.len(), 2);
     assert_eq!((g.edges[1].from, g.edges[1].to), (1, 0), "edge back to a");
-    let src: Vec<String> = (0..6).map(|i| format!("n{i}")).collect();
+    let src: Vec<String> = (0..6).map(|i| format!("[ n{i} ]")).collect();
     let g = text::parse(&src.join(" --> ")).expect("chain must parse");
     assert_eq!(g.nodes.len(), 6);
     assert_eq!(g.edges.len(), 5);
@@ -165,9 +165,11 @@ fn p5() {
     let src = "[ a ] -->\n{ style: bold; }\n[ b ]\n";
     let g = text::parse(src).expect("must parse");
     assert_eq!(style(&g, 0), Some(String::from("bold")), "edge attrs across lines");
-    let src = "[ a ] --> [ b ]\n{ style: bold; }\n";
+    // a block after a completed edge line targets the edge's right node
+    // (the oracle's stack-top; verified under the pinned oracle)
+    let src = "[ a ] --> [ b ]\n{ color: red; }\n";
     let g = text::parse(src).expect("must parse");
-    assert_eq!(style(&g, 0), Some(String::from("bold")), "nearest preceding edge");
+    assert_eq!(g.get_attr(Scope::Node(1), "color"), Some("red"), "last node target");
     let g = text::parse("( G: [ a ] ) { color: red; } [ c ]\n").expect("must parse");
     assert_eq!(g.get_attr(Scope::Group(0), "color"), Some("red"));
     let src = "graph { x: 1; }\nnode { y: 2; }\nedge { z: 3; }\ngroup { w: 4; }\n[ a ]\n";
