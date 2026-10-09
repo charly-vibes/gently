@@ -1,0 +1,9 @@
+ticket: gently-css
+branch: main
+brief_path: 
+steps:
+  - claim @ 7c0eb0b0039652b4cf9481a550544d1d8dec72e4
+  - gates @ 7c0eb0b0039652b4cf9481a550544d1d8dec72e4
+  - brief @ bf7fbcef98d415f63bac3d22ebeec6808f9a948e
+  - spawn @ bf7fbcef98d415f63bac3d22ebeec6808f9a948e
+  - verify @ d0e995ef0aef4b23508efabc006fd7327cb01eb4
