@@ -35,3 +35,9 @@ id = "c6"
 kind = "advisory"
 expr = "The fixture corpus exercises every edge style, border style, node shape, group form, flow direction, and label placement at least once."
 traces_to = "[[ge.oracle]]"
+
+[[constraints]]
+id = "c7"
+kind = "invariant"
+expr = "Byte-compatibility claims are admissible only for fixture classes the pinned oracle produces deterministically: an input is in scope exactly when the pinned oracle renders it identically across repeated runs under the pinned seed (hash-stable) and records it within 10 seconds wall time (envelope); claims over out-of-scope classes — hash-randomized inputs, beyond-envelope sizes, round-trip fidelity the oracle itself lacks — are verified structurally against gently's own invariants instead of byte-wise against the oracle, and no spec may state unqualified byte-equality with the oracle."
+traces_to = "[[ge.oracle]]"
