@@ -1,0 +1,42 @@
+All done. Final state verified. Here is the report per the brief:
+
+## Report: gently-eyo — ge.html_render implemented
+
+### Probe files added (commit 1cf137e)
+Extended `tests/repro/probes.pl` with three claim probes serving gently-eyo, recorded as binding `.observed` files:
+- `tests/repro/claims/html-edge-styles.observed` — c3: the edge-style border remap as observed td bytes (solid→`solid 2px`, double/`double-dash`→`double` (no width), bold→`solid 4px`, wide→`solid 1em`, broad→`solid 0.5em`, bold-dash→`dashed 4px`; `none` is attribute-rejected); orientation classes `lh`/`lv`/`eb`; arrow spans (east `sh` + raw `>`, west `shl` + `<`, south `sv` + U+2228, north `su` + U+2227); arrowless edges emit no arrow td; labelled edges keep class `lh` with the label text.
+- `tests/repro/claims/html-css-rules.observed` — c4: the full `->css()` rule blocks and their conditional emission per class group.
+- `tests/repro/claims/html-colors-shapes.observed` — c5: fill→`background:` hex (W3C scheme, `rgb()`→hex), `background` on plain nodes suppressed, `color` declarations; shape bytes (rounded/circle/ellipse inner-div template, point → ★, invisible → classless td, all other shapes leave the plain node td); edge-color on border + arrow tds.
+
+### Commits (sha + one-line)
+- `1cf137e` test: probe html edge styles, css rules, and colors/shapes from the pinned oracle
+- `968aecb` test: RED scenarios for ge.html_render p1-p5 against a stub renderer (also fixes the `.espectacular/ge-html_render/p1..p5.toml` filters to the `ge_html_render::pN` convention)
+- `b99cd51` feat: implement ge.html_render — the table-based HTML renderer
+- `84ac8e3` feat: register render::html in the render module tree (stray-file fixup)
+- `3ddde0d` chore: ship artifacts for the gently-eyo run
+
+No refactor commit needed — the GREEN pass already landed in the required shape (module split into `mod/styles/css`).
+
+### Gate results (all exit 0)
+- `cargo test -p gently-core` — 43 lib + 66 scenario + 0 doc, all ok (corpus intact)
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean
+- `pretender check --mode gate` — clean (the ge_html_render.rs file went through 3 restructuring rounds to land with 0 new violations, ≤400 lines/fn ≤40)
+- `ah check --run-tests` — ge-html_render p1–p5 contracts all pass; 24 `no-tests-ran` findings remain, all PRE-EXISTING in other capabilities (cli, ge-dot_parser, ge-graphviz_render, ge-oracle — stale dashed filters at the verified 87aced3 baseline; the baseline research note records them as a known backlog, and my filter fix reduced the backlog from 29 to 24)
+- `just gates` — specodelic compile + model-check, 0 blocking
+- `spk lint openspec` — 0 findings
+- `git status --short` — clean; `git log origin/main..HEAD` — empty (pushed to `87aced3..3ddde0d`)
+- `bd show gently-eyo` — **CLOSED**
+
+### Scenario status: p1–p5 all green
+`tests/scenarios/ge_html_render.rs` — p1 (one td per grid cell, td count == grid size, observed skeleton + content-kind classes), p2 (escaped labels, `<br>` multiline, href wrapping with raw `&`/space→+/`'`→%27, empty labels unlinked), p3 (border remap ×12 styles on bend-over cells, arrow spans ×4 directions, arrowless, selfloop, bidirectional, label cells, plain `lv` vertical run), p4 (self-contained document: `<style>` block + table, rule coverage for every class token), p5 (W3C named/hex/rgb colors, combined sorted declarations, background suppression, shape vocabulary, border components 4px/1em/0.5em).
+
+### Divergences found (documented in `render/html` module header)
+1. **Structural, spec-sanctioned**: gently's layout grid is one cell per node, so the oracle's colspan/rowspan=4 subcell machinery, filler `<tr></tr>` rows, `el` padding cells and separate arrow tds have no counterpart — one td per grid cell; arrow cells keep their line border; label+arrow cells combine; empty cells emit `<td></td>`; the css() selector drops the `##id##` anchor.
+2. **Observed-wins detail**: `background` on a plain node node is suppressed (only `fill` surfaces) — matching the oracle bytes against the spec prose.
+3. **Cross-capability divergence (fled as a bead)**: the oracle strips one pair of quotes from attribute values (`label: 'a&b'` → `a&b`); gently's text_parser stores quoted values verbatim including quotes — its own `value()` doc-comment claims otherwise. The html fixtures therefore pin bytes via model-API/unquoted fixtures.
+
+### Follow-up beads filed
+- `gently-8ol` (open, P2 bug): text_parser attribute-value quote-stripping divergence — for the gently-bzx contract.
+- (`gently-dgx` was an accidental duplicate during filing; closed immediately.)
+
+The CLI `--as` plumbing was intentionally not touched — it is gently-ef5's, and `render::html::{render, document}` are ready for it.
