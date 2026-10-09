@@ -1,0 +1,16 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: attr-store-decompose
+color readback: red
+border readback (virtual): bold  red
+border-style: bold
+border-width: 1
+border-color: red
+label readback (quoted at set): hello world
+node A color (instance): red
+node B color (class): blue
+edge label readback: go
+as_txt:
+node { color: blue; }
+
+[ A ] { color: red; label: hello world; border: bold  red; }
+
+[ A ] -- go --> [ B ]

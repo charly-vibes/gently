@@ -1,0 +1,10 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: deleted-node-add-edge
+before delete: nodes: A, B, C; edges: 2
+after del_node('A'): nodes: B, C; edges: 0
+add_edge('A','B') after delete: succeeded
+nodes now: A, B, C
+recreated 'A' color: 'black'
+edges now: 1
+as_txt:
+[ A ] --> [ B ]
+[ C ]

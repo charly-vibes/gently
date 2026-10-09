@@ -115,6 +115,10 @@ my %SERVES = (
     'subgraph-handling'      => 'gently-13f (dot_parser c3)',
     'cli-flags'              => 'gently-0h9 (closed — kept as upstream evidence)',
     'node-unnamed'           => 'gently-r22 (graph_model c1)',
+    'anon-numbering'         => 'gently-r22 (graph_model c1 — exact #N scheme)',
+    'attr-store-decompose'   => 'gently-r22 (graph_model c2 — store-layer unquote + border decomposition)',
+    'group-edge'             => 'gently-r22 (graph_model c3 — group endpoints)',
+    'deleted-node-add-edge'  => 'gently-r22 (graph_model c3/p3 — deleted-node add_edge)',
     'href-escaping'          => 'gently-dcp, gently-eyo (html_render c2)',
     'td-colspan'             => 'gently-dcp, gently-eyo (html_render c4)',
     'html-edge-styles'       => 'gently-eyo (html_render c3)',
@@ -329,6 +333,139 @@ print "node names: ", join(', ', sort map { $_->name() } $g->nodes()), "\n";
 print "node('#1'): ", (defined $g->node('#1') ? 'FOUND' : 'undef'), "\n";
 print "node('#0'): ", (defined $g->node('#0') ? 'FOUND' : 'undef'), "\n";
 print "as_txt:\n", $g->as_txt();
+PROBE
+
+    'anon-numbering' => <<'PROBE',
+# serves: gently-r22 (graph_model c1)
+# claim probed: the EXACT anonymous-node naming scheme. Observed: the name
+# is '#' . <object id> from a global object-id counter (Graph::Easy::Base
+# _new_id) shared by every object the process creates — nodes, edges,
+# groups — so an anon node's number depends on object-creation order within
+# the parse, not on a per-graph anon-node count. The PARSER resets that
+# counter at every parse (Parser::reset -> _reset_id), making parser-derived
+# anon names deterministic; API-created anon nodes (add_anon_node without a
+# parser) continue the counter from whatever the process created before.
+use Graph::Easy;
+use Graph::Easy::Parser;
+my $g = Graph::Easy::Parser->new->from_text("[ a ] --> [ ] --> [ ]\n");
+print "graph1 (node a + edge + 2 anon): ", join(', ', map { $_->name() } $g->nodes()), "\n";
+my $g2 = Graph::Easy::Parser->new->from_text("( G: [ x ] )\n[ ] --> [ y ]\n");
+print "graph2 nodes: ", join(', ', sort map { $_->name() } $g2->nodes()), "\n";
+print "graph2 groups: ", join(', ', map { $_->name() } $g2->groups()), "\n";
+my $g3 = Graph::Easy->new();
+my $anon = $g3->add_anon_node();
+print "graph3 API add_anon_node: ", $anon->name(), " is_anon: ", ($anon->is_anon() ? 'yes' : 'no'), "\n";
+my $g4 = Graph::Easy::Parser->new->from_text("[ ]\n");
+my ($n4) = $g4->nodes();
+print "graph4 single anon: ", $n4->name(), "\n";
+print "anon node has default label ' ' stored: ", (defined $n4->{att}->{label} ? "'" . $n4->{att}->{label} . "'" : 'undef'), "\n";
+PROBE
+
+    'attr-store-decompose' => <<'PROBE',
+# serves: gently-r22 (graph_model c2)
+# claim probed: c2 — "values stored verbatim; border components computed at
+# assignment time". Observed: EVERY assignment value passes through the
+# store-layer unquote (set_attribute -> unquote_attribute) — a quoted
+# string is stored unquoted; the 'border' attribute is DECOMPOSED at
+# assignment time into border-style/border-width/border-color (the 'border'
+# key itself is never stored) and RECOMPOSED on read (attribute('border') is
+# a virtual attribute via _border_attribute); class-scope assignments
+# (node { color: ... }) are stored separately from object attributes and
+# instance reads override them.
+use Graph::Easy;
+my $g = Graph::Easy->new();
+my $n = $g->add_node('A');
+$n->set_attribute('color', 'red');
+print "color readback: ", $n->attribute('color'), "\n";
+$n->set_attribute('border', 'dotted bold red');
+print "border readback (virtual): ", $n->attribute('border'), "\n";
+print "border-style: ", ($n->attribute('border-style') // 'undef'), "\n";
+print "border-width: ", ($n->attribute('border-width') // 'undef'), "\n";
+print "border-color: ", ($n->attribute('border-color') // 'undef'), "\n";
+$n->set_attribute('label', '"hello world"');
+print "label readback (quoted at set): ", $n->attribute('label'), "\n";
+$g->set_attribute('node', 'color', 'blue');
+my $b = $g->add_node('B');
+print "node A color (instance): ", $n->attribute('color'), "\n";
+print "node B color (class): ", $b->attribute('color'), "\n";
+my $e = $g->add_edge('A', 'B');
+$e->set_attribute('label', 'go');
+print "edge label readback: ", $e->attribute('label'), "\n";
+my $txt = eval { $g->as_txt() };
+print $@ ? "as_txt ERROR: $@\n" : "as_txt:\n$txt";
+PROBE
+
+    'group-edge' => <<'PROBE',
+# serves: gently-r22 (graph_model c3)
+# claim probed: c3 — "every edge references exactly two NODES". Observed:
+# edges can carry a GROUP as an endpoint. The parser's _link_lists adds
+# edges from every left-stack node to the GROUP OBJECT itself (not rewritten
+# to group members); the API add_edge($group1,$group2) does the same and
+# indexes the group endpoint in the groups hash.
+use Graph::Easy;
+use Graph::Easy::Parser;
+sub dump_edges {
+  my ($g) = @_;
+  my @e = $g->edges();
+  print "edges: ", scalar(@e), "\n";
+  for my $e (@e) {
+    my ($f, $t) = ($e->{from}, $e->{to});
+    my $fname = eval { $f->name() }; $fname = 'undef' if !defined $fname;
+    my $tname = eval { $t->name() }; $tname = 'undef' if !defined $tname;
+    print "  edge ", ref($f), "($fname) -> ", ref($t), "($tname)\n";
+  }
+}
+my $g = eval { Graph::Easy::Parser->new->from_text("( A: [ x ] ) --> ( B: [ y ] )\n") };
+if ($@) { print "parse group-to-group: ERROR: ", (split /\n/, $@)[0], "\n"; }
+else {
+  print "group-to-group (with inner nodes) parsed\n";
+  print "nodes: ", join(', ', sort map { $_->name() } $g->nodes()), "\n";
+  print "groups: ", join(', ', map { $_->name() } $g->groups()), "\n";
+  dump_edges($g);
+  my $txt = eval { $g->as_txt() };
+  if ($@) { print "as_txt ERROR: ", (split /\n/, $@)[0], "\n"; }
+  else { print "as_txt:\n$txt"; }
+}
+my $g2 = eval { Graph::Easy::Parser->new->from_text("( A ) --> ( B )\n") };
+if ($@) { print "parse bare group-to-group: ERROR: ", (split /\n/, $@)[0], "\n"; }
+else {
+  print "bare group-to-group ( A ) --> ( B ) parsed\n";
+  print "nodes: ", join(', ', sort map { $_->name() } $g2->nodes()), "\n";
+  print "groups: ", join(', ', map { $_->name() } $g2->groups()), "\n";
+  dump_edges($g2);
+}
+my $g3 = Graph::Easy->new();
+my $ga = $g3->add_group('G1');
+my $gb = $g3->add_group('G2');
+my ($x, $y, $ed) = $g3->add_edge($ga, $gb);
+print "API add_edge(G1,G2): from ", ref($x), " to ", ref($y), "\n";
+dump_edges($g3);
+PROBE
+
+    'deleted-node-add-edge' => <<'PROBE',
+# serves: gently-r22 (graph_model c3/p3)
+# claim probed: p3 — "no dangling edge ever escapes a mutation" vs
+# add_edge on a DELETED node. Observed: del_node drops the node AND all its
+# incident edges; a later add_edge naming the deleted node SUCCEEDS by
+# implicitly re-creating it as a fresh bare node (stored attributes of the
+# deleted node are gone; the old incident edges are NOT revived).
+use Graph::Easy;
+my $g = Graph::Easy->new();
+$g->add_edge('A', 'B');
+$g->add_edge('A', 'C');
+my $a = $g->node('A');
+$a->set_attribute('color', 'red');
+print "before delete: nodes: ", join(', ', sort map { $_->name() } $g->nodes()), "; edges: ", scalar($g->edges()), "\n";
+$g->del_node('A');
+print "after del_node('A'): nodes: ", join(', ', sort map { $_->name() } $g->nodes()), "; edges: ", scalar($g->edges()), "\n";
+my ($x, $y, $e) = $g->add_edge('A', 'B');
+print "add_edge('A','B') after delete: ", (defined $e ? 'succeeded' : 'FAILED'), "\n";
+print "nodes now: ", join(', ', sort map { $_->name() } $g->nodes()), "\n";
+print "recreated 'A' color: '", ($g->node('A')->attribute('color') // 'undef'), "'\n";
+print "edges now: ", scalar($g->edges()), "\n";
+my $txt = eval { $g->as_txt() };
+if ($@) { print "as_txt ERROR: ", (split /\n/, $@)[0], "\n"; }
+else { print "as_txt:\n$txt"; }
 PROBE
 
     'href-escaping' => <<'PROBE',

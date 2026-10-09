@@ -1,0 +1,7 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: anon-numbering
+graph1 (node a + edge + 2 anon): #3, #1, a
+graph2 nodes: #2, x, y
+graph2 groups: G:
+graph3 API add_anon_node: #5 is_anon: yes
+graph4 single anon: #0
+anon node has default label ' ' stored: ' '

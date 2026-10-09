@@ -79,6 +79,10 @@ claim and the observed bytes, and amends the row in the same commit.
 | `subgraph-handling` | gently-13f (dot_parser c3) | any named subgraph becomes a group; anonymous `{}` is an error |
 | `cli-flags` | gently-0h9 (closed, upstream evidence) | `--as`/`--output`/positional roles; unknown format exits 255 |
 | `node-unnamed` | gently-r22 (graph_model c1) | anonymous nodes are NAMED `#1`,`#3`; `node('#1')` finds them |
+| `anon-numbering` | gently-r22 (graph_model c1) | anon name = `#` + global object id (shared with edges/groups); the parser RESETS the counter per parse (deterministic names), API `add_anon_node` continues it; anon nodes carry a default label `' '` |
+| `attr-store-decompose` | gently-r22 (graph_model c2) | values pass through the store-layer unquote at set; `border` is DECOMPOSED into border-style/width/color at assignment (never stored verbatim) and recomposed on read — `dotted bold red` reads back `bold  red`; class-scope attrs stored separately, instance reads override |
+| `group-edge` | gently-r22 (graph_model c3) | edges store a GROUP OBJECT as endpoint (`Graph::Easy::Group -> Graph::Easy::Group`), not rewritten to members; bare `( A ) --> ( B )` creates groups + edge, no nodes; as_txt renders the groups but drops the group-to-group edge |
+| `deleted-node-add-edge` | gently-r22 (graph_model c3/p3) | `del_node` drops the node AND its incident edges; later `add_edge('A','B')` SUCCEEDS, re-creating A as a fresh bare node (no stored attrs); old edges are not revived |
 | `href-escaping` | gently-dcp/eyo (html_render c2) | href carries the raw `&` |
 | `td-colspan` | gently-dcp/eyo (html_render c4) | 1 td with colspan=4 rowspan=4 ≠ cell count; oracle may HANG on multiline labels |
 | `shape-outline-collapse` | gently-dcp/css (ascii shapes) | shape names rejected outright; bold/wide/broad differ only in border-width |

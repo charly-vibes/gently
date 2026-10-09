@@ -1,0 +1,23 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: group-edge
+group-to-group (with inner nodes) parsed
+nodes: x, y
+groups: A:, B:
+edges: 1
+  edge Graph::Easy::Group(A:) -> Graph::Easy::Group(B:)
+as_txt:
+( A:
+  [ x ]
+)
+
+( B:
+  [ y ]
+)
+
+bare group-to-group ( A ) --> ( B ) parsed
+nodes: 
+groups: A, B
+edges: 1
+  edge Graph::Easy::Group(A) -> Graph::Easy::Group(B)
+API add_edge(G1,G2): from Graph::Easy::Group to Graph::Easy::Group
+edges: 1
+  edge Graph::Easy::Group(G1) -> Graph::Easy::Group(G2)
