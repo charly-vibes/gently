@@ -1,0 +1,26 @@
+## Report
+
+**Commits**
+- `57a7955` test: four graph_model probes — anon #N numbering, store-layer attr decomposition, group endpoints, deleted-node add_edge (gently-r22) — RED: 4 new probes + recorded `claims/*.observed` + README probe table
+- `5113d02` docs: graph_model spec re-derivation — anon #N names, store-layer unquote + border decomposition, group endpoints, deleted-node add_edge (gently-r22) — GREEN: corpus spec + deployed mirror staged in the same commit
+
+**Gates run**
+- `spk lint specs/` → 12 files, 0 findings, 0 warnings
+- `just gates` → exit 0 (compile + model-check clean)
+- `cargo test --workspace` → 114 passed, 0 failed
+- `ah check` → exit 0, **0 structural**; with `--run-tests`: ge-graph_model p1–p5 all pass, 0 findings on graph_model (24 pre-existing `no-tests-ran` on cli/dot_parser/graphviz_render/oracle/perf — future-epic state, unchanged by this work)
+- All 5 probes (`node-unnamed` + 4 new) re-run cleanly under `PERL5LIB=/var/tmp/ge0.69/Graph-Easy-0.69/lib`
+
+**What the oracle actually does (now pinned in the spec)**
+- **c1**: anon nodes get `'#' + <object id>` from the shared object-id counter (nodes/edges/groups all draw from it); the **parser resets the counter at each parse** (deterministic names — `#1`, `#3` for `[ a ] --> [ ] --> [ ]`), while API `add_anon_node` continues it across the process; anon nodes carry a default `label: ' '`
+- **c2**: every assigned value passes the store-layer unquote (`set_attribute('label','"hello world"')` stores `hello world`); `border` is **decomposed at assignment** into border-style/width/color (never stored verbatim) and **recomposed on read** — `'dotted bold red'` reads back `'bold  red'`; class-scope attrs stored separately, instance reads override
+- **c3**: edges store **group objects** as endpoints (`Graph::Easy::Group -> Graph::Easy::Group`), never rewritten to members; bare `( A ) --> ( B )` yields 2 groups + 1 edge and zero nodes; `as_txt` renders the groups but drops the group-to-group edge
+- **c3/p3 (delete lifecycle)**: `del_node` drops the node **and all incident edges**; a later `add_edge('A','B')` **succeeds**, re-creating A as a fresh bare node (color reads back as class default `black`; old edges not revived)
+
+**Deviations**
+- The delete-node finding became part of **c3/p3** rather than a new c6/p6 row: a new property row trips `ah check`'s `no-toml` structural finding and `.espectacular/**` is outside this bead's allowed files; the brief itself prescribed "Amend c3/p3".
+- Left **uncommitted** for your ship pass: regenerated `specodelic/*` compile artifacts (`ge-graph_model.toml`, `ge-graph_model_props.rs`, `*.check.json`) reflecting the amended rows — matching your established "ship artifacts" commit pattern; outside my allowed files.
+- Note for filing (outside graph_model scope): `( A: [ x ] )` joins the colon into the group name (`A:`, `B:`) — already covered by text_parser c6; no new spec touched.
+
+**Next**
+- Ship: commit the regenerated `specodelic/*` artifacts, then close gently-r22. Implementation follow-ups (group-endpoint edges, `#N` anon naming, store-layer unquote in the model, delete/recreate lifecycle) can now be briefed directly from the amended c1/c2/c3 rows.
