@@ -228,7 +228,7 @@ for my $c (@cases) {
   my $g = eval { Graph::Easy::Parser->new->from_text($c) };
   if ($@) { my ($m) = split /\n/, $@; print "ERR  [$c]\n     $m\n"; next; }
   my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
-  my $gs = join ';', map { $_->name()."=[".join(',',map{$_->name()}$_->nodes())."]" } $g->groups();
+  my $gs = join ';', map { $_->name()."=[".join(',', sort map{$_->name()}$_->nodes())."]" } $g->groups();
   print "OK   [$c]\n     as_txt: $txt\n     groups: $gs\n";
 }
 PROBE
