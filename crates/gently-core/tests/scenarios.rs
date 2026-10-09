@@ -360,6 +360,12 @@ mod ge_txt_render;
 #[path = "scenarios/ge_text_parser.rs"]
 mod ge_text_parser;
 
+/// ge.ascii_render (gently-0cq): the classic ASCII renderer — border
+/// styles, edge style runs, shapes, label/wide-glyph handling, one test
+/// per property row of specs/ge-ascii_render.md.
+#[path = "scenarios/ge_ascii_render.rs"]
+mod ge_ascii_render;
+
 /// ge.layout (gently-4nx): the deterministic grid layout capability —
 /// one test per property row of specs/ge-layout.md.
 #[path = "scenarios/ge_layout.rs"]

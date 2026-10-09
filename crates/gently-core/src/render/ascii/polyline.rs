@@ -9,7 +9,8 @@
 //! under the tidy gates; geometry shaped by the recorded v0.69 @ ededa3d7
 //! companions (the parallel elbow, the diamond's verticals and c->d route).
 
-use super::{Canvas, RenderError, BAND_HEIGHT};
+use super::canvas::{BAND_HEIGHT, Canvas};
+use super::RenderError;
 use crate::layout::{Cell, Layout};
 
 /// Direction of travel along an edge polyline.

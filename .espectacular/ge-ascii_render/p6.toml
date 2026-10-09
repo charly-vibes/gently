@@ -6,4 +6,4 @@ superseded_by = ""
 authored_with = "0.9.3"
 
 [tests]
-cargo = [{flags = "scenarios::ge-ascii_render::p6"}]
+cargo = [{flags = "ge_ascii_render::p6"}]
