@@ -86,3 +86,11 @@ fn p8() {
         todo_predicate!("each error names a line number and a reason and aborts without producing a graph");
 }
 
+// id: p10
+// generator: attribute values in double-, single-, mixed-, and unterminated-quoted form, with mid-value quotes and escaped `\"`, `\'`, `\;`, `\\` sequences
+// predicate: single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\"`, `\'`, `\;`, and `\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive
+#[test]
+fn p10() {
+        todo_predicate!("single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\\\"`, `\\'`, `\\;`, and `\\\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive");
+}
+
