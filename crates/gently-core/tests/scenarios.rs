@@ -383,3 +383,9 @@ mod ge_oracle;
 /// specs/ge-boxart_render.md.
 #[path = "scenarios/ge_boxart_render.rs"]
 mod ge_boxart_render;
+
+/// ge.html_render (gently-eyo): the table-based HTML renderer — grid
+/// mapping, node labels/links, edge style classes, embedded CSS, colors
+/// and shapes, one test per property row of specs/ge-html_render.md.
+#[path = "scenarios/ge_html_render.rs"]
+mod ge_html_render;
