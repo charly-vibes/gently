@@ -35,6 +35,6 @@ Next ==
 \* One entry per state with an `emits` field — domain is exactly
 \* the emitting states; each value is the effect-Constraint's expr.
 Output ==
-"cli_failed" :> "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 2."
+"cli_failed" :> "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 255 — bug-for-bug with the upstream script, whose unknown `--as` dies calling the missing `as_<fmt>` method."
 
 ============================================================================

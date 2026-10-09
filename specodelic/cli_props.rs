@@ -15,19 +15,19 @@ macro_rules! todo_predicate {
 }
 
 // id: p1
-// generator: invocations with and without file arguments
-// predicate: stdin and file inputs reach the parser with the same bytes
+// generator: invocations with no, one, and multiple file arguments
+// predicate: stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored
 #[test]
 fn p1() {
-        todo_predicate!("stdin and file inputs reach the parser with the same bytes");
+        todo_predicate!("stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored");
 }
 
 // id: p2
 // generator: invocations over every output format with and without the flag
-// predicate: each requested format renders through its renderer; the default is ascii
+// predicate: each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent
 #[test]
 fn p2() {
-        todo_predicate!("each requested format renders through its renderer; the default is ascii");
+        todo_predicate!("each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent");
 }
 
 // id: p3
@@ -40,10 +40,10 @@ fn p3() {
 
 // id: p4
 // generator: invocations with unknown formats
-// predicate: the diagnostic names both the requested and the valid formats and exit code is 2
+// predicate: the diagnostic names both the requested and the valid formats and exit code is 255
 #[test]
 fn p4() {
-        todo_predicate!("the diagnostic names both the requested and the valid formats and exit code is 2");
+        todo_predicate!("the diagnostic names both the requested and the valid formats and exit code is 255");
 }
 
 // id: p5

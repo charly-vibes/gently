@@ -3,13 +3,13 @@ source = "cli"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "With no file arguments, input is read from stdin; each file argument is parsed in order and concatenated as one graph source."
+expr = "With no file arguments, input is read from stdin; otherwise the first file argument is the input, a second file argument (or `--output`) names the output file, and further file arguments are silently ignored — bug-for-bug with the upstream script."
 traces_to = "[[cli]]"
 
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "The `--output` flag selects the renderer (ascii, boxart, html, graphviz, txt); with no flag the default output is ascii."
+expr = "The `--as` flag selects the output format (ascii, boxart, html, graphviz, txt; `dot` aliases graphviz), defaulting to ascii, or to the output filename's extension format when `--as` is absent; the `--output` flag names the output file that receives the rendered bytes — stdout when absent."
 traces_to = "[[cli]]"
 
 [[constraints]]
@@ -21,7 +21,7 @@ traces_to = "[[cli]]"
 [[constraints]]
 id = "c4"
 kind = "effect"
-expr = "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 2."
+expr = "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 255 — bug-for-bug with the upstream script, whose unknown `--as` dies calling the missing `as_<fmt>` method."
 traces_to = "[[cli]]"
 
 [[constraints]]

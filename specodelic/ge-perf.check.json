@@ -12,7 +12,7 @@
   "expected_claim_ids": [],
   "invariants_checked": [],
   "outcome": "exploration_only",
-  "scope_sha256": "23101b58e0f8acfb518c38d0d79cad7f916c69396acaf41024e9c3a9b4f45114",
+  "scope_sha256": "f72c5922dc72528134038a52b6318379d5fb095fa215fa8ae7aa318418dbec3a",
   "states_explored": 3,
   "unchecked_claim_ids": [
     "c1",
