@@ -123,6 +123,7 @@ my %SERVES = (
     'shape-outline-collapse' => 'gently-dcp, gently-css (ascii shapes; html border-styles)',
     'ascii-render-tables'    => 'gently-0cq (ascii_render c1/c2/c5/c6)',
     'boxart-render-tables'   => 'gently-css (boxart_render c1/c2/c3/c4)',
+    'attr-quote-value'       => 'gently-8ol (text_parser c5 quote-unquoting)',
     'graphviz-round-trip'    => 'gently-0kg, gently-b4v (graphviz c2/c4, txt_render c3)',
     'size-envelope'          => 'gently-k4u (perf c2/c5)',
     'perl5lib-pin'           => 'gently-ikm, gently-liz (oracle pin contract)',
@@ -570,6 +571,40 @@ for my $shape (qw(box rounded point circle ellipse diamond triangle pentagon hex
 }
 print "== label long ==\n", render("[ this is a very long node label that must wrap somewhere ]\n"), "\n";
 print "== label wide glyph ==\n", render("[ \x{e4}\x{b8}\x{ad} ]\n"), "\n";
+PROBE
+
+    'attr-quote-value' => <<'PROBE',
+# serves: gently-8ol (text_parser c5 quote-unquoting)
+# claim probed: the attribute-value quote-stripping layer. Upstream strips
+# quotes NOT in the parser (_unquote leaves them in) but at the STORE
+# layer (Graph::Easy::Attributes::unquote_attribute, run from
+# set_attribute): s/^["'](.*)["']\z/$1/ — either quote char, GREEDY
+# (first char + last char, even mismatched), then \([#"';\\]) unescape,
+# then %XX entity decode. The probe prints the STORED value
+# (->attribute) plus as_txt for each case.
+use Graph::Easy::Parser;
+my @cases = (
+  '[ a ] { label: "hello world"; } --> [ b ]',   # double-quoted
+  "[ a ] { label: 'hello'; } --> [ b ]",          # single-quoted
+  '[ a ] { label: "a" "b"; } --> [ b ]',          # greedy strip: first+last
+  "[ a ] { label: \"mixed'; } --> [ b ]",        # mismatched quote chars
+  '[ a ] { label: x"y"z; } --> [ b ]',            # mid-value quotes
+  '[ a ] { label: "a\\"b"; } --> [ b ]',          # escaped quote inside
+  "[ a ] { label: a\\'b; } --> [ b ]",            # escaped single quote
+  '[ a ] { label: a\\;b; } --> [ b ]',            # escaped semicolon
+  '[ a ] { label: a\\\\b; } --> [ b ]',           # escaped backslash
+  '[ a ] { label: "abc; } --> [ b ]',             # unterminated quote
+  '[ a ] { label: ""; } --> [ b ]',               # empty quoted value
+  '[ a ] { label: %41; } --> [ b ]',              # %XX entity decode
+);
+for my $c (@cases) {
+  my $g = eval { Graph::Easy::Parser->new->from_text("$c\n") };
+  if ($@) { my ($m) = split /\n/, $@; print "ERR  [$c]\n     $m\n"; next; }
+  my $n = $g->node('a');
+  my $stored = defined $n ? $n->attribute('label') : '(no node a)';
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$c]\n     stored: [$stored]\n     as_txt: $txt\n";
+}
 PROBE
 
     'boxart-render-tables' => <<'PROBE',
