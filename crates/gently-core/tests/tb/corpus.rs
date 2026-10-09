@@ -6,7 +6,7 @@
 /// (`*.ascii.expected`, Graph::Easy v0.69 @ ededa3d7, pin header
 /// stripped) byte-identically (ge.oracle.c3). The txt companions are
 /// covered by the tb::oracle differential tests and ge_txt_render.
-use gently_core::{layout, parse::text, render::ascii};
+use gently_core::{layout, parse::text, render::ascii, render::txt};
 use std::path::PathBuf;
 
 fn fixture_dir() -> PathBuf {
@@ -121,4 +121,31 @@ fn tracer_renders_oracle_ascii() {
         rendered_ascii("tracer").into_bytes(),
         oracle_body("tracer", "ascii")
     );
+}
+
+/// ge.oracle.c3: every corpus fixture's txt companion is reproduced
+/// byte-identically by the txt renderer (gently-3hv side of the pin) —
+/// the whole corpus, so `just oracle-verify`'s txt claim holds without
+/// perl for every recorded input, not just the tracer.
+#[test]
+fn all_fixtures_render_oracle_txt() {
+    for base in [
+        "chain",
+        "mixed_isolated",
+        "parallel",
+        "selfloop",
+        "txt-diamond",
+        "txt-isolated",
+        "txt-shared-target",
+        "tracer",
+    ] {
+        let g =
+            text::parse(&fixture_input(base)).unwrap_or_else(|e| panic!("{base} must parse: {e}"));
+        let got = txt::render(&g);
+        assert_eq!(
+            got.into_bytes(),
+            oracle_body(base, "txt"),
+            "txt companion for {base}"
+        );
+    }
 }
