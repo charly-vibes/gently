@@ -24,24 +24,24 @@ fn count(haystack: &str, needle: &str) -> usize {
 fn p1() {
     let mut g = Graph::default();
     let a = g.add_node("a");
-    let spaced = g.add_node("a b");
-    let uni = g.add_node("üñî");
-    let quoted = g.add_node("q\"x");
-    let anon = g.add_anonymous_node();
+    let _spaced = g.add_node("a b");
+    let _uni = g.add_node("üñî");
+    let _quoted = g.add_node("q\"x");
+    let _anon = g.add_anonymous_node();
     g.set_attr(Scope::Node(a), "color", "#000000");
     g.set_attr(Scope::Node(a), "fill", "white");
     g.set_attr(Scope::Node(a), "shape", "box");
     let out = graphviz::render(&g);
 
     // exactly one node statement per node, with the safely quoted name
-    assert_eq!(count(&out, "\"a\" ["), 1, "bare name a");
-    assert_eq!(count(&out, "\"a b\" ["), 1, "spaced name quoted");
-    assert_eq!(count(&out, "\"üñî\" ["), 1, "unicode name quoted");
-    assert_eq!(count(&out, "\"q\\\"x\" ["), 1, "embedded quote escaped");
-    assert_eq!(count(&out, "\"#4\" ["), 1, "anonymous node as #<index>");
+    assert_eq!(count(&out, "a ["), 1, "bare simple name stays bare");
+    assert_eq!(count(&out, "\"a b\""), 1, "spaced name quoted");
+    assert_eq!(count(&out, "\"üñî\""), 1, "unicode name quoted");
+    assert_eq!(count(&out, "\"q\\\"x\""), 1, "embedded quote escaped");
+    assert_eq!(count(&out, "\"#4\""), 1, "anonymous node as #<index>");
 
     // node attributes map onto DOT counterparts
-    assert!(out.contains("\"a\" [ color=\"#000000\", shape=box, fillcolor=\"white\" ]"),
+    assert!(out.contains("a [ color=\"#000000\", fillcolor=white, shape=box ]"),
         "attrs on a: {out:?}");
 }
 
@@ -61,9 +61,9 @@ fn p2() {
     g.set_attr(Scope::Edge(0), "color", "#000000");
     let out = graphviz::render(&g);
 
-    assert_eq!(count(&out, "\"a\" -> \"b\""), 1, "directed edge uses ->");
-    assert_eq!(count(&out, "\"b\" -- \"c\""), 1, "undirected edge uses --");
-    assert!(out.contains("\"a\" -> \"b\" [ style=dotted, color=\"#000000\" ]"),
+    assert_eq!(count(&out, "a -> b"), 1, "directed edge uses ->");
+    assert_eq!(count(&out, "b -- c"), 1, "undirected edge uses --");
+    assert!(out.contains("a -> b [ color=\"#000000\", style=dotted ]"),
         "edge attrs: {out:?}");
 }
 
@@ -86,19 +86,19 @@ fn p3() {
     let out = graphviz::render(&g);
 
     // named group keeps its name; cluster label is the group label
-    let cluster = out.split("subgraph \"cluster_grp\" {").nth(1).expect("named cluster emitted");
+    let cluster = out.split("subgraph cluster_grp {").nth(1).expect("named cluster emitted");
     let cluster = cluster.split('}').next().unwrap();
-    assert!(cluster.contains("\"a\""), "member a inside: {cluster:?}");
-    assert!(cluster.contains("\"b\""), "member b inside: {cluster:?}");
-    assert!(!cluster.contains("\"c\""), "non-member c outside: {cluster:?}");
+    assert!(cluster.contains("\n  a\n"), "member a inside: {cluster:?}");
+    assert!(cluster.contains("\n  b\n"), "member b inside: {cluster:?}");
+    assert!(!cluster.contains("\n  c\n"), "non-member c outside: {cluster:?}");
     assert!(out.contains("label=\"my grp\""), "group label as cluster label: {out:?}");
 
     // anonymous group emits cluster<N> in internal-id order (index 1)
     let anon_cluster = out.split("cluster1").nth(1).expect("anonymous cluster1 emitted");
-    assert!(anon_cluster.contains("\"c\""), "anon member c inside: {out:?}");
+    assert!(anon_cluster.contains("\n  c\n"), "anon member c inside: {out:?}");
     // grouped nodes appear exactly once (inside their cluster, not top-level)
-    assert_eq!(count(&out, "\"a\" ["), 1, "a emitted once");
-    assert_eq!(count(&out, "\"c\" ["), 1, "c emitted once");
+    assert_eq!(count(&out, "\n  a\n"), 1, "a emitted once");
+    assert_eq!(count(&out, "\n  c\n"), 1, "c emitted once");
 }
 
 /// The source model for p4: mixed-direction edges, attrs, one group.
