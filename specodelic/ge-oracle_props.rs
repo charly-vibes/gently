@@ -16,10 +16,10 @@ macro_rules! todo_predicate {
 
 // id: p1
 // generator: fixture headers recorded by the oracle runner
-// predicate: every header names the pinned version and commit; none carries a foreign pin
+// predicate: every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin
 #[test]
 fn p1() {
-        todo_predicate!("every header names the pinned version and commit; none carries a foreign pin");
+        todo_predicate!("every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin");
 }
 
 // id: p2
@@ -39,7 +39,7 @@ fn p3() {
 }
 
 // id: p4
-// generator: environments missing perl, with a drifted Graph::Easy, and with stale pins
+// generator: environments missing perl, with a drifted Graph::Easy, off the pinned checkout, without a pinned seed, and with stale pins
 // predicate: each case yields a typed error naming the missing piece and the remediation
 #[test]
 fn p4() {

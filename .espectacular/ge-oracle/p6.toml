@@ -6,4 +6,4 @@ superseded_by = ""
 authored_with = "0.9.3"
 
 [tests]
-cargo = [{flags = "scenarios::ge-oracle::p6"}]
+cargo = [{flags = "scenarios::ge_oracle::p6"}]

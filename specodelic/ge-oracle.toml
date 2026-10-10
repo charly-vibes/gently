@@ -3,7 +3,7 @@ source = "ge.oracle"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "The oracle is upstream Graph::Easy v0.69 at commit `ededa3d787ad89ac532c578c06390e8a7b270499`, invoked via perl; every recorded fixture carries a pin header naming that version and commit."
+expr = "The oracle is upstream Graph::Easy v0.69 at commit `ededa3d787ad89ac532c578c06390e8a7b270499`, invoked via perl v5.44.0 from the pinned source checkout on `PERL5LIB` (never a cpan-installed copy), with `PERL_HASH_SEED` explicitly pinned — the current corpus is byte-consistent with seed 0 across all companions, and every recording declares its perl version and seed in a pin-header metadata line; every recorded fixture carries a pin header naming the upstream version and commit."
 traces_to = "[[ge.oracle]]"
 
 [[constraints]]
@@ -15,13 +15,13 @@ traces_to = "[[ge.oracle]]"
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "`just oracle-verify` re-renders every fixture input through gently and compares byte-identically to the recorded outputs; any mismatch fails naming the input, the format, and the first differing line."
+expr = "`just oracle-verify` re-renders every fixture input through gently and compares byte-identically to the recorded outputs — recorded under the pinned seed (c1), which is the only seed at which a byte comparison is meaningful for hash-dependent inputs (c7); any mismatch fails naming the input, the format, and the first differing line."
 traces_to = "[[ge.oracle]]"
 
 [[constraints]]
 id = "c4"
 kind = "effect"
-expr = "A missing or drifted oracle environment — perl absent, installed Graph::Easy version differs from the pin, or a stale pin header in a fixture — produces a typed error naming what is missing and the `just oracle-record` remediation."
+expr = "A missing or drifted oracle environment — perl absent, installed Graph::Easy version differs from the pin, Graph::Easy not loaded from the pinned source checkout, a recording run without an explicit `PERL_HASH_SEED`, or a stale pin header in a fixture — produces a typed error naming what is missing and the `just oracle-record` remediation."
 traces_to = "[[ge.oracle]]"
 
 [[constraints]]
@@ -39,5 +39,5 @@ traces_to = "[[ge.oracle]]"
 [[constraints]]
 id = "c7"
 kind = "invariant"
-expr = "Byte-compatibility claims are admissible only for fixture classes the pinned oracle produces deterministically: an input is in scope exactly when the pinned oracle renders it identically across repeated runs under the pinned seed (hash-stable) and records it within 10 seconds wall time (envelope); claims over out-of-scope classes — hash-randomized inputs, beyond-envelope sizes, round-trip fidelity the oracle itself lacks — are verified structurally against gently's own invariants instead of byte-wise against the oracle, and no spec may state unqualified byte-equality with the oracle."
+expr = "Byte-compatibility claims are admissible only for fixture classes the pinned oracle produces deterministically: an input is in scope exactly when the pinned oracle renders it identically across hash seeds (hash-stable — computed by the admission sweep, tests/repro/admission.tsv) and records it within 10 seconds wall time (envelope); claims over out-of-scope classes — hash-randomized inputs, beyond-envelope sizes, round-trip fidelity the oracle itself lacks — are verified structurally against gently's own invariants instead of byte-wise against the oracle, and no spec may state unqualified byte-equality with the oracle."
 traces_to = "[[ge.oracle]]"

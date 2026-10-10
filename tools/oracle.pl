@@ -15,10 +15,43 @@ use strict;
 use warnings;
 
 # The pinned oracle (specs/ge-oracle.md c1): Graph::Easy v0.69 at
-# ededa3d787ad89ac532c578c06390e8a7b270499.
+# ededa3d787ad89ac532c578c06390e8a7b270499, run from the pinned source
+# checkout under the pinned hash seed (recordings only).
 my $PIN_VERSION = '0.69';
 my $PIN_COMMIT  = 'ededa3d787ad89ac532c578c06390e8a7b270499';
+my $PIN_LIB     = "/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib";
 my $HEADER      = "# oracle: Graph::Easy v$PIN_VERSION @ $PIN_COMMIT\n";
+my $PERL_V      = "$^V";   # e.g. v5.44.0
+
+sub fail_pin {
+    my ($what) = @_;
+    die <<"EOF";
+oracle: $what — spec ge.oracle.c4
+remediation: recordings run against the pinned source checkout, never a
+  cpan-installed copy (a dist tarball cannot be verified against the pin
+  commit; a git clone checked out at the commit can):
+     git clone https://github.com/shlomif/Graph-Easy /var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION
+     git -C /var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION checkout $PIN_COMMIT
+     PERL_HASH_SEED=0 PERL5LIB=$PIN_LIB just oracle-record
+EOF
+}
+
+# ge.oracle.c4: drifted environment is a typed error naming the pin and
+# the remediation, before any companion is touched. The pin is the full
+# environment contract: Graph::Easy version, source-checkout load path,
+# and an explicitly pinned PERL_HASH_SEED (byte-identical recordings are
+# only reproducible at the same seed — c1/c3).
+my $version = eval { Graph::Easy->VERSION } // 'not installed';
+fail_pin("installed Graph::Easy is '$version', pin is v$PIN_VERSION \@ $PIN_COMMIT")
+    unless defined $version && $version eq $PIN_VERSION;
+my $load_path = $INC{'Graph/Easy.pm'} // 'not loaded';
+fail_pin("Graph::Easy loaded from '$load_path', pin requires the source checkout $PIN_LIB")
+    unless index($load_path, $PIN_LIB) == 0;
+fail_pin("PERL_HASH_SEED is unset — hash randomization is live, recordings would not reproduce")
+    unless defined $ENV{PERL_HASH_SEED} && $ENV{PERL_HASH_SEED} =~ /^\d+$/;
+my $META_LINE = "# oracle: perl $PERL_V PERL_HASH_SEED=$ENV{PERL_HASH_SEED}\n";
+
+use Graph::Easy::Parser;
 
 my $mode = shift @ARGV // '';
 my $dir  = shift @ARGV
@@ -26,23 +59,6 @@ my $dir  = shift @ARGV
 
 die "oracle: unknown mode '$mode' — usage: tools/oracle.pl record <fixtures-dir>\n"
     unless $mode eq 'record';
-
-# ge.oracle.c4: drifted environment is a typed error naming the pin and
-# the remediation, before any companion is touched.
-my $version = eval { Graph::Easy->VERSION } // 'not installed';
-unless (defined $version && $version eq $PIN_VERSION) {
-    die <<"EOF";
-oracle: installed Graph::Easy is '$version', pin is v$PIN_VERSION \@ $PIN_COMMIT — spec ge.oracle.c4
-remediation: cpanm Graph::Easy==$PIN_VERSION
-   or fetch the pinned dist isolated and put it on PERL5LIB:
-     mkdir -p /var/tmp/ge$PIN_VERSION && cd /var/tmp/ge$PIN_VERSION
-     curl -fsSLO https://backpan.perl.org/authors/id/S/SH/SHLOMIF/Graph-Easy-$PIN_VERSION.tar.gz
-     tar xzf Graph-Easy-$PIN_VERSION.tar.gz
-     PERL5LIB=/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib just oracle-record
-EOF
-}
-
-use Graph::Easy::Parser;
 
 opendir(my $dh, $dir) or die "oracle: cannot open fixture dir '$dir': $!\n";
 my @inputs = sort grep { /\.txt$/ && -f "$dir/$_" } readdir $dh;
@@ -84,7 +100,7 @@ for my $input (@inputs) {
             print "oracle-record: pin changed — regenerating $companion\n";
         }
         open(my $out, '>', $path) or die "oracle: cannot write '$path': $!\n";
-        print $out $HEADER, $outputs{$companion};
+        print $out $HEADER, $META_LINE, $outputs{$companion};
         close($out);
         print "oracle-record: recorded $companion\n";
         $recorded++;

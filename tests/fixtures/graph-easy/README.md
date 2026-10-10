@@ -31,19 +31,31 @@ in one pass: new inputs get companions, stale-pinned companions are
 regenerated, and companions whose pin already matches are refused
 (re-recording without a pin change is a non-deliberate change).
 
-The pin check requires Graph::Easy **exactly 0.69** on `PERL5LIB`
-(system perl often carries a different version). Two remediations:
+The pin check requires Graph::Easy **exactly 0.69** loaded from the
+**pinned source checkout** on `PERL5LIB` (never a cpan/cpanm-installed
+copy), perl **v5.44.0**, and an explicit `PERL_HASH_SEED` (spec
+ge.oracle.c1/c4 — a missing seed pin is a typed error, because hash
+randomization makes recordings unreproducible). A dist tarball cannot be
+verified against the pin commit; the remediation verifies it by
+construction:
 
 ```sh
-# system-wide via cpanm
-cpanm Graph::Easy==0.69
-
-# or an isolated checkout (ephemeral, recording is rare and deliberate)
-mkdir -p /var/tmp/ge069 && cd /var/tmp/ge069
-curl -fsSLO https://backpan.perl.org/authors/id/S/SH/SHLOMIF/Graph-Easy-0.69.tar.gz
-tar xzf Graph-Easy-0.69.tar.gz
-PERL5LIB=/var/tmp/ge069/Graph-Easy-0.69/lib just oracle-record
+git clone https://github.com/shlomif/Graph-Easy /var/tmp/ge0.69/Graph-Easy-0.69
+git -C /var/tmp/ge0.69/Graph-Easy-0.69 checkout ededa3d787ad89ac532c578c06390e8a7b270499
+PERL_HASH_SEED=0 PERL5LIB=/var/tmp/ge0.69/Graph-Easy-0.69/lib just oracle-record
 ```
+
+(The backpan tarball at the same path works if already unpacked, but its
+bytes are only SIGNATURE-verified, not commit-verified.)
+
+## Determinism (ge.oracle.c1/c3/c7)
+
+Recordings run under a pinned `PERL_HASH_SEED` (the current corpus is
+byte-consistent with seed 0); byte comparison is only meaningful at the
+recording seed. Upstream renders some inputs differently across seeds —
+`txt-diamond` is hash-dependent in this corpus — and those classes are
+out of scope for byte-compat claims (ge.oracle.c7); the computed gate is
+`tests/repro/admission.tsv` (`just repro`).
 
 ## Verifying (ge.oracle.c3)
 

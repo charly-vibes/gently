@@ -33,15 +33,20 @@ ci:
     just clippy
     just test
 
-# Record oracle fixtures for new inputs (spec: ge.oracle.c5). Runner:
-# tools/oracle.pl — needs Graph::Easy exactly 0.69 on PERL5LIB (see
-# tests/fixtures/graph-easy/README.md for both remediations).
+# Record oracle fixtures for new inputs (spec: ge.oracle.c1/c5). Runner:
+# tools/oracle.pl — needs the pinned source checkout (Graph::Easy 0.69 @
+# the pinned commit) on PERL5LIB and an explicit PERL_HASH_SEED (see
+# tests/fixtures/graph-easy/README.md 'Recording' for the setup).
 oracle-record:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v perl >/dev/null || { echo "oracle: perl not found — spec ge.oracle.c4 (remediation: install perl)"; exit 1; }
     FIX=tests/fixtures/graph-easy
     [ -d "$FIX" ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2 (remediation: create it, see $FIX/README.md)"; exit 1; }
+    LIB=/var/tmp/ge0.69/Graph-Easy-0.69/lib
+    [ -f "$LIB/Graph/Easy.pm" ] || { echo "oracle: pinned source checkout missing at $LIB — spec ge.oracle.c1/c4 (remediation: see $FIX/README.md 'Recording')"; exit 1; }
+    export PERL_HASH_SEED="${PERL_HASH_SEED:-0}"
+    export PERL5LIB="$LIB${PERL5LIB:+:$PERL5LIB}"
     perl tools/oracle.pl record "$FIX"
 
 # Tier-1 admission sweep (spec ge-oracle.c7/p7): recompute the per-fixture
