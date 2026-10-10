@@ -53,11 +53,11 @@ fn p3() {
 }
 
 // id: p4
-// generator: named, nested, and bare-scope subgraphs
-// predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack
+// generator: named, nested, bare-scope, and cluster-convention subgraphs
+// predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack
 #[test]
 fn p4() {
-        todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack");
+        todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack");
 }
 
 proptest! {

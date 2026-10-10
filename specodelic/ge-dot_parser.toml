@@ -21,7 +21,7 @@ traces_to = "[[ge.dot_parser]]"
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "A subgraph block with a name maps to a model group whose name is the subgraph's name verbatim, containing only the nodes declared directly inside it."
+expr = "A subgraph block with a name maps to a model group whose name is the subgraph's name verbatim — except for the graphviz cluster convention (gently-j2i): an id `cluster_<name>` maps to group `<name>` and an id `cluster<N>` (bare digits after `cluster`) maps to an anonymous group — containing only the nodes declared directly inside it."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]

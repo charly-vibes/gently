@@ -40,9 +40,9 @@ fn p3() {
 
 // id: p4
 // generator: arbitrary graphs rendered to DOT and re-parsed
-// predicate: the re-parsed model is isomorphic to the source model, up to group renaming (named groups re-parse as `cluster_<name>`, anonymous ones as `cluster<N>`); group membership itself round-trips
+// predicate: the re-parsed model is isomorphic to the source model with full group identity — verbatim named group names and restored anonymity via the [[ge.dot_parser]] cluster convention (`cluster_<name>` re-parses as `<name>`, `cluster<N>` as an anonymous group); group membership itself round-trips; group-endpoint edges excluded
 #[test]
 fn p4() {
-        todo_predicate!("the re-parsed model is isomorphic to the source model, up to group renaming (named groups re-parse as `cluster_<name>`, anonymous ones as `cluster<N>`); group membership itself round-trips");
+        todo_predicate!("the re-parsed model is isomorphic to the source model with full group identity — verbatim named group names and restored anonymity via the [[ge.dot_parser]] cluster convention (`cluster_<name>` re-parses as `<name>`, `cluster<N>` as an anonymous group); group membership itself round-trips; group-endpoint edges excluded");
 }
 
