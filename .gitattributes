@@ -1,0 +1,5 @@
+# Pin LF line endings for ALL text files — the recorded-oracle corpus
+# (tests/fixtures/graph-easy/, tests/repro/claims/*.observed) is compared
+# byte-exactly (ge.oracle c3, ge.txt_render c4); a CRLF checkout on Windows
+# corrupts the recorded bytes and breaks the CI (ge-liz family, CI finding).
+* text=auto eol=lf
