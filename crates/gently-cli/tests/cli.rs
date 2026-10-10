@@ -292,21 +292,21 @@ mod scenarios {
             // subcommand near-miss: DidYouMean names the closest known command.
             let dir = TempDir::new("p7-sub");
             let r = run_gently_in(&dir.0, &["initt"], b"");
-            assert!(r.code.map_or(true, |c| c != 0), "unknown subcommand must exit nonzero");
+            assert!(!r.code.is_some_and(|c| c == 0), "unknown subcommand must exit nonzero");
             let err = String::from_utf8_lossy(&r.stderr);
             assert!(err.contains("Did you mean"), "suggestion expected: {err}");
             assert!(err.contains("init"), "suggestion must name the closest known command: {err}");
 
             // flag near-miss: DidYouMean names the closest known flag.
             let r = run_gently(&["--outpt"], b"");
-            assert!(r.code.map_or(true, |c| c != 0), "unknown flag must exit nonzero");
+            assert!(!r.code.is_some_and(|c| c == 0), "unknown flag must exit nonzero");
             let err = String::from_utf8_lossy(&r.stderr);
             assert!(err.contains("Did you mean"), "flag suggestion expected: {err}");
             assert!(err.contains("output"), "flag suggestion must name the closest known flag: {err}");
 
             // far miss: a Fix suggestion still precedes the nonzero exit.
             let r = run_gently(&["--zzzz"], b"");
-            assert!(r.code.map_or(true, |c| c != 0), "unknown flag must exit nonzero");
+            assert!(!r.code.is_some_and(|c| c == 0), "unknown flag must exit nonzero");
             let err = String::from_utf8_lossy(&r.stderr);
             assert!(!err.is_empty(), "a Fix suggestion must be printed: {err}");
             assert!(err.contains("--zzzz"), "Fix must name the unknown flag: {err}");
