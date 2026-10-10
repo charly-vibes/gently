@@ -44,3 +44,8 @@
 - 2026-10-09T23:10:31Z [id:65444be6813d3e75a95fe90036a509c5b8f0e04735bb15a46b1aef7e567b1f3a] ### 2026-10-09 23:10 — snap
   - /next quick-stash: gently-8ol run fully shipped — origin in sync at 81c3453 (feat d1085b9, probe evidence c6fad2b, artifacts 288448f), tree clean, 0 beads in_progress, 16 open (new: gently-a83 P3 %XX-decode follow-up).
   - **Next:** /renew -> gently-ef5 (cli pipeline, P1, unblocked by css) or gently-r22 (graph_model spec P1). /clear first if context heavy.
+- 2026-10-10T01:08:05Z [id:76fbffe1d6cab123dea5f65b862288e14be8df901760fa5d857ffa084a757553] ### 2026-10-10 01:08 — snap
+  - Orchestrated 3 autonomous epic-orchestrator runs (nohup+timeout 1800 spawn, poll loop): gently-r22 (graph_model spec re-derived), gently-13f (dot_parser spec re-derived), gently-89p (full ge.dot_parser impl, parse/dot/*, p1-p5 executing, backlog 24->19). All closed + pushed through 3e90f7b, gates green every run.
+  - Spawn lessons: 30-min cap killed 1st 89p run with zero writes (all 30 min orientation, 107 read-only cmds); clean retry with binding time-budget addendum succeeded in 11 min. 2nd: upstream stream-interrupt mid-GREEN -> manual resume pi -p --session <id> completed it. RED commit had bare 'mod ge_dot_parser;' missing #[path=...] attr (fixup 86c163a).
+  - Remaining: gently-b4v (graphviz_render P2, LAST blocker of P1 cli gently-ef5), then ef5; P2/P3 wave 0kg/cbb/dcp/89d/a83/ikm/k4u/liz/4ln/q1x. Follow-ups: 19 no-tests-ran toml flag fixes; GROUP edge endpoints in model Edge.
+  - **Next:** /clear then /renew -> gently-b4v (P2) to unblock gently-ef5 (P1).
