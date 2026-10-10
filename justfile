@@ -118,8 +118,10 @@ oracle-verify:
     cargo test -q -p gently-core --test scenarios tb::oracle::
     echo "oracle-verify: green — corpus verified against pin v0.69 @ ededa3d7"
 
-# Run the performance budget gates (spec: ge.perf c1-c4)
+# Run the performance budget gates (spec: ge.perf c1-c5)
 perf-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "perf-check: implementation phase not started — budgets spec'd in specs/ge-perf.md c1-c3"; exit 1
+    echo "perf-check: running ge.perf budget gates (specs/ge-perf.md c1-c5, scenarios ge_perf::p1-p5)"
+    cargo test -q -p gently-core --test scenarios ge_perf --release -- --nocapture
+    echo "perf-check: all budgets green — latency, memory shape, and scaling within spec budgets"
