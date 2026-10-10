@@ -1,0 +1,1 @@
+SHIP: CI green at fd5b62f — .gitattributes LF pin (CRLF corrupts byte-exact fixtures on windows), deny.toml license allow list (empty default rejected all crates), cli.rs BrokenPipe tolerance (p4 exit-255 race)
