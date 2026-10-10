@@ -3,8 +3,10 @@
 //! `lib/Graph/Easy/As_txt.pm`.
 //! Responsibilities: orchestrate the upstream output passes — class
 //! attribute sections first (sorted class order), attribute-bearing node
-//! declaration lines, group sections, then every edge exactly once as an
-//! operator chain plus edge-less isolated nodes, in upstream
+//! declaration lines, group sections carrying their member node
+//! declarations inside the section (so membership round-trips), then every
+//! edge exactly once as an operator chain plus edge-less isolated nodes, in
+//! upstream
 //! `(abs rank, name)` order driven by `_assign_ranks`; attribute-text
 //! rules live in the `attributes` submodule.
 //! Rationale: the txt form is the golden-test lingua franca — the recorded
@@ -15,6 +17,8 @@
 //! attributes has no class sections and the same edge chains.
 
 mod attributes;
+#[cfg(test)]
+mod tests;
 
 use crate::graph::{AttributeTable, Graph, ObjectKind};
 
@@ -23,10 +27,10 @@ use attributes::{class_section, instance_attributes};
 /// Serialize the graph to the canonical Graph::Easy txt form.
 pub fn render(graph: &Graph) -> String {
     let ranks = assign_ranks(graph);
-    let (declarations, declared) = declaration_pass(graph);
+    let (declarations, mut declared) = declaration_pass(graph);
     let mut out = class_pass(graph);
     out.push_str(&declarations);
-    out.push_str(&group_pass(graph));
+    out.push_str(&group_pass(graph, &mut declared));
     out.push_str(&edge_pass(graph, &ranks, &declared));
     out
 }
@@ -74,13 +78,20 @@ fn kind_name(kind: ObjectKind) -> &'static str {
 
 /// Pass 2: attribute-bearing nodes as declaration lines, sorted by name,
 /// followed by a blank line when any were emitted (upstream marks them
-/// `_p` so they are not re-emitted as isolated nodes).
+/// `_p` so they are not re-emitted as isolated nodes). Group members are
+/// excluded: a node belongs to exactly one group, so its declaration —
+/// attributes included — lives inside that group's section (pass 3).
 fn declaration_pass(graph: &Graph) -> (String, std::collections::HashSet<usize>) {
+    let members: std::collections::HashSet<usize> = graph
+        .groups
+        .iter()
+        .flat_map(|g| g.members.iter().copied())
+        .collect();
     let mut declared: Vec<usize> = graph
         .nodes
         .iter()
         .enumerate()
-        .filter(|(_, n)| !n.attributes.is_empty())
+        .filter(|(i, n)| !n.attributes.is_empty() && !members.contains(i))
         .map(|(i, _)| i)
         .collect();
     declared.sort_by(|x, y| {
@@ -102,15 +113,41 @@ fn declaration_pass(graph: &Graph) -> (String, std::collections::HashSet<usize>)
     (out, declared.into_iter().collect())
 }
 
-/// Pass 3: group sections, sorted by name (upstream Group::as_txt; the
-/// group stub has no membership yet, so the empty `( name )` form).
-fn group_pass(graph: &Graph) -> String {
+/// Pass 3: group sections, sorted by name (upstream Group::as_txt). A
+/// member-bearing group emits the upstream section shape — the header
+/// `( name`, then each member's node declaration indented two spaces, then
+/// `)` (tests/repro/claims/group-edge-graphviz.observed) — so membership
+/// round-trips through ge.text_parser's group-scope rule (a node line
+/// inside a group scope joins that group, c6). Member nodes are marked
+/// declared so pass 4 does not re-emit them as isolated nodes. An empty
+/// group keeps the parser's `( name )` empty-section form.
+fn group_pass(graph: &Graph, declared: &mut std::collections::HashSet<usize>) -> String {
     let mut groups: Vec<usize> = (0..graph.groups.len()).collect();
     groups.sort_by(|x, y| graph.groups[*x].name.cmp(&graph.groups[*y].name));
     let mut out = String::new();
     for &i in &groups {
         let group = &graph.groups[i];
-        out.push_str(&group_line(&group.name));
+        if group.members.is_empty() {
+            out.push_str(&group_line(&group.name));
+            out.push_str(&instance_attributes(&group.attributes, ObjectKind::Group));
+            out.push_str("\n\n");
+            continue;
+        }
+        out.push_str("( ");
+        out.push_str(&escape_chars(
+            &group.name,
+            &['[', ']', '(', ')', '{', '}', '#'],
+        ));
+        out.push('\n');
+        for &m in &group.members {
+            let node = &graph.nodes[m];
+            out.push_str("  ");
+            out.push_str(&node_line(&node.name));
+            out.push_str(&instance_attributes(&node.attributes, ObjectKind::Node));
+            out.push('\n');
+            declared.insert(m);
+        }
+        out.push(')');
         out.push_str(&instance_attributes(&group.attributes, ObjectKind::Group));
         out.push_str("\n\n");
     }
@@ -337,63 +374,3 @@ fn ordered_nodes(graph: &Graph, ranks: &[isize]) -> Vec<usize> {
     order
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::graph::{Edge, Graph, Node, Scope};
-
-    #[test]
-    fn edge_less_node_emits_bare_node_line() {
-        let g = Graph {
-            nodes: vec![Node::named("a"), Node::named("b")],
-            edges: vec![Edge::directed(0, 1), Edge::directed(0, 1)],
-            ..Graph::default()
-        };
-        let mut g2 = g.clone();
-        g2.nodes.push(Node::named("c"));
-        assert_eq!(
-            super::render(&g2),
-            "[ a ] --> [ b ]\n[ a ] --> [ b ]\n[ c ]\n"
-        );
-    }
-
-    #[test]
-    fn empty_graph_emits_empty_output() {
-        assert_eq!(super::render(&Graph::default()), "");
-    }
-
-    /// Oracle: undirected styles with a trailing space double the operator
-    /// (`- - ` for dashed, `= = ` for double-dash).
-    #[test]
-    fn undirected_trailing_space_styles_double() {
-        let mut g = Graph::default();
-        let a = g.add_node("a");
-        let b = g.add_node("b");
-        let e = g.add_edge(a, b, false).expect("live");
-        g.edges[e].arrows = Default::default();
-        g.set_attr(Scope::Edge(e), "style", "dashed");
-        assert_eq!(super::render(&g), "[ a ] - -  [ b ]\n");
-        g.set_attr(Scope::Edge(e), "style", "double-dash");
-        assert_eq!(super::render(&g), "[ a ] = =  [ b ]\n");
-        g.set_attr(Scope::Edge(e), "style", "solid");
-        assert_eq!(super::render(&g), "[ a ] -- [ b ]\n");
-    }
-
-    /// Oracle: node names escape `[`, `]`, `|`, `{`, `}`, `#`.
-    #[test]
-    fn node_names_escape_brackets_and_friends() {
-        let mut g = Graph::default();
-        g.add_node("a|b");
-        assert_eq!(super::render(&g), "[ a\\|b ]\n");
-    }
-
-    /// Oracle: a named group section renders as `( name )` plus its
-    /// instance attributes, followed by a blank line.
-    #[test]
-    fn group_sections_render_sorted_with_attributes() {
-        let mut g = Graph::default();
-        g.add_group("B");
-        let a = g.add_group("A");
-        g.set_attr(Scope::Group(a), "fill", "#ffccaa");
-        assert_eq!(super::render(&g), "( A ) { fill: #ffccaa; }\n\n( B )\n\n");
-    }
-}
