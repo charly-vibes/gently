@@ -6,6 +6,8 @@
 //! block's assertion body; predicates not yet translated fail in
 //! `verify` via `todo_predicate!`, never at artifact emission.
 
+use proptest::prelude::*;
+
 /// Marker for predicates not yet translated to Rust: compiles here,
 /// panics when executed — execution is `verify`'s job. A predicate
 /// opting in with **rust:** compiles as a real assertion instead
@@ -14,12 +16,26 @@ macro_rules! todo_predicate {
     ($reason:expr) => { todo!("{}", $reason) };
 }
 
-// id: p1
-// generator: arbitrary graphs laid out twice under identical options
-// predicate: both runs produce byte-identical grid outputs
-#[test]
-fn p1() {
+/// Generated strategies — one per generator named in the spec rows.
+/// Each yields a String (the generator's name; executable
+/// fragments bind these directly — Revision 15).
+pub mod spec_gen {
+    use super::*;
+
+    pub fn only() -> impl Strategy<Value = String> {
+        Just("only".into())
+    }
+
+}
+
+proptest! {
+    // id: p1
+    // generator: arbitrary graphs laid out twice under identical options — oracle-comparable sizes within the recorded envelope, gently-only (deterministic re-render) beyond it
+    // predicate: both runs produce byte-identical grid outputs
+    #[test]
+    fn p1(v0 in spec_gen::only()) {
         todo_predicate!("both runs produce byte-identical grid outputs");
+    }
 }
 
 // id: p2
@@ -31,19 +47,19 @@ fn p2() {
 }
 
 // id: p3
-// generator: graphs with all four flow directions and self-loops
-// predicate: every edge's source precedes its target along the flow axis, self-loops excepted
+// generator: acyclic graphs with a uniform graph-level flow across all four directions and self-loops, excluding the corpus-pinned shared-target/diamond shapes and any per-edge flow override
+// predicate: every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted
 #[test]
 fn p3() {
-        todo_predicate!("every edge's source precedes its target along the flow axis, self-loops excepted");
+        todo_predicate!("every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted");
 }
 
 // id: p4
-// generator: graphs with labelled, self-loop, and parallel multi-edges
-// predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell
+// generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges
+// predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path
 #[test]
 fn p4() {
-        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell");
+        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path");
 }
 
 // id: p5

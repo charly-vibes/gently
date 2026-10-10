@@ -5,12 +5,16 @@
 //! - The default (east) flow is byte-pinned by the recorded oracle corpus
 //!   (tb.corpus); non-east flows and edge labels appear in no tier-1
 //!   fixture, so they are free design here.
-//! - specs/ge-layout.md c3's strict-earlier claim is falsified by the
-//!   oracle itself for cycles (tests/repro/claims/layout-flow-direction
-//!   .observed — the return edge routes against the flow) and for the
-//!   packed fan-out/shared-target shapes the corpus pins (diamond: c below
-//!   a; shared-target: b east of c). Those shapes are excluded from p3's
-//!   generator; gently-89d owns the c3 re-derivation.
+//! - specs/ge-layout.md c3 (re-derived in gently-89d): strict-earlier
+//!   holds for acyclic, uniform-flow graphs; the oracle itself falsifies
+//!   the unqualified claim for cycles (tests/repro/claims
+//!   /layout-flow-direction.observed — the return edge routes against the
+//!   flow) and for the packed fan-out/shared-target shapes the corpus
+//!   pins (diamond: c below a; shared-target: b east of c). Those shapes
+//!   are excluded from p3's generator, matching the amended row. The
+//!   same amendment scoped c1 (tiered verification — the oracle's 5 s
+//!   alarm) and c4 (within-envelope — the oracle silently drops paths at
+//!   scale; tests/repro/claims/layout-edge-drop.observed).
 
 use gently_core::graph::{Graph, Scope};
 use gently_core::layout::{self, Layout};

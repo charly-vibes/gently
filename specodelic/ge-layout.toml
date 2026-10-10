@@ -3,7 +3,7 @@ source = "ge.layout"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "The layout is a pure function of the graph model and the layout options: identical inputs always produce identical ranks, orders, coordinates, and edge paths."
+expr = """The layout is a pure function of the graph model and the layout options: identical inputs always produce identical ranks, orders, coordinates, and edge paths. Verification is tiered (the [[ge.oracle]] c7 pattern): byte-comparable against the pinned oracle within the recorded envelope, and gently-only beyond it — deterministic re-render of gently's own output — because the oracle arms a default 5-second `alarm()` (Layout.pm:481) and cannot witness any claim at out-of-envelope scales (tests/repro/claims/size-envelope.observed: 200 nodes → "layout did not finish in time")."""
 traces_to = "[[ge.layout]]"
 
 [[constraints]]
@@ -15,13 +15,13 @@ traces_to = "[[ge.layout]]"
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "The configured flow direction (down, up, left, right) maps source nodes to strictly earlier positions along the flow axis than their targets; self-loops are exempt, since source and target coincide."
+expr = "For acyclic graphs under a uniform graph-level flow, the configured flow direction (down, up, left, right) maps source nodes to strictly earlier positions along the flow axis than their targets; self-loops are exempt (source and target coincide), and the packed shared-target/diamond shapes the recorded corpus pins rank-equal are exempt (tests/scenarios/ge_layout.rs scope note). Cycles and per-edge flow overrides are documented divergences: the oracle routes back-edges and overridden edges AGAINST the flow (tests/repro/claims/layout-flow-direction.observed), so no flow-consistent reading of the unqualified claim exists; gently's placement follows the recorded corpus."
 traces_to = "[[ge.layout]]"
 
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "Every edge is routed along an orthogonal path of grid cells connecting its source port to its target port, passing through its label cell when the edge has a label; parallel edges between the same node pair are routed through distinct cells."
+expr = """Every edge is routed along an orthogonal path of grid cells connecting its source port to its target port, passing through its label cell when the edge has a label; parallel edges between the same node pair are routed through distinct cells. This is a within-envelope contract: at larger scales the pinned oracle itself silently drops edge paths ("could only place ... - giving up", Layout.pm:846; tests/repro/claims/layout-edge-drop.observed: 74 of 75 edges placed at 50 nodes), so large-graph edge-count fidelity is oracle-scoped-off ([[ge.oracle]] c7) and gently's own invariant — every model edge gets a routed path — is verified structurally instead."""
 traces_to = "[[ge.layout]]"
 
 [[constraints]]

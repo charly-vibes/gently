@@ -1,0 +1,6 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: layout-edge-drop
+WARN: Warning: Layouter could only place 50 nodes/74 edges out of 50/75 - giving up at (eval 10) line 7.
+edges declared: 75
+edges with a routed cell path: 74
+200-node layout: completed
+200-node layout: ok

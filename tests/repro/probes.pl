@@ -112,6 +112,7 @@ my %SERVES = (
     'group-syntax'           => 'gently-6j0, gently-bzx (text_parser c6)',
     'anon-reference'         => 'gently-6j0, gently-bzx (text_parser c1)',
     'layout-flow-direction'  => 'gently-89d (layout c3)',
+    'layout-edge-drop'       => 'gently-89d (layout c1/c4 — alarm timeout, silent edge drop at scale)',
     'subgraph-handling'      => 'gently-13f (dot_parser c4 — named/nested/bare-scope subgraphs)',
     'dot-direction'          => 'gently-13f (dot_parser c1/c2 — header×operator direction matrix)',
     'dot-records-ports'      => 'gently-13f (dot_parser c5 — records, HTML-like labels, port references)',
@@ -282,6 +283,43 @@ my $a = $g->as_ascii();
 print $a;
 my ($arrowhead_glyphs) = ($a =~ /[^-]v|<|\^/);
 print "non-east arrow present: ", (defined $arrowhead_glyphs ? 'YES' : 'no'), "\n";
+PROBE
+
+    'layout-edge-drop' => <<'PROBE',
+# serves: gently-89d (layout c1/c4)
+# claim probed: layout c4 — "every edge is routed along an orthogonal
+# path" and c1 — "pure function" (oracle-verifiability scale).
+# Observed (probe a): at 50 nodes/75 edges the pinned oracle's layouter
+# SILENTLY DROPS edge paths — it warns "could only place 50 nodes/74
+# edges out of 50/75 - giving up" (Layout.pm:846; the exact placed count
+# varies with hash seed, the drop does not) but still renders, so the
+# output cannot witness c4 at that scale. Probe b: the layouter arms a
+# default 5-second alarm() (Layout.pm:481), so at dense/large scales it
+# dies before producing output (size-envelope.observed: 200 nodes →
+# "layout did not finish in time") — the oracle cannot verify ANY claim
+# (including determinism, c1) at that scale. Both scales are outside
+# the oracle-verifiable envelope; c4 is scoped within-envelope, c1's
+# determinism is verified gently-only beyond it (ge.oracle c7 pattern).
+use Graph::Easy;
+my $g = Graph::Easy->new();
+my @n = map { $g->add_node("n$_") } 0..49;
+for my $i (0..48) { $g->add_edge($n[$i], $n[$i+1]); }
+for my $i (0..25) { $g->add_edge($n[$i], $n[($i*7+13) % 50]); }
+local $SIG{__WARN__} = sub { print "WARN: $_[0]" };
+$g->layout();
+print "edges declared: ", scalar($g->edges()), "\n";
+my $with_path = 0;
+for my $e ($g->edges()) { $with_path++ if @{ $e->{cells} || [] } || (defined $e->from()->{x} && $e->from() == $e->to()); }
+print "edges with a routed cell path: $with_path\n";
+my $big = Graph::Easy->new();
+my @m = map { $big->add_node("m$_") } 0..199;
+for my $i (0..198) { $big->add_edge($m[$i], $m[$i+1]); }
+eval {
+  local $SIG{ALRM} = sub { die "alarm\n" };
+  $big->layout();
+  print "200-node layout: completed\n";
+};
+print "200-node layout: ", ($@ eq "alarm\n" ? "ERROR: layout did not finish in time (default 5 s alarm, Layout.pm:481)" : ($@ ? "ERROR: $@" : "ok")), "\n";
 PROBE
 
     'subgraph-handling' => <<'PROBE',
