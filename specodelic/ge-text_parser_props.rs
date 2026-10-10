@@ -88,9 +88,9 @@ fn p8() {
 
 // id: p10
 // generator: attribute values in double-, single-, mixed-, and unterminated-quoted form, with mid-value quotes and escaped `\"`, `\'`, `\;`, `\\` sequences
-// predicate: single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\"`, `\'`, `\;`, and `\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive
+// predicate: single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\"`, `\'`, `\;`, and `\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive; printable-band `%XX` entities decode (`%41` → `A`), exploit-band escapes (`%00`-`%1f`, `%7f`, high-bit) strip, and a bare `%` with no hex-pair tail stays literal
 #[test]
 fn p10() {
-        todo_predicate!("single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\\\"`, `\\'`, `\\;`, and `\\\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive");
+        todo_predicate!("single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\\\"`, `\\'`, `\\;`, and `\\\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive; printable-band `%XX` entities decode (`%41` → `A`), exploit-band escapes (`%00`-`%1f`, `%7f`, high-bit) strip, and a bare `%` with no hex-pair tail stays literal");
 }
 
