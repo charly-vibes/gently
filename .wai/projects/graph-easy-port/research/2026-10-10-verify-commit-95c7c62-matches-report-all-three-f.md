@@ -1,0 +1,1 @@
+VERIFY: commit 95c7c62 matches report; all three findings confirmed (c3 cycle divergence, c1 alarm timeout Layout.pm:481, c4 silent drop with corrected seed-dependent count; new probe layout-edge-drop.observed); c1/c3/c4+p1/p3/p4 amended, mirror+props deployed; cargo test 135/0, just gates green

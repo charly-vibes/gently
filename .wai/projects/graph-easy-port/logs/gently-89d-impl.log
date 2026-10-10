@@ -1,0 +1,34 @@
+## Report
+
+**Probe evidence** (each finding confirmed/corrected)
+- **c3 (flow direction)** — **confirmed.** `tests/repro/claims/layout-flow-direction.observed` (existing): cycle A→B→A under `flow: east` renders the return edge against the flow — no consistent reading of the unqualified claim exists.
+- **c1 (purity/oracle verifiability)** — **confirmed.** Pinned oracle source: `alarm(abs($args->{timeout} || $self->{timeout} || 5))` at `Layout.pm:481`; committed `size-envelope.observed` shows 200 nodes → "layout did not finish in time". The oracle cannot witness *any* claim (including determinism) at out-of-envelope scales.
+- **c4 (every edge routed)** — **confirmed, with corrected count.** New probe `tests/repro/claims/layout-edge-drop.observed` (added to `probes.pl` as named claim, run under the pinned checkout + seed 0): at 50 nodes/75 edges the oracle **silently drops paths** — "could only place 50 nodes/74 edges out of 50/75 - giving up" (Layout.pm:846) — and still renders. The placed count varies with hash seed (74 here vs 62 in the original report); the drop is what matters. My 200-node chain completed, confirming the alarm trip is shape-dependent (pinned by `size-envelope.observed`).
+
+**Spec rows amended** (all in `specs/ge-layout.md` + mirror + props)
+- **c1** — determinism kept; verification tiered (oracle-comparable within envelope, gently-only deterministic re-render beyond it, per the ge.oracle c7 pattern).
+- **c3** — scoped to acyclic, uniform-flow graphs; self-loops + corpus-pinned shared-target/diamond shapes exempt; cycles and per-edge flow overrides pinned as documented divergences.
+- **c4** — qualified within-envelope; oracle's silent drop at scale scoped-off; gently's own every-edge-routed invariant verified structurally.
+- **p1/p3/p4** — generators/predicates realigned to the amended rows.
+- `ge_layout.rs` doc-comment realigned only (no test logic changes).
+
+**Commits**
+- `95c7c62` — spec(layout): re-derive c1/c3/c4 against pinned-oracle behavior (gently-89d)
+
+**Follow-up beads filed**
+- `gently-oca` — pre-existing: `ah check --run-tests` shows 11 `no-tests-ran` findings for ge-oracle/ge-perf scenario filters (not touched by this change; verified pre-existing since my diff touches neither spec).
+
+**Gates run**
+- `spk lint specs/` — 12 files, 0 findings ✅
+- `cargo test --workspace` — 135 passed, 0 failed ✅
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean ✅
+- `ah check` — ok, 0 findings ✅
+- `ah check --run-tests` — 11 pre-existing `no-tests-ran` findings, all ge-oracle/ge-perf; **all ge-layout scenarios ran and passed** ⚠️ (tracked in gently-oca)
+- `just gates` — green (deploy + recompile + model checks, 0 blocking) ✅
+
+**Deviations**
+- The working tree contained stale unmerged index state (`src/layout.rs` UU, `render/ascii.rs` DU) left by the crashed raced attempt (insured in stash `gently-0of`, marked "did not compile"). I could not commit with unmerged paths; I restored `layout.rs` to HEAD and `git rm`'d the raced `ascii.rs` (new-file-from-them, absent at HEAD) to clear the index — the exact HEAD state my green gates then ran against. No conflict content was hand-resolved.
+- The "62 of 75" drop count in the ticket corrected to 74 of 75 (seed-dependent).
+
+**Next**
+- Ticket complete — orchestrator: review commit `95c7c62`, then resolve `gently-oca` (pre-existing test-filter drift) at leisure.
