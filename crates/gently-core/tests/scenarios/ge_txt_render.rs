@@ -103,7 +103,10 @@ fn p2() {
 
 /// Model equality for the round-trip (c3): the same node-name set with
 /// equal attribute tables and the same edge multiset keyed by endpoint
-/// names, direction and per-end arrows with equal attribute tables — the
+/// names, direction and per-end arrows with equal attribute tables, and
+/// the same group set with equal attributes and equal membership —
+/// members compared by node NAME (group membership is a name relation;
+/// re-parsed node indices may differ from the source's). The
 /// model-equality predicate for the parser-supported feature subset (see
 /// the documented deviation in p3).
 fn model_equivalent(a: &Graph, b: &Graph) -> bool {
@@ -139,19 +142,71 @@ fn model_equivalent(a: &Graph, b: &Graph) -> bool {
         v.sort();
         v
     };
+    let group_keys =
+        |g: &Graph| -> Vec<(String, Vec<String>, gently_core::graph::AttributeTable)> {
+            let mut v: Vec<_> = g
+                .groups
+                .iter()
+                .map(|grp| {
+                    (
+                        grp.name.clone(),
+                        grp.members
+                            .iter()
+                            .map(|&m| g.nodes[m].name.clone())
+                            .collect(),
+                        grp.attributes.clone(),
+                    )
+                })
+                .collect();
+            v.sort_by(|x, y| x.0.cmp(&y.0));
+            v
+        };
     node_names(a) == node_names(b)
         && node_attrs(a) == node_attrs(b)
         && edge_keys(a) == edge_keys(b)
         && a.attributes == b.attributes
         && a.class_attributes == b.class_attributes
-        && a.groups == b.groups
+        && group_keys(a) == group_keys(b)
 }
 
 /// The round-trip sources: shapes within the parser-supported feature set.
 fn round_trip_sources() -> Vec<Graph> {
     let mut sources = connected_shapes();
     sources.push(diamond_shape());
+    sources.extend(group_shapes());
     sources
+}
+
+/// Group shapes: a named group whose member sits on an edge, a group whose
+/// members are isolated (one bearing node attributes), a group with
+/// group-level attributes, and an empty group — the membership-carrier
+/// forms for the c3 round-trip.
+fn group_shapes() -> Vec<Graph> {
+    let mut edged_member = Graph::default();
+    let a = edged_member.add_node("a");
+    let b = edged_member.add_node("b");
+    edged_member.add_edge(a, b, true);
+    let g = edged_member.add_group("G");
+    edged_member.set_node_group(b, g);
+
+    let mut isolated_members = Graph::default();
+    let x = isolated_members.add_node("x");
+    let y = isolated_members.add_node("y");
+    let ga = isolated_members.add_group("A");
+    isolated_members.set_node_group(x, ga);
+    isolated_members.set_node_group(y, ga);
+    isolated_members.set_attr(Scope::Node(x), "fill", "red");
+
+    let mut attributed_group = Graph::default();
+    let c = attributed_group.add_node("c");
+    let h = attributed_group.add_group("H");
+    attributed_group.set_node_group(c, h);
+    attributed_group.set_attr(Scope::Group(h), "fill", "#ffccaa");
+
+    let mut empty = Graph::default();
+    empty.add_group("E");
+
+    vec![edged_member, isolated_members, attributed_group, empty]
 }
 
 /// Chain-derived shapes: a chain, an isolated node appended, parallel
@@ -201,8 +256,9 @@ fn diamond_shape() -> Graph {
 
 /// ge.txt_render.p3 (c3): parsing the emitted text with ge.text_parser
 /// reproduces a model with the same nodes, edges, styles, labels,
-/// directions, and attributes as the source model. Bound to the
-/// parser-supported feature subset (see the documented deviation below).
+/// directions, attributes, and group membership as the source model.
+/// Bound to the parser-supported feature subset (see the documented
+/// deviation below).
 #[test]
 fn p3() {
     for g in &round_trip_sources() {
