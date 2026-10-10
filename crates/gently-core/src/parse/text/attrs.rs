@@ -9,8 +9,8 @@
 //! unquoting (c10): parser layer (`_unquote` — unescape the special set,
 //! collapse whitespace), then store layer (`Attributes::unquote_attribute`
 //! — strip one greedy pair of surrounding quotes, either quote char,
-//! then unescape `\# \" \' \; \\`). %XX entity decoding is upstream
-//! store-layer behavior NOT implemented here (gently follow-up). Also
+//! then unescape `\# \" \' \; \\`, strip exploit-band %XX escapes, and
+//! decode printable-band %XX entities). Also
 //! owns the shared unescape/collapse helpers used for node and group
 //! names and edge labels (parser layer only — names never see the store
 //! layer). Rationale: values are stored verbatim — no key or value
@@ -177,13 +177,13 @@ fn parse_single(decl: &str, line: usize) -> Result<(String, String), ParseError>
 /// parser layer (`_unquote`: unescape the special set, collapse
 /// whitespace), then the store layer (`Attributes::unquote_attribute`:
 /// strip one greedy pair of surrounding quotes — either quote char,
-/// mixed ends allowed — and unescape `\# \" \' \; \\`). A value whose
-/// opening quote never closes is kept verbatim; mid-value quotes
-/// survive. %XX entity decoding is NOT implemented (upstream store-layer
-/// behavior beyond this slice).
+/// mixed ends allowed — and unescape `\# \" \' \; \\`, strip exploit-band
+/// %XX escapes, decode printable-band %XX entities). A value whose
+/// opening quote never closes is kept verbatim; mid-value quotes survive.
 fn unquote_value(value: &str) -> String {
     let parsed = collapse_ws(&unescape(value));
-    store_unescape(&strip_quote_pair(&parsed))
+    let unescaped = store_unescape(&strip_quote_pair(&parsed));
+    decode_percent_entities(&unescaped)
 }
 
 /// The store-layer quote strip: `s/^["'](.*)["']\z/$1/` — when the first
@@ -244,6 +244,40 @@ pub fn unescape(s: &str) -> String {
             out.push(chars[i]);
             i += 1;
         }
+    }
+    out
+}
+
+/// The store-layer %XX pass (upstream `s/%[^2-7][a-fA-F0-9]|%7f//g` then
+/// `s/%([2-7][a-fA-F0-9])/sprintf("%c",hex($1))/eg`): per position, a `%`
+/// followed by a non-%2X-%7X head and a hex digit — the exploit band
+/// (%00-%1f, %80-%ff) plus `%7f` — is dropped, a `%` in the %20-%7f band
+/// followed by a hex digit decodes to its character, and anything else
+/// stays literal (e.g. `100%`, `%zz`).
+fn decode_percent_entities(s: &str) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let hex = |c: char| c.is_ascii_hexdigit();
+    let exploit = |head: char, tail: char| {
+        hex(tail) && (!(('2'..='7').contains(&head)) || (head == '7' && tail == 'f'))
+    };
+    let mut out = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == '%' && i + 2 < chars.len() {
+            let (head, tail) = (chars[i + 1], chars[i + 2]);
+            if exploit(head, tail) {
+                i += 3; // drop the escape entirely
+                continue;
+            }
+            if hex(tail) && ('2'..='7').contains(&head) {
+                let v = head.to_digit(16).unwrap() * 16 + tail.to_digit(16).unwrap();
+                out.push(char::from_u32(v).expect("%20-%7f is a valid scalar"));
+                i += 3;
+                continue;
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
     }
     out
 }
