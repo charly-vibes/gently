@@ -1,0 +1,1 @@
+VERIFY: commit 1629c4f re-derives html c1/c2/c4 + ascii c1/c2/c6 vs oracle AND shipped renderers; no impl-gap beads (implementations match amended contracts); spk lint 0, cargo test 135/0, just gates green

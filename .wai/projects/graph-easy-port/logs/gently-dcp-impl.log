@@ -1,0 +1,37 @@
+Committed `1629c4f`, all hooks green. No implementation gaps, no new probes needed — every question was already pinned by existing `.observed` files. Final state check and report:
+
+## Report
+
+**Verdicts**
+- **html c2 (link escaping)** — `row-amended`: oracle keeps ampersands RAW in href (only space→+, '→%27; `href-escaping.observed`); implementation (`escape_href`, styles.rs:262) matches oracle, so the "HTML-escaped URLs" wording overclaimed — c2 + p2 amended with re-derivation note.
+- **html c4 (self-contained CSS)** — `row-amended`: oracle `as_html` emits ONLY the table; CSS comes from `->css()` used by the document form (`html-css-rules.observed`, probe calls `$g->css()`); implementation mirrors the split (`render()` table-only, `document()` embeds `<style>`) — c4 + p4 amended to scope the self-contained claim to the document form.
+- **html td-count (c1)** — `row-amended`: oracle spans nodes `td colspan=4 rowspan=4` over its 4×4 subcell grid (`td-colspan.observed`), so oracle td count ≠ cell count; gently emits one td per grid cell as a documented deliberate divergence (module header) — c1 + p1 amended recording the oracle machinery and the by-design simplification.
+- **ascii c2 (edge glyphs)** — `row-amended`: observed minimum runs are `-->`, `==>`, `..>`, `~~>`, `- >`, `##>` — not the fixed `....>`/`- - >` forms; labelled/wider runs repeat the style's fill pattern (`ascii-render-tables.observed`; implementation `edge_run`/`edge_fill` matches exactly) — c2 + p2 amended.
+- **ascii shapes (c6)** — `row-amended`: oracle collapses all non-special shapes to the plain box; `rounded`/`point`/`invisible` are the only divergent outlines; `shape: box` is upstream-REJECTED (probe HANG-OR-ERROR line) — c6 + p6 amended; implementation (`Shape` enum, 4 classes) matches exactly.
+- **ascii bold/wide/broad (c1/p1)** — `row-amended`: all three render identical `#####` outlines in ASCII (`ascii-render-tables.observed`); they differ only in HTML border widths (`shape-outline-collapse.observed`); implementation maps all three to one `Border` — c1 (vocabulary + collapse note) and p1 predicate amended.
+
+No impl-gap beads: the shipped html + ascii renderers match the oracle on every probed point; only the spec rows overclaimed.
+
+**Commits**
+- `1629c4f` — specs: re-derive html c1/c2/c4 + ascii c1/c2/c6 against oracle and shipped renderers (gently-dcp) — includes openspec mirrors + regenerated specodelic tomls/props/check.jsons.
+
+**Probes added** — none (all six questions already pinned by existing `tests/repro/claims/*.observed`).
+
+**Follow-up beads filed** — none (no implementation divergences from the amended contracts).
+
+**Gates run**
+```
+spk lint specs/            — 12 files, 0 findings, 0 warnings
+cargo test --workspace     — all green (50 unit + 76 tb + scenario suites pass)
+cargo clippy -D warnings   — clean
+ah check                   — 0 structural findings
+ah check --run-tests       — 58/58 contract tests passed for ge-html_render + ge-ascii_render; 0 findings on touched specs
+just gates                 — regenerated props + model-check reports, all green
+```
+
+**Deviations**
+- `ah check --run-tests` reports 11 pre-existing `no-tests-ran` findings in **ge-oracle** and **ge-perf** — specs outside this ticket's scope (their contract TOMLs declare test flags that don't match any scenario test). Not introduced by this change; owned by the oracle/perf tickets. Left untouched per hard scope guard.
+- `python3 tools/deploy_specs.py --help` ran the deploy instead of printing help (idempotent, harmless).
+
+**Next**
+- Ticket complete — orchestrator may close `gently-dcp`; no follow-up beads needed. The ge-oracle/ge-perf contract-TOML flag mismatch could be filed as a separate bead by the orchestrator if not already tracked.
