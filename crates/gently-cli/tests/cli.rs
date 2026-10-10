@@ -15,7 +15,53 @@
 //! and gently-bzx (full parser capability).
 
 use std::io::Write;
+use std::path::Path;
 use std::process::{Command, Stdio};
+
+/// Like [`run_gently`], but spawns `gently` with `dir` as its working
+/// directory — required for filesystem-touching surfaces (`init`, `doctor`)
+/// so they never write into the repo working tree (gently-ef5).
+fn run_gently_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_gently"))
+        .args(args)
+        .current_dir(dir)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("spawn gently");
+    if let Err(e) = child
+        .stdin
+        .as_mut()
+        .expect("stdin piped")
+        .write_all(stdin)
+    {
+        assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "write stdin");
+    }
+    let out = child.wait_with_output().expect("wait for gently");
+    Run {
+        stdout: out.stdout,
+        stderr: out.stderr,
+        code: out.status.code(),
+    }
+}
+
+/// A fresh tempdir scoped to this test process, cleaned up on drop.
+struct TempDir(std::path::PathBuf);
+
+impl TempDir {
+    fn new(tag: &str) -> TempDir {
+        let dir = std::env::temp_dir().join(format!("gently-{tag}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        TempDir(dir)
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
 
 /// Pinned oracle (Graph::Easy v0.69 @ ededa3d7, recorded 2026-10-08):
 /// `perl -IGraph-Easy-0.69/lib -MGraph::Easy -e 'my $g = Graph::Easy->new;
@@ -67,7 +113,7 @@ fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
 /// matches these test paths.
 mod scenarios {
     mod cli {
-        use super::super::{run_gently, ORACLE};
+        use super::super::{run_gently, run_gently_in, TempDir, ORACLE};
 
         /// cli.p1 (c1): stdin and the first file argument reach the parser
         /// with the same bytes; the second positional names the output file;
@@ -176,6 +222,127 @@ mod scenarios {
             let err = String::from_utf8_lossy(&r.stderr);
             assert!(err.contains("html"), "diagnostic must name the requested format: {err}");
             assert!(err.contains("ascii"), "diagnostic must name the valid formats: {err}");
+        }
+
+        /// cli.p5 (c5): genesis foundation — `init` registers gently in
+        /// `.genesis/tools.toml` of the working directory (tempdir, never
+        /// the repo), verbosity is honored (`-v` adds a verbose diagnostic
+        /// on stderr; `--quiet` suppresses non-error output), and default
+        /// human dispatch is unchanged.
+        #[test]
+        fn p5() {
+            // init: registers the tool entry in the tempdir's manifest.
+            let dir = TempDir::new("p5-init");
+            let r = run_gently_in(&dir.0, &["init"], b"");
+            assert_eq!(Some(0), r.code, "init must exit 0: {}", String::from_utf8_lossy(&r.stderr));
+            let manifest = dir.0.join(".genesis/tools.toml");
+            let body = std::fs::read_to_string(&manifest)
+                .expect("init must write .genesis/tools.toml in the working directory");
+            assert!(body.contains("[tools.gently]"), "manifest must name gently: {body}");
+            assert!(r.stderr.is_empty(), "init keeps stderr clean on success");
+
+            // -v: verbose diagnostics appear on stderr; stdout unchanged.
+            let r = run_gently(&["-v"], b"[ a ] --> [ b ]\n");
+            assert_eq!(Some(0), r.code, "-v must not fail");
+            assert_eq!(ORACLE, &r.stdout[..], "-v keeps the rendered bytes on stdout");
+            assert!(!r.stderr.is_empty(), "-v must add a verbose diagnostic on stderr");
+
+            // --quiet: non-error output is suppressed; exit stays 0.
+            let r = run_gently(&["--quiet"], b"[ a ] --> [ b ]\n");
+            assert_eq!(Some(0), r.code, "--quiet must not fail");
+            assert!(r.stdout.is_empty(), "--quiet suppresses the rendered payload");
+            assert!(r.stderr.is_empty(), "--quiet suppresses verbose diagnostics");
+        }
+
+        /// cli.p6 (c6): `--json` wraps results in the genesis Envelope
+        /// (ok, envelope_version, envelope_kind, data, warnings, hints,
+        /// meta); failures carry a typed error envelope; human mode stays
+        /// byte-identical to the unwrapped oracle stream.
+        #[test]
+        fn p6() {
+            // success envelope: ok:true, kind "ok", rendered bytes in data.
+            let r = run_gently(&["--json"], b"[ a ] --> [ b ]\n");
+            assert_eq!(Some(0), r.code, "--json success exits 0");
+            let out = String::from_utf8_lossy(&r.stdout);
+            for field in ["\"ok\":true", "\"envelope_version\":", "\"envelope_kind\":\"ok\"", "\"warnings\":", "\"hints\":", "\"meta\":"] {
+                assert!(out.contains(field), "envelope must carry {field}: {out}");
+            }
+            assert!(out.contains("| a | --> | b |"), "envelope data must carry the rendered bytes: {out}");
+            assert!(r.stderr.is_empty(), "json success keeps stderr clean: {}", String::from_utf8_lossy(&r.stderr));
+
+            // failure envelope: typed error kind, ok:false, nonzero exit.
+            let r = run_gently(&["--json"], b"this is not graph text\n");
+            assert_eq!(Some(1), r.code, "--json failure exits 1");
+            let out = String::from_utf8_lossy(&r.stdout);
+            assert!(out.contains("\"ok\":false"), "failure envelope ok:false: {out}");
+            assert!(out.contains("\"envelope_kind\":\"error\""), "failure envelope kind error: {out}");
+            assert!(out.contains("parse error"), "failure envelope names the failure: {out}");
+
+            // human mode: raw oracle bytes, not a wrapped envelope.
+            let r = run_gently(&["--human"], b"[ a ] --> [ b ]\n");
+            assert_eq!(ORACLE, &r.stdout[..], "human mode must stay byte-identical");
+        }
+
+        /// cli.p7 (c7): unknown subcommands and flags get a genesis
+        /// suggestion (DidYouMean / Fix) naming the closest known name on
+        /// stderr, before the nonzero exit.
+        #[test]
+        fn p7() {
+            // subcommand near-miss: DidYouMean names the closest known command.
+            let dir = TempDir::new("p7-sub");
+            let r = run_gently_in(&dir.0, &["initt"], b"");
+            assert!(r.code.map_or(true, |c| c != 0), "unknown subcommand must exit nonzero");
+            let err = String::from_utf8_lossy(&r.stderr);
+            assert!(err.contains("Did you mean"), "suggestion expected: {err}");
+            assert!(err.contains("init"), "suggestion must name the closest known command: {err}");
+
+            // flag near-miss: DidYouMean names the closest known flag.
+            let r = run_gently(&["--outpt"], b"");
+            assert!(r.code.map_or(true, |c| c != 0), "unknown flag must exit nonzero");
+            let err = String::from_utf8_lossy(&r.stderr);
+            assert!(err.contains("Did you mean"), "flag suggestion expected: {err}");
+            assert!(err.contains("output"), "flag suggestion must name the closest known flag: {err}");
+
+            // far miss: a Fix suggestion still precedes the nonzero exit.
+            let r = run_gently(&["--zzzz"], b"");
+            assert!(r.code.map_or(true, |c| c != 0), "unknown flag must exit nonzero");
+            let err = String::from_utf8_lossy(&r.stderr);
+            assert!(!err.is_empty(), "a Fix suggestion must be printed: {err}");
+            assert!(err.contains("--zzzz"), "Fix must name the unknown flag: {err}");
+        }
+
+        /// cli.p8 (c8): `gently doctor` runs suite health checks through
+        /// genesis DoctorRunner — oracle availability, output-format
+        /// support, fixture pin freshness — names each check's status, and
+        /// applies available auto-fixes (--fix registers the genesis
+        /// entry). Runs in a tempdir; never the repo.
+        #[test]
+        fn p8() {
+            // Without the oracle toolchain (PATH stripped): the oracle check
+            // is named and failing; without --fix nothing is auto-repaired.
+            let dir = TempDir::new("p8-doctor");
+            let mut child = Command::new(env!("CARGO_BIN_EXE_gently"))
+                .args(["doctor"])
+                .current_dir(&dir.0)
+                .env("PATH", "/nonexistent-gently-p8")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("spawn gently doctor");
+            let out = child.wait_with_output().expect("wait");
+            assert_eq!(Some(1), out.status.code(), "unhealthy doctor exits 1");
+            let report = String::from_utf8_lossy(&out.stdout);
+            for check in ["oracle", "format", "pin", "genesis"] {
+                assert!(report.contains(check), "report must name the {check} check: {report}");
+            }
+            assert!(report.contains("fail"), "oracle check must be named failing: {report}");
+            assert!(!dir.0.join(".genesis/tools.toml").exists(), "no auto-fix without --fix");
+
+            // --fix: the available auto-fix (genesis registration) applies.
+            let r = run_gently_in(&dir.0, &["doctor", "--fix"], b"");
+            let report = String::from_utf8_lossy(&r.stdout);
+            assert!(dir.0.join(".genesis/tools.toml").exists(), "--fix must register the genesis entry: {report}");
+            assert!(report.contains("pass"), "fixed registration must pass: {report}");
         }
     }
 }
