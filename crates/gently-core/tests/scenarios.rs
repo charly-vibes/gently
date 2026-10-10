@@ -390,4 +390,5 @@ mod ge_boxart_render;
 #[path = "scenarios/ge_html_render.rs"]
 mod ge_html_render;
 
+#[path = "scenarios/ge_dot_parser.rs"]
 mod ge_dot_parser;
