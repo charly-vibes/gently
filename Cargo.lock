@@ -226,6 +226,7 @@ dependencies = [
  "genesis-vibes",
  "gently-core",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

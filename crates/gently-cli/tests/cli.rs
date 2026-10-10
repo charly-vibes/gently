@@ -114,6 +114,7 @@ fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
 mod scenarios {
     mod cli {
         use super::super::{run_gently, run_gently_in, TempDir, ORACLE};
+        use std::process::{Command, Stdio};
 
         /// cli.p1 (c1): stdin and the first file argument reach the parser
         /// with the same bytes; the second positional names the output file;
@@ -321,15 +322,14 @@ mod scenarios {
             // Without the oracle toolchain (PATH stripped): the oracle check
             // is named and failing; without --fix nothing is auto-repaired.
             let dir = TempDir::new("p8-doctor");
-            let mut child = Command::new(env!("CARGO_BIN_EXE_gently"))
+            let out = Command::new(env!("CARGO_BIN_EXE_gently"))
                 .args(["doctor"])
                 .current_dir(&dir.0)
                 .env("PATH", "/nonexistent-gently-p8")
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .spawn()
+                .output()
                 .expect("spawn gently doctor");
-            let out = child.wait_with_output().expect("wait");
             assert_eq!(Some(1), out.status.code(), "unhealthy doctor exits 1");
             let report = String::from_utf8_lossy(&out.stdout);
             for check in ["oracle", "format", "pin", "genesis"] {
