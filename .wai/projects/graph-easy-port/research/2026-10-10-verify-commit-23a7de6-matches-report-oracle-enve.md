@@ -1,0 +1,1 @@
+VERIFY: commit 23a7de6 matches report; oracle envelope re-verified vs gently release measurements (1000 nodes 13ms/4.4MB vs oracle dies at 200); c2/c5 re-scoped Tier-3 gently-only; follow-up mki filed; cargo test 135/0, just gates green

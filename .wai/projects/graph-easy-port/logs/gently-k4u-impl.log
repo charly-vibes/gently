@@ -1,0 +1,32 @@
+All gates run post-change on the committed content. Final report:
+
+## Report
+
+**Measurements**
+- *Oracle envelope* (recorded, `tests/repro/claims/size-envelope.observed`, pinned v0.69 @ ededa3d, seed 0): 50 nodes/141 edges → **0.597 s**; 100 nodes/291 edges → **2.744 s**; 200 nodes → **ERROR (5 s alarm, no output)** — superlinear growth, no usable comparison fixtures beyond ~100 nodes.
+- *Gently envelope* (release build, same chain+skip-edge fixture classes): 50/141 ≈ 1 ms; 100/291 ≈ 1 ms; 200 ≈ 2 ms; **1,000 nodes/2,991 edges ≈ 13 ms** (ascii), 1 ms per graphviz/html/txt, **peak RSS ≈ 4.4 MB**; 4,000-node chain ≈ 55 ms. Near-linear, ~150× headroom on the 2 s wall budget, ~58× on the 256 MB RSS budget.
+
+**Spec rows amended** (`specs/ge-perf.md` + mirror `openspec/specs/ge-perf/spec.md`)
+- frontmatter statement — byte-compat now qualified to "within the oracle-verifiable envelope (specs/ge-oracle.md c7)".
+- header prose — added the oracle-envelope evidence and Tier-3 scoping paragraph.
+- c2 — 1,000-node/2 s + 256 MB budget kept as a **gently-only Tier-3** budget, no oracle byte comparison, with re-derivation note + measured headroom (13 ms / 4.4 MB).
+- c5 — near-linear advisory rewritten honestly: upstream grows superlinearly and is alarm-killed at 200 nodes; scaling is measured on gently alone in the raw-scaling tier (13 ms @ 1,000 / 55 ms @ 4,000).
+- p2, p5 — predicates updated to gently-only / raw-scaling-tier verification.
+- c1, c3, c4, model, t1–t3 — unchanged (measurement forced no change).
+
+**Commits** — `23a7de6` specs(ge.perf): re-scope c2/c5 budgets to the oracle-verifiable envelope; large-graph budgets become gently-only Tier-3 (gently-k4u)
+
+**Follow-up beads filed** — `gently-mki`: scenario tests missing for ge-perf p1–p5 and ge-oracle p1–p6 (pre-existing `no-tests-ran` findings; crates/** out of k4u scope).
+
+**Gates run**
+- `spk lint specs/` — ✅ 12 files, 0 issues
+- `cargo test --workspace` — ✅ all pass
+- `cargo clippy --workspace --all-targets -- -D warnings` — ✅ clean
+- `ah check` — ✅ 0 findings
+- `ah check --run-tests` — ❌ 11 pre-existing `no-tests-ran` findings (ge-perf p1–p5, ge-oracle p1–p6 declare cargo filters with no matching tests; predates this change, tracked as gently-mki)
+- `just gates` — ✅ compile 12/0, model-check 12/0
+
+**Deviations** — `ah check --run-tests` is red on pre-existing `no-tests-ran` findings only (see gently-mki); every declared test that exists passes. No implementation changes made; no probes/.observed files changed (the recorded oracle evidence was reused, not re-measured).
+
+**Next**
+- Orchestrator: verify commit `23a7de6`, then gently-k4u is ready to close; hand gently-mki (missing scenario tests) to an impl ticket if `ah check --run-tests` green is required.
