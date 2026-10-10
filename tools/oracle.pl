@@ -41,7 +41,10 @@ EOF
 # environment contract: Graph::Easy version, source-checkout load path,
 # and an explicitly pinned PERL_HASH_SEED (byte-identical recordings are
 # only reproducible at the same seed — c1/c3).
-my $version = eval { Graph::Easy->VERSION } // 'not installed';
+# p4 (gently-q1x): require the module explicitly so a wrong-version
+# Graph::Easy on PERL5LIB is detected as drift, not 'not installed'
+# (perl does not auto-load the class for a bareword method call).
+my $version = eval { require Graph::Easy; Graph::Easy->VERSION } // 'not installed';
 fail_pin("installed Graph::Easy is '$version', pin is v$PIN_VERSION \@ $PIN_COMMIT")
     unless defined $version && $version eq $PIN_VERSION;
 my $load_path = $INC{'Graph/Easy.pm'} // 'not loaded';

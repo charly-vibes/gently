@@ -41,7 +41,9 @@ oracle-record:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v perl >/dev/null || { echo "oracle: perl not found — spec ge.oracle.c4 (remediation: install perl)"; exit 1; }
-    FIX=tests/fixtures/graph-easy
+    # FIX is overridable so drifted-environment probes (ge-oracle p4) can
+    # exercise the recipes against a tempdir corpus, never the repo tree.
+    FIX="${FIX:-tests/fixtures/graph-easy}"
     [ -d "$FIX" ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2 (remediation: create it, see $FIX/README.md)"; exit 1; }
     LIB=/var/tmp/ge0.69/Graph-Easy-0.69/lib
     [ -f "$LIB/Graph/Easy.pm" ] || { echo "oracle: pinned source checkout missing at $LIB — spec ge.oracle.c1/c4 (remediation: see $FIX/README.md 'Recording')"; exit 1; }
@@ -72,7 +74,8 @@ repro-claims:
 oracle-verify:
     #!/usr/bin/env bash
     set -euo pipefail
-    FIX=tests/fixtures/graph-easy
+    # FIX overridable for the p4 drifted-environment probes (see above).
+    FIX="${FIX:-tests/fixtures/graph-easy}"
     PIN="# oracle: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499"
     [ -d "$FIX" ] || { echo "oracle: no fixture corpus at tests/fixtures/graph-easy — spec ge.oracle.c2"; exit 1; }
     ls "$FIX"/*.txt >/dev/null 2>&1 || { echo "oracle: no *.txt inputs in $FIX — spec ge.oracle.c2"; exit 1; }
