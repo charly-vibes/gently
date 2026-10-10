@@ -74,19 +74,27 @@ fn p3() {
 
 /// ge.dot_parser.p4 (c4): a named subgraph becomes a model group with the
 /// name verbatim containing only its directly declared nodes (nested nodes
-/// belong to the innermost group); a bare `{ }` scope keeps its nodes
-/// ungrouped — with the oracle's pinned left-edge-stack caveat — and the
-/// nameless `subgraph` keyword form (with or without an attribute list) is
-/// a tokenizing error.
+/// belong to the innermost group) — except for the graphviz renderer's
+/// cluster convention (gently-j2i): an id `cluster_<name>` re-parses as
+/// group `<name>` and an id `cluster` + bare digits re-parses as an
+/// anonymous group; a bare `{ }` scope keeps its nodes ungrouped — with
+/// the oracle's pinned left-edge-stack caveat — and the nameless `subgraph`
+/// keyword form (with or without an attribute list) is a tokenizing error.
 #[test]
 fn p4() {
-    // named subgraphs become groups under their verbatim names
-    let g = dot::parse("digraph G { a -> b; subgraph cluster_x { c d } subgraph named { e } }\n")
-        .expect("must parse");
-    let cx = g.groups.iter().position(|grp| grp.name == "cluster_x").expect("cluster_x group");
+    // named subgraphs become groups under their verbatim names — with the
+    // graphviz cluster convention: `cluster_x` re-parses as `x`, a bare
+    // `cluster0` re-parses as an anonymous group (empty name)
+    let g = dot::parse(
+        "digraph G { a -> b; subgraph cluster_x { c d } subgraph named { e } subgraph cluster0 { f } }\n",
+    )
+    .expect("must parse");
+    let cx = g.groups.iter().position(|grp| grp.name == "x").expect("x group (cluster_ stripped)");
     let nm = g.groups.iter().position(|grp| grp.name == "named").expect("named group");
+    let an = g.groups.iter().position(|grp| grp.name.is_empty()).expect("anonymous group (cluster0)");
     assert_eq!(g.groups[cx].members, vec![node(&g, "c"), node(&g, "d")]);
     assert_eq!(g.groups[nm].members, vec![node(&g, "e")]);
+    assert_eq!(g.groups[an].members, vec![node(&g, "f")]);
 
     // nested subgraphs: each level its own group, innermost membership wins
     let g =

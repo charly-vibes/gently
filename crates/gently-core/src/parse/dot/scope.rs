@@ -3,7 +3,8 @@
 //! body; bare `{ }` scopes — nodes ungrouped, with the oracle's surviving
 //! left-edge stack (the pinned spurious edge from the enclosing chain
 //! tail to the scope's last node); `subgraph NAME { ... }` statements and
-//! inline subgraph endpoints — groups under their verbatim name,
+//! inline subgraph endpoints — groups under their verbatim name except
+//! for the graphviz cluster convention (gently-j2i, see `cluster_convention`),
 //! innermost-only membership, with the nameless keyword form and any
 //! attribute list before `{` as tokenizing errors. Rationale: split from
 //! mod.rs so files stay under the pretender ratchet's limits.
@@ -83,10 +84,36 @@ impl P<'_> {
             Some(Tok::LBrace) => self.pos += 1,
             _ => return Err(self.not_recognized(start)),
         }
-        let gidx = self.g.add_group(&name);
+        let gidx = self.g.add_group(&cluster_convention(&name));
         self.scope_body(Some(gidx))?;
         self.expect_rbrace()?;
         Ok(name)
     }
 
+}
+
+/// The graphviz renderer's cluster convention (gently-j2i,
+/// ge.graphviz_render.c4): the renderer emits a named group `name` as the
+/// subgraph id `cluster_<name>` and an anonymous group as `cluster<N>`
+/// (bare digits after `cluster`, `<N>` the group's internal id). Restoring
+/// the dot round trip therefore means: a subgraph id of the form
+/// `cluster_<name>` re-parses with group name `<name>` (verbatim restore),
+/// and an id of the form `cluster` + one-or-more ASCII digits re-parses as
+/// an ANONYMOUS group (empty name). Single deterministic interpretation
+/// rule, applied uniformly: every `cluster_`-prefixed id strips the prefix
+/// and every `cluster`+digits id is anonymous — a model group genuinely
+/// named `cluster_foo` is unambiguous (the renderer emits
+/// `cluster_cluster_foo`, which strips back to `cluster_foo`), while a
+/// hand-written `subgraph cluster_foo` in foreign DOT resolves to group
+/// `foo`. No escape hatches beyond this one rule.
+fn cluster_convention(name: &str) -> String {
+    if let Some(rest) = name.strip_prefix("cluster_") {
+        return rest.to_string();
+    }
+    if let Some(digits) = name.strip_prefix("cluster") {
+        if !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) {
+            return String::new(); // anonymous group restored
+        }
+    }
+    name.to_string()
 }
