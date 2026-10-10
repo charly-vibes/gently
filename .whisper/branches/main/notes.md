@@ -52,3 +52,6 @@
 - 2026-10-10T12:25:52Z [id:4e1936226a496c8b6d039157da41f1b0f49ca425d38254c09aa9dd45d8ddfd5a] ### 2026-10-10 12:25 — snap
   - /next quick-stash after close: the r22/13f/89p orchestration session fully wrapped — 3 runs shipped, origin in sync at 6530d6f (wai close handoff + turu notes committed), tree clean, 0 in_progress, 12 open.
   - **Next:** /clear then /renew -> gently-b4v (graphviz_render P2, last blocker of P1 cli gently-ef5); follow-up beads noted in notes: 19 no-tests-ran toml flag fixes, GROUP edge endpoints in model Edge.
+- 2026-10-10T17:52:24Z [id:24c727eac0cb4d250c0c9fdb1de1cddb75f97f682ef83049b74417200683a0b5] ### 14:52 — snap
+  - FULL WAVE COMPLETE (15 orchestrated runs, nohup+timeout 1800, 20-min polls): 12 original beads + 8 follow-ups all closed — b4v graphviz_render, ef5 cli p5-p8, 0kg/j2i/8jf round-trip trio, cbb/dcp/ikm/k4u/liz/89d spec re-derivations, a83 %XX decode, 4ln ge.perf (just perf-check live), q1x ge.oracle p1-p6. CI green throughout after 3 pre-existing failures fixed inline (gitattributes LF pin for windows CRLF fixture corruption, deny.toml license allowlist, cli.rs BrokenPipe flake). ah check --run-tests 0 findings (69 passed), cargo test 146/0, 0 open beads. Origin in sync at a6b7529.
+  - **Next:** nothing queued — project wave done; /renew will show clean slate.
