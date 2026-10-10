@@ -36,6 +36,19 @@ impl AttributeTable {
             .map(|(_, v)| v.as_str())
     }
 
+    /// Drop the value stored under `key` (last occurrence); returns whether
+    /// anything was removed. Parser-serving surface (ge.dot_parser c5: a
+    /// split node's `label` attribute becomes its name and must not linger).
+    pub fn remove(&mut self, key: &str) -> bool {
+        match self.entries.iter().rposition(|(k, _)| k == key) {
+            Some(i) => {
+                self.entries.remove(i);
+                true
+            }
+            None => false,
+        }
+    }
+
     /// True when no attribute is stored.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
