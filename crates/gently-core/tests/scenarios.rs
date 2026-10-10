@@ -389,3 +389,5 @@ mod ge_boxart_render;
 /// and shapes, one test per property row of specs/ge-html_render.md.
 #[path = "scenarios/ge_html_render.rs"]
 mod ge_html_render;
+
+mod ge_dot_parser;
