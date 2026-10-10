@@ -49,3 +49,6 @@
   - Spawn lessons: 30-min cap killed 1st 89p run with zero writes (all 30 min orientation, 107 read-only cmds); clean retry with binding time-budget addendum succeeded in 11 min. 2nd: upstream stream-interrupt mid-GREEN -> manual resume pi -p --session <id> completed it. RED commit had bare 'mod ge_dot_parser;' missing #[path=...] attr (fixup 86c163a).
   - Remaining: gently-b4v (graphviz_render P2, LAST blocker of P1 cli gently-ef5), then ef5; P2/P3 wave 0kg/cbb/dcp/89d/a83/ikm/k4u/liz/4ln/q1x. Follow-ups: 19 no-tests-ran toml flag fixes; GROUP edge endpoints in model Edge.
   - **Next:** /clear then /renew -> gently-b4v (P2) to unblock gently-ef5 (P1).
+- 2026-10-10T12:25:52Z [id:4e1936226a496c8b6d039157da41f1b0f49ca425d38254c09aa9dd45d8ddfd5a] ### 2026-10-10 12:25 — snap
+  - /next quick-stash after close: the r22/13f/89p orchestration session fully wrapped — 3 runs shipped, origin in sync at 6530d6f (wai close handoff + turu notes committed), tree clean, 0 in_progress, 12 open.
+  - **Next:** /clear then /renew -> gently-b4v (graphviz_render P2, last blocker of P1 cli gently-ef5); follow-up beads noted in notes: 19 no-tests-ran toml flag fixes, GROUP edge endpoints in model Edge.
