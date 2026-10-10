@@ -32,10 +32,10 @@ fn p2() {
 
 // id: p3
 // generator: arbitrary graphs serialized then re-parsed
-// predicate: the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership excepted (emitted group sections are empty, so members do not round-trip)
+// predicate: the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership
 #[test]
 fn p3() {
-        todo_predicate!("the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership excepted (emitted group sections are empty, so members do not round-trip)");
+        todo_predicate!("the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership");
 }
 
 // id: p4
