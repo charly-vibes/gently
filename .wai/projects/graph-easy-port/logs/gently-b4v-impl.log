@@ -1,0 +1,29 @@
+All gates green — the four `ge-graphviz_render` contracts now execute and pass (54 passed; the remaining 15 `no-tests-ran` are the pre-existing cli/oracle/perf backlog, not mine).
+
+## Report
+
+**Commits**
+- `623a290` test: ge.graphviz_render scenario RED — p1-p4 property tests (gently-b4v) — one `#[test]` per property id in `tests/scenarios/ge_graphviz_render.rs`, registered in `tests/scenarios.rs` with the `#[path]` attr
+- `03a3eef` feat: ge.graphviz_render renderer — node/edge/cluster emission, dot_parser round trip (gently-b4v) — `src/render/graphviz/{mod,quote}.rs`, wired into `render.rs`
+- `856de52` chore: fix ge.graphviz_render contract test flags to executable test names (gently-b4v) — `.espectacular/ge-graphviz_render/p1–p4.toml` flags only
+
+**Gates run**
+- `cargo test --workspace` → pass (76 lib + 49 unit + 4 graphviz_render + suite green; quote module has 2 own tests)
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `spk lint specs/` → 0 findings, 0 warnings (12 files)
+- `ah check` → 0 structural issues
+- `ah check --run-tests` → 54 passed; graphviz_render p1–p4 execute and pass; 15 pre-existing no-tests-ran remain (cli p5–p8, oracle, perf — outside my scope; the brief's expected backlog shrink by 4 confirmed: 24→15 was the documented count for these families)
+- `just gates` → exit 0 (pretender gate all green, specodelic lint 0)
+
+**Deviations** (all recorded in the `src/render/graphviz/mod.rs` header)
+1. **Oracle skeleton trimmed to keep c4**: the global `edge [ … ]` / `graph [ … ]` / `node [ … ]` default blocks and the `//` generated-by comment are omitted — the ge.dot_parser lexer rejects `//` and ingests the global attr blocks as spurious `edge`/`graph`/`node` NODE statements (observed during RED→GREEN), which would break the round trip. c4 (spec row) wins over oracle shape.
+2. **Cluster labels**: emitted as `label=…` inside the cluster only when the group carries an explicit `label` attribute (c3's emission requirement, verified by p3). Name-fallback labels are NOT emitted: the dot_parser grammar has no graph-attribute statement inside a scope, so every named group would fail to re-parse ("expected a statement", observed). Tension between c3 and c4 is parser-side.
+3. **Cluster ids**: named groups emit bare `subgraph cluster_<name>`, anonymous (empty-name) groups `cluster<N>` after group index — quoted subgraph names are rejected by the parser (observed); upstream quotes and renumbers `cluster0..N`.
+4. **Arrows mirror the model** (c2 as briefed): `->`/`--` per edge direction; the oracle's always-`digraph`+`->` lossiness is not copied. Bidirectional edges append `dir=both`.
+5. **Anonymous nodes** emit `#<node index>` (upstream uses odd global object ids; gently's model has no global object counter — the node index is the internal id).
+6. Attribute mapping is minimal: `fill`→`fillcolor`, all else passthrough, values quoted per DOT identifier rules (`quote.rs`, unit-tested).
+
+No new probes were run and no spec rows were amended; every contradiction above came from the shipped dot_parser contract, not from the pinned oracle.
+
+**Next**
+- Ticket complete — orchestrator should verify gates, then ship/close gently-b4v. Suggested follow-up beads: (a) extend ge.dot_parser with subscope graph-attribute statements so cluster labels round-trip losslessly, (b) GROUP edge endpoints in model Edge (r22) for faithful group-edge emission.

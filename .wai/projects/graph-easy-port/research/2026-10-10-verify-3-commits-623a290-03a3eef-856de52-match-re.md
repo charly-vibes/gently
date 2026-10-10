@@ -1,0 +1,1 @@
+VERIFY: 3 commits 623a290/03a3eef/856de52 match report; cargo test workspace green; clippy -D warnings clean; spk lint 0; ah check --run-tests 54 passed (backlog 24->15, graphviz_render p1-p4 executing); just gates green
