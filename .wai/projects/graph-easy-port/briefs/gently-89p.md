@@ -157,3 +157,19 @@ beads listing exactly what remains — never leave the tree red.
 
 **Next**
 - <exact next action for the orchestrator, or "ticket complete">
+
+## ⏱ TIME BUDGET (retry addendum — binding)
+
+A previous run spent ALL 30 minutes on orientation and wrote nothing.
+You are hard-capped at 30 minutes wall clock. Budget:
+- **Minutes 0–5:** orientation — read this brief, the spec, and the three
+  `.observed` files. That is ALL. Max 10 tool calls.
+- **Minutes 5–10:** write the RED scenario file (`tests/scenarios/ge_dot_parser.rs`)
+  + register module; commit RED.
+- **Minutes 10–22:** GREEN implementation in `src/parse/dot*`; commit GREEN
+  as soon as tests pass.
+- **Minutes 22–28:** contract-flag wiring + gates.
+- **Minutes 28–30:** report.
+Never re-read a file you have already read. Never cat an entire directory.
+If RED+GREEN cannot both land, ship RED-commit + partial GREEN and say so
+in the report — a committed RED beats an uncommitted almost.
