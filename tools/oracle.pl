@@ -5,8 +5,9 @@
 # `as_txt` and `as_ascii` companions with a leading `# oracle: ` pin
 # header; refuse to re-record a companion whose header already matches the
 # current pin (ge.oracle.c5) and regenerate only stale-pinned or missing
-# companions. The Graph::Easy version is checked against the pin up front
-# and any drift is a typed error naming the remediation (ge.oracle.c4).
+# companions. The Graph::Easy version, source-checkout load path, hash
+# seed, and checkout git commit are checked against the pin up front and
+# any drift is a typed error naming the remediation (ge.oracle.c4).
 # Rationale: recording is rare and deliberate — the runner lives outside
 # the cargo workspace so the corpus, not the toolchain, stays the source
 # of truth; verification needs no perl at all (`just oracle-verify`
@@ -19,7 +20,11 @@ use warnings;
 # checkout under the pinned hash seed (recordings only).
 my $PIN_VERSION = '0.69';
 my $PIN_COMMIT  = 'ededa3d787ad89ac532c578c06390e8a7b270499';
-my $PIN_LIB     = "/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib";
+# GE_PIN_LIB exists only so drifted-environment probes (ge-oracle p4)
+# can point the pin at a fake checkout; recordings never set it.
+my $PIN_LIB     = $ENV{GE_PIN_LIB}
+    // "/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib";
+my $PIN_ROOT    = "$PIN_LIB/..";   # checkout root owning the lib dir
 my $HEADER      = "# oracle: Graph::Easy v$PIN_VERSION @ $PIN_COMMIT\n";
 my $PERL_V      = "$^V";   # e.g. v5.44.0
 
@@ -30,8 +35,8 @@ oracle: $what — spec ge.oracle.c4
 remediation: recordings run against the pinned source checkout, never a
   cpan-installed copy (a dist tarball cannot be verified against the pin
   commit; a git clone checked out at the commit can):
-     git clone https://github.com/shlomif/Graph-Easy /var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION
-     git -C /var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION checkout $PIN_COMMIT
+     git clone https://github.com/shlomif/Graph-Easy $PIN_ROOT
+     git -C $PIN_ROOT checkout $PIN_COMMIT
      PERL_HASH_SEED=0 PERL5LIB=$PIN_LIB just oracle-record
 EOF
 }
@@ -50,6 +55,28 @@ fail_pin("installed Graph::Easy is '$version', pin is v$PIN_VERSION \@ $PIN_COMM
 my $load_path = $INC{'Graph/Easy.pm'} // 'not loaded';
 fail_pin("Graph::Easy loaded from '$load_path', pin requires the source checkout $PIN_LIB")
     unless index($load_path, $PIN_LIB) == 0;
+
+# gently-4sq: the pin names the upstream commit — a drifted checkout
+# (right version, wrong commit) must be a typed error. The loaded lib
+# dir's checkout root ($PIN_ROOT) is queried for its git HEAD; a commit
+# id matches when the full sha starts with it (an abbreviated pin form
+# like ededa3d7 is accepted). A dist tarball has no .git — the check
+# degrades to a warning naming the limitation (the remediation above
+# already carries the clone recipe); recordings trust the checkout
+# bytes as-is in that case.
+if (-d $PIN_LIB) {
+    my $head = qx{git -C $PIN_ROOT rev-parse HEAD 2>/dev/null};
+    if ($? != 0 || $head !~ /\S/) {
+        warn "oracle: warning: checkout at $PIN_ROOT is not a git repository — the pin commit cannot be verified against $PIN_COMMIT (a dist tarball cannot be verified against the pin commit; recordings trust the checkout bytes as-is)\n";
+    } else {
+        chomp $head;
+        fail_pin("pinned checkout HEAD is '$head', pin commit is $PIN_COMMIT")
+            unless $head eq $PIN_COMMIT
+                || index($head, $PIN_COMMIT) == 0
+                || index($PIN_COMMIT, $head) == 0;
+    }
+}
+
 fail_pin("PERL_HASH_SEED is unset — hash randomization is live, recordings would not reproduce")
     unless defined $ENV{PERL_HASH_SEED} && $ENV{PERL_HASH_SEED} =~ /^\d+$/;
 my $META_LINE = "# oracle: perl $PERL_V PERL_HASH_SEED=$ENV{PERL_HASH_SEED}\n";

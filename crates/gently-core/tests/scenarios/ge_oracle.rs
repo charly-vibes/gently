@@ -4,11 +4,9 @@
 //! - p3–p5 execute the oracle toolchain (`tools/oracle.pl` + the justfile
 //!   `oracle-*` recipes) and SKIP with a reason when the pinned checkout
 //!   or perl is absent (CI has neither; honest degradation, never a hang).
-//! - p7 is the tier-1 admission manifest check: the repro-probe harness
-//!   (`tests/repro/probes.pl admit`) classifies every fixture by
-//!   hash-stability and envelope; this module validates the manifest
-//!   against the corpus — the admissible set is derived from the manifest,
-//!   never hardcoded (ge-oracle.c7).
+//! - p7 validates the tier-1 admission manifest written by the repro-probe
+//!   harness (`tests/repro/probes.pl admit`) — the admissible set is
+//!   derived from the manifest, never hardcoded (ge-oracle.c7).
 
 use std::path::PathBuf;
 
@@ -33,17 +31,14 @@ fn corpus_inputs() -> Vec<String> {
         .expect("fixture corpus dir (ge.oracle.c2)")
         .filter_map(|e| e.ok())
         .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| n.ends_with(".txt"))
-        .map(|n| n.trim_end_matches(".txt").to_string())
+        .filter_map(|n| n.strip_suffix(".txt").map(str::to_string))
         .collect();
     names.sort();
     names
 }
 
-/// ge.oracle.p7: the corpus stability and envelope probes over every fixture
-/// input — each fixture is classified hash-stable or hash-dependent and
-/// inside or outside the envelope, and the classification is
-/// machine-checkable by the repro-probe harness.
+/// ge.oracle.p7: the repro-probe harness classifies every fixture input
+/// by hash-stability and envelope; this arm validates the manifest.
 #[test]
 fn p7() {
     let manifest_path = repo_root().join("tests/repro/admission.tsv");
@@ -54,15 +49,13 @@ fn p7() {
     let inputs = corpus_inputs();
     assert_every_input_classified(&rows, &inputs);
     assert_no_orphan_rows(&rows, &inputs);
-    // Tier-1 membership is re-derived from the probe fields: stable and
-    // within the envelope. render-error fixtures are outside byte-compat
-    // scope by construction (the oracle cannot record them).
+    // Tier-1 = stable and within the envelope (render-error fixtures are
+    // outside byte-compat scope by construction).
     let tier1 = derive_tier1(&rows);
     assert!(!tier1.is_empty(), "at least the tracer fixture class must be tier-1 admissible");
 }
 
-/// Manifest shape: a `# admission: <pin> ...` header naming the pinned
-/// oracle, then one `name<TAB>verdict<TAB>seconds` row per input.
+/// Manifest shape: `# admission: <pin>` header, then `name<TAB>verdict<TAB>seconds` rows.
 fn parse_manifest(manifest: &str) -> Vec<Row> {
     let mut lines = manifest.lines();
     let header = lines.next().expect("admission manifest must have a pin header");
@@ -94,8 +87,7 @@ fn parse_seconds(line: &str, raw: &str) -> f64 {
     seconds
 }
 
-/// Every corpus input is classified, exactly once (p7: "over every fixture
-/// input").
+/// Every corpus input is classified exactly once (p7).
 fn assert_every_input_classified(rows: &[Row], inputs: &[String]) {
     for name in inputs {
         let n = rows.iter().filter(|(r, _, _)| r == name).count();
@@ -110,10 +102,7 @@ fn assert_no_orphan_rows(rows: &[Row], inputs: &[String]) {
 }
 
 fn derive_tier1(rows: &[Row]) -> Vec<&String> {
-    rows.iter()
-        .filter(|(_, verdict, seconds)| *verdict == "stable" && *seconds <= ENVELOPE_SECONDS)
-        .map(|(name, _, _)| name)
-        .collect()
+    rows.iter().filter(|(_, v, s)| *v == "stable" && *s <= ENVELOPE_SECONDS).map(|(n, _, _)| n).collect()
 }
 
 // p1–p6 (gently-q1x): corpus pin headers, companion accounting, oracle
@@ -137,8 +126,7 @@ fn companions() -> Vec<Companion> {
         .map(|e| e.file_name().to_string_lossy().into_owned())
         .filter(|n| n.ends_with(".expected"))
         .map(|name| {
-            let (stem, format) = name.strip_suffix(".expected").unwrap()
-                .rsplit_once('.').expect("companion naming <base>.<fmt>.expected (ge.oracle.c2)");
+            let (stem, format) = name.strip_suffix(".expected").unwrap().rsplit_once('.').expect("companion naming <base>.<fmt>.expected (ge.oracle.c2)");
             let raw = std::fs::read_to_string(fixture_dir().join(&name)).expect("read companion");
             Companion { stem: stem.to_string(), format: format.to_string(), raw }
         })
@@ -153,7 +141,6 @@ fn pin_header() -> String {
 }
 
 /// True when this machine has the pinned oracle toolchain (ge.oracle.c1).
-/// CI does not; every oracle-executing arm skips with a reason there.
 fn toolchain() -> bool {
     let perl = Command::new("perl").arg("-e").arg("exit 0").status().is_ok_and(|s| s.success());
     let checkout = format!("/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib/Graph/Easy.pm");
@@ -171,15 +158,14 @@ fn run(cmd: &mut Command) -> (bool, String) {
     (out.status.success(), combined)
 }
 
-/// A drifted-environment run must fail with a typed error naming the
-/// missing piece and the remediation (ge.oracle.c4).
+/// A drifted-environment run must fail typed, naming the piece + remediation
+/// (ge.oracle.c4).
 fn typed_failure(ok: bool, out: &str, needle: &str, case: &str) {
     assert!(!ok && out.contains(needle) && out.contains("remediation"), "{case} must be a typed error + remediation (ge.oracle.c4), got: {out}");
 }
 
-/// ge.oracle.p1 (c1): every companion's pin header names the pinned
-/// version and commit, the recording metadata line names the perl
-/// version and seed, and no companion carries a foreign pin.
+/// ge.oracle.p1 (c1): every pin header names version + commit, every
+/// metadata line names perl + seed, no companion carries a foreign pin.
 #[test]
 fn p1() {
     let cs = companions();
@@ -208,8 +194,8 @@ fn assert_no_orphans(cs: &[Companion], inputs: &[String]) {
     }
 }
 
-/// ge.oracle.p2 (c2): every corpus input has exactly one recorded
-/// expected output per supported format (txt, ascii); no orphans.
+/// ge.oracle.p2 (c2): every corpus input has exactly one recorded expected
+/// output per supported format (txt, ascii); no orphans.
 #[test]
 fn p2() {
     let inputs = corpus_inputs();
@@ -223,23 +209,18 @@ fn p2() {
     assert_no_orphans(&cs, &inputs);
 }
 
-/// ge.oracle.p3 (c3): the full verify pass — every fixture input
-/// re-rendered and compared byte-identically to the recorded companions,
-/// mismatch reported with input, format, and first differing line. The
-/// runner owns the diff report; here we assert its exit status.
+/// ge.oracle.p3 (c3): the full verify pass — every fixture re-rendered and
+/// compared byte-identically to the recorded companions; the runner owns
+/// the diff report, this arm asserts its exit status.
 #[test]
 fn p3() {
-    if !toolchain() {
-        skip("p3 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)");
-        return;
-    }
+    if !toolchain() { skip("p3 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)"); return; }
     let (ok, out) = run(Command::new("just").arg("oracle-verify").current_dir(repo_root()));
     assert!(ok, "just oracle-verify failed — see its input/format/first-differing-line report (ge.oracle.c3): {out}");
 }
 
 // ge.oracle.p4 (c4): every drifted-environment case yields a typed error
-// naming the missing piece and the remediation. Tempdir only — never
-// the repo tree.
+// naming the missing piece + remediation. Tempdir only, never the repo tree.
 
 fn tempdir(tag: &str) -> PathBuf {
     let tmp = std::env::temp_dir().join(format!("gently-oracle-{tag}-{}", std::process::id()));
@@ -264,8 +245,7 @@ fn fake_checkout(lib: &Path, version: &str) {
     std::fs::write(lib.join("Graph/Easy.pm"), format!("package Graph::Easy; our $VERSION = '{version}'; 1;\n")).expect("write fake Graph::Easy");
 }
 
-/// Case 1: perl missing (fake PATH without perl) — the justfile
-/// oracle-record recipe types this before anything else runs.
+/// Case 1: perl missing (fake PATH without perl) — the justfile recipe types this first.
 fn p4_missing_perl(tmp: &Path) {
     let bin = tmp.join("bin");
     std::fs::create_dir_all(&bin).expect("temp bin dir");
@@ -283,10 +263,9 @@ fn p4_version_drift(tmp: &Path) {
     typed_failure(ok, &out, "0.99", "version drift");
 }
 
-/// Case 3: off the pinned checkout — the right version loaded from the
-/// wrong path (isolates the source-checkout clause of c4 from the
-/// version clause; a fully missing checkout surfaces as cpan-copy drift
-/// or the p3/p5 skip guard in CI).
+/// Case 3: off the pinned checkout — right version from the wrong path
+/// (isolates the source-checkout clause; a fully missing checkout surfaces
+/// as cpan-copy drift or the p3/p5 skip guard in CI).
 fn p4_off_checkout(tmp: &Path) {
     let off = tmp.join("off-path-lib");
     fake_checkout(&off, PIN_VERSION);
@@ -303,6 +282,35 @@ fn p4_missing_seed(tmp: &Path) {
     typed_failure(ok, &out, "PERL_HASH_SEED", "missing seed pin");
 }
 
+/// A minimal git repo at `root` with one empty commit; returns its HEAD sha.
+fn git_repo_at_wrong_commit(root: &Path) -> String {
+    let git = |args: &[&str]| {
+        let out = Command::new("git").args(args).current_dir(root)
+            .env("GIT_AUTHOR_NAME", "probe").env("GIT_AUTHOR_EMAIL", "probe@example.invalid")
+            .env("GIT_COMMITTER_NAME", "probe").env("GIT_COMMITTER_EMAIL", "probe@example.invalid")
+            .output().expect("spawn git");
+        assert!(out.status.success(), "git {args:?} failed: {}", String::from_utf8_lossy(&out.stderr));
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    };
+    git(&["init", "-q"]);
+    git(&["commit", "-q", "--allow-empty", "-m", "drifted checkout probe"]);
+    git(&["rev-parse", "HEAD"])
+}
+
+/// Case 6 (gently-4sq): commit drift — the pinned version loaded from a
+/// checkout whose git HEAD is not the pin commit. GE_PIN_LIB points the
+/// pin at the fake checkout so the load-path clause passes and the commit
+/// clause is exercised alone; a real drifted checkout is the same shape.
+fn p4_commit_drift(tmp: &Path) {
+    let root = tmp.join("drifted-checkout");
+    fake_checkout(&root.join("lib"), PIN_VERSION);
+    let head = git_repo_at_wrong_commit(&root);
+    let lib = root.join("lib");
+    let (ok, out) = run(&mut record_cmd(tmp, &[("PERL5LIB", lib.as_path()), ("GE_PIN_LIB", lib.as_path())]));
+    typed_failure(ok, &out, "pin commit is", "commit drift");
+    assert!(out.contains(PIN_COMMIT) && out.contains(&head), "commit drift must name both shas (ge.oracle.c4), got: {out}");
+}
+
 /// Case 5: stale pin header — just oracle-verify types it with the
 /// `just oracle-record` remediation before any comparison runs.
 fn p4_stale_pin(tmp: &Path) {
@@ -316,21 +324,18 @@ fn p4_stale_pin(tmp: &Path) {
 
 #[test]
 fn p4() {
-    if !toolchain() {
-        skip("p4 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)");
-        return;
-    }
+    if !toolchain() { skip("p4 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)"); return; }
     let tmp = tempdir("p4");
     p4_missing_perl(&tmp);
     p4_version_drift(&tmp);
     p4_off_checkout(&tmp);
     p4_missing_seed(&tmp);
+    p4_commit_drift(&tmp);
     p4_stale_pin(&tmp);
     assert!(std::fs::remove_dir_all(&tmp).is_ok(), "p4 tempdir must clean up");
 }
 
-/// After a successful record run, a tiny.txt companion carries the pin
-/// header and the perl/seed metadata line (ge.oracle.c1/c5).
+/// After a record run, tiny.txt companions carry pin header + metadata (c1/c5).
 fn assert_recorded(dir: &Path, companion: &str) {
     let text = std::fs::read_to_string(dir.join(companion)).expect("recorded companion");
     assert!(text.starts_with(&pin_header()), "{companion}: pin header required (ge.oracle.c1/c5)");
@@ -347,15 +352,11 @@ fn assert_rejected(dir: &Path, pin: &Path) {
     assert_eq!(before, after, "refused re-record must not touch companion bytes (ge.oracle.c5)");
 }
 
-/// ge.oracle.p5 (c5): recording a new input records companions and pins
-/// headers in one pass; re-recording without a pin change is rejected as
-/// a non-deliberate change; a stale pin regenerates. Tempdir corpus.
+/// ge.oracle.p5 (c5): a new input records pinned companions in one pass;
+/// re-record without a pin change is rejected; a stale pin regenerates.
 #[test]
 fn p5() {
-    if !toolchain() {
-        skip("p5 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)");
-        return;
-    }
+    if !toolchain() { skip("p5 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)"); return; }
     let tmp = tempdir("p5");
     std::fs::write(tmp.join("tiny.txt"), "[ x ] --> [ y ]\n").expect("new input");
     let pin = PathBuf::from(format!("/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib"));
@@ -374,9 +375,8 @@ fn p5() {
     let _ = std::fs::remove_dir_all(&tmp);
 }
 
-/// ge.oracle.p6 (c6, advisory): the corpus coverage matrix — every edge
-/// style, border style, node shape, group form, flow direction, and label
-/// placement class appears in at least one fixture (derived from inputs).
+/// ge.oracle.p6 (c6, advisory): corpus coverage — every edge style, border
+/// style, node shape, group form, flow direction, label placement class appears.
 #[test]
 fn p6() {
     let inputs = corpus_inputs();
