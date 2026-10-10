@@ -1,0 +1,27 @@
+## Report
+
+**Commits**
+- `7630279` test: ge.dot_parser p1-p5 scenario tests, red (gently-89p) — RED: one `#[test]` per property row in `tests/scenarios/ge_dot_parser.rs`, registered in `tests/scenarios.rs`
+- `86c163a` fix: add missing `#[path]` attr for ge_dot_parser mod declaration (gently-89p) — landed between my runs (orchestrator-side; fixed the E0583 that had left the tree red)
+- `d332726` refactor: split dot grammar into lex/scope/stmt/record modules under the ratchet (gently-89p) — GREEN implementation **plus** the pretender-mandated module split in one commit (see deviations)
+- `5f3bb03` chore: drop unused import from ge_dot_parser scenarios (gently-89p)
+- `7f82594` fix: ge-dot_parser contract flags to the real test paths (gently-89p)
+
+**Implementation delivered** (all five property rows, full floor): `crates/gently-core/src/parse/dot/{mod,lex,scope,stmt,attrs,record}.rs` — headers set `type`/`title` only (c1), operator decides edge direction incl. all four header×operator combos (c2), attr lists unquoted exactly once onto the right object (c3), named subgraphs → verbatim groups with innermost-only membership, nameless `subgraph` keyword/attr-list forms → tokenizing errors, bare `{ }` scope with the oracle's pinned spurious left-edge-stack edge (c4), record/HTML-like autosplit into `name.N` parts with port reattachment and the oracle's exact typed errors (`Cannot find autosplit node for base:port on edge N`, `'…' not recognized by Graph::Easy::Parser::Graphviz`), no partial graph on failure (c5). Plus minimal parser-serving model surface: `AttributeTable::remove`.
+
+**Gates run**
+- `cargo test --workspace` → pass (72 scenarios incl. ge_dot_parser p1–p5)
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `spk lint specs/` → 12 files, 0 findings, 0 warnings
+- `ah check` → ok (exit 0)
+- `ah check --run-tests` → ge-dot_parser p1–p5 all **execute and pass**; no-tests-ran backlog shrank 24→19 — the remaining 19 are pre-existing backlog in other specs (cli p5–p8, ge-graphviz_render, ge-oracle, ge-perf: dash-style flags like `scenarios::cli::p5`), outside my allowed files
+- `just gates` → exit 0
+
+**Deviations**
+1. GREEN landed under the "refactor:" commit message: the pretender gate blocked the first feat commit (file/function limits on the new grammar files), so implementation + module split merged into `d332726`. Content is complete; only the commit history shape differs from the brief.
+2. Named-subgraph-as-edge-endpoint (`a -> foo` naming a group): the model's `Edge` holds node indices only (no GROUP endpoints — that r22 row is not in the current `graph/mod.rs`), so the parser interns a node named `foo`. Rendered bytes match the oracle (`[ a ] --> [ foo ]`); the group-vs-node object distinction is deferred to whoever wires group endpoints into the model.
+3. The RED commit was briefly non-compiling (E0583) until `86c163a`; tree has been green since `d332726`.
+4. No new probes were run; no spec rows were amended.
+
+**Next**
+- Ticket complete from the subagent's side — orchestrator should verify gates, then close gently-89p. Recommended follow-up beads: (a) the 19 pre-existing `no-tests-ran` contract flags in cli/graphviz_render/oracle/perf tomls (same one-line fix pattern I used), (b) model support for GROUP edge endpoints to close the c4 deviation above.
