@@ -392,3 +392,8 @@ mod ge_html_render;
 
 #[path = "scenarios/ge_dot_parser.rs"]
 mod ge_dot_parser;
+
+/// ge.graphviz_render (gently-b4v): the DOT output renderer — node, edge,
+/// and group emission plus the dot_parser round trip.
+#[path = "scenarios/ge_graphviz_render.rs"]
+mod ge_graphviz_render;
