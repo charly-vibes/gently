@@ -1,0 +1,1 @@
+VERIFY: commits 360ab91/bd0643c/92f21b5 match report; 20x debug headroom multiplier documented; just perf-check green; cargo test 140/0; ah check --run-tests 63 passed (backlog 11->6); clippy clean; just gates green
