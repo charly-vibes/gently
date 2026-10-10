@@ -6,12 +6,30 @@
 //! block's assertion body; predicates not yet translated fail in
 //! `verify` via `todo_predicate!`, never at artifact emission.
 
+use proptest::prelude::*;
+
 /// Marker for predicates not yet translated to Rust: compiles here,
 /// panics when executed — execution is `verify`'s job. A predicate
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
     ($reason:expr) => { todo!("{}", $reason) };
+}
+
+/// Generated strategies — one per generator named in the spec rows.
+/// Each yields a String (the generator's name; executable
+/// fragments bind these directly — Revision 15).
+pub mod spec_gen {
+    use super::*;
+
+    pub fn alone() -> impl Strategy<Value = String> {
+        Just("alone".into())
+    }
+
+    pub fn classes() -> impl Strategy<Value = String> {
+        Just("classes".into())
+    }
+
 }
 
 // id: p1
@@ -22,12 +40,14 @@ fn p1() {
         todo_predicate!("median wall time stays under 50 ms with no run above 3x the median budget");
 }
 
-// id: p2
-// generator: large graphs around the 1,000-node/2,000-edge class
-// predicate: every supported format renders within the wall-time and RSS budgets
-#[test]
-fn p2() {
-        todo_predicate!("every supported format renders within the wall-time and RSS budgets");
+proptest! {
+    // id: p2
+    // generator: large graphs around the 1,000-node/2,000-edge class, rendered by gently alone (Tier 3)
+    // predicate: every supported format renders within the wall-time and RSS budgets, verified structurally against gently with no oracle comparison
+    #[test]
+    fn p2(v0 in spec_gen::alone()) {
+        todo_predicate!("every supported format renders within the wall-time and RSS budgets, verified structurally against gently with no oracle comparison");
+    }
 }
 
 // id: p3
@@ -46,11 +66,13 @@ fn p4() {
         todo_predicate!("the diagnostic names stage, budget, and measured value, and the exit code is non-zero");
 }
 
-// id: p5
-// generator: input sizes sweeping two orders of magnitude beyond the budget classes
-// predicate: measured scaling stays near-linear; deviations beyond the bound are reported
-#[test]
-fn p5() {
-        todo_predicate!("measured scaling stays near-linear; deviations beyond the bound are reported");
+proptest! {
+    // id: p5
+    // generator: gently-only input sizes sweeping two orders of magnitude beyond the budget classes (raw-scaling tier)
+    // predicate: measured gently scaling stays near-linear; deviations beyond the bound are reported
+    #[test]
+    fn p5(v0 in spec_gen::classes()) {
+        todo_predicate!("measured gently scaling stays near-linear; deviations beyond the bound are reported");
+    }
 }
 

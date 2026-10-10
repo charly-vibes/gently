@@ -9,7 +9,7 @@ traces_to = "[[ge.perf]]"
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "A 1,000-node/2,000-edge graph lays out and renders in every supported format within 2 s wall time and 256 MB peak RSS in release builds."
+expr = "A 1,000-node/2,000-edge graph lays out and renders in every supported format within 2 s wall time and 256 MB peak RSS in release builds. Re-derived (gently-k4u): this is a gently-only budget (Tier 3, specs/ge-oracle.md c7) — the pinned oracle cannot produce comparison fixtures at this class (tests/repro/claims/size-envelope.observed: 2.744 s at 100 nodes/291 edges with superlinear growth, alarm timeout with no output at 200 nodes), so the budget is verified structurally against gently alone with no oracle byte comparison; measured headroom: 13 ms wall and ~4.4 MB peak RSS for a 1,000-node/2,991-edge fixture in release builds."
 traces_to = "[[ge.perf]]"
 
 [[constraints]]
@@ -27,5 +27,5 @@ traces_to = "[[ge.perf]]"
 [[constraints]]
 id = "c5"
 kind = "advisory"
-expr = "Beyond the budgeted input classes, runtime scales near-linearly in nodes plus edge-crossing work; regressions in scaling are reported, never silently accepted."
+expr = "Beyond the budgeted input classes, gently's runtime scales near-linearly in nodes plus edge-crossing work; regressions in scaling are reported, never silently accepted. Re-derived (gently-k4u): the near-linear expectation holds for gently only — upstream grows superlinearly and dies at 200 nodes (tests/repro/claims/size-envelope.observed), so upstream behavior cannot anchor any scaling claim; scaling is measured on gently alone within the raw-scaling tier (specs/ge-oracle.md c7), where measured wall time stays near-linear (13 ms at 1,000 nodes, 55 ms at 4,000 nodes for chain-class inputs)."
 traces_to = "[[ge.perf]]"
