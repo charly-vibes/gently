@@ -344,56 +344,56 @@ mod tb {
     }
 }
 
-/// ge.graph_model (gently-4ht): the shared model contract, one test per
-/// property row of specs/ge-graph_model.md.
+/// ge.graph_model (gently-4ht): the shared model contract (specs/ge-graph_model.md p1–p5).
 #[path = "scenarios/ge_graph_model.rs"]
 mod ge_graph_model;
 
-/// ge.txt_render (gently-3hv): the canonical txt serialization contract,
-/// one test per property row of specs/ge-txt_render.md.
+/// ge.txt_render (gently-3hv): the canonical txt serialization contract (specs/ge-txt_render.md p1–p5).
 #[path = "scenarios/ge_txt_render.rs"]
 mod ge_txt_render;
 
 /// ge.text_parser (gently-bzx): the Graph::Easy text-format grammar — the
-/// full capability (operators, labels, attributes, groups, comments), one
-/// test per property row of specs/ge-text_parser.md.
+/// full capability (operators, labels, attributes, groups, comments)
+/// (specs/ge-text_parser.md p1–p5).
 #[path = "scenarios/ge_text_parser.rs"]
 mod ge_text_parser;
 
 /// ge.ascii_render (gently-0cq): the classic ASCII renderer — border
-/// styles, edge style runs, shapes, label/wide-glyph handling, one test
-/// per property row of specs/ge-ascii_render.md.
+/// styles, edge style runs, shapes, label/wide-glyph handling
+/// (specs/ge-ascii_render.md p1–p5).
 #[path = "scenarios/ge_ascii_render.rs"]
 mod ge_ascii_render;
 
-/// ge.layout (gently-4nx): the deterministic grid layout capability —
-/// one test per property row of specs/ge-layout.md.
+/// ge.layout (gently-4nx): the deterministic grid layout capability (specs/ge-layout.md p1–p5).
 #[path = "scenarios/ge_layout.rs"]
 mod ge_layout;
 
 /// ge.oracle (gently-mwo): tier-1 admission enforcement — the repro-probe
 /// harness (`tests/repro/probes.pl admit`) classifies every corpus fixture
-/// by hash-stability × envelope, and this module machine-checks that
-/// classification against the corpus (specs/ge-oracle.md p7).
+/// by hash-stability × envelope; machine-checked against the corpus
+/// (specs/ge-oracle.md p7).
 #[path = "scenarios/ge_oracle.rs"]
 mod ge_oracle;
 
 /// ge.boxart_render (gently-css): the Unicode boxart renderer — border
-/// styles, edge styles, junctions, shapes, one test per property row of
-/// specs/ge-boxart_render.md.
+/// styles, edge styles, junctions, shapes (specs/ge-boxart_render.md p1–p5).
 #[path = "scenarios/ge_boxart_render.rs"]
 mod ge_boxart_render;
 
 /// ge.html_render (gently-eyo): the table-based HTML renderer — grid
 /// mapping, node labels/links, edge style classes, embedded CSS, colors
-/// and shapes, one test per property row of specs/ge-html_render.md.
+/// and shapes (specs/ge-html_render.md p1–p5).
 #[path = "scenarios/ge_html_render.rs"]
 mod ge_html_render;
 
 #[path = "scenarios/ge_dot_parser.rs"]
 mod ge_dot_parser;
 
+/// ge.perf (gently-4ln): performance budget gates (specs/ge-perf.md p1–p5).
+#[path = "scenarios/ge_perf.rs"]
+mod ge_perf;
+
 /// ge.graphviz_render (gently-b4v): the DOT output renderer — node, edge,
-/// and group emission plus the dot_parser round trip.
+/// and group emission plus the dot_parser round trip (specs/ge-graphviz_render.md).
 #[path = "scenarios/ge_graphviz_render.rs"]
 mod ge_graphviz_render;
