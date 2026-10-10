@@ -1,0 +1,32 @@
+## Report
+
+**Commits**
+- `4114e34` — test(ge-oracle): add scenario tests p1-p6 + fix contract filters (gently-q1x) *(includes the oracle.pl/justfile/fixture-header fixes — see Deviations)*
+
+**Test arms** (all in `crates/gently-core/tests/scenarios/ge_oracle.rs`)
+- **p1** — static: every companion's pin header names v0.69 @ `ededa3d7…`, metadata line names perl v5.44.0 + `PERL_HASH_SEED=0`, no foreign `# oracle:` lines. CI: runs.
+- **p2** — static: exactly one `.txt.expected` + one `.ascii.expected` per input; no orphans. CI: runs.
+- **p3** — oracle-executing: runs `just oracle-verify`, asserts exit status. Skips with reason when perl/pinned checkout absent (CI).
+- **p4** — oracle-executing: 5 drift cases in a tempdir — missing perl (fake PATH via justfile recipe), version drift 0.99 (fake checkout), off-checkout load path (right version, wrong lib), missing `PERL_HASH_SEED`, stale pin header via `FIX=<tmp> just oracle-verify` — each must fail with a typed error naming the piece + remediation. Skips in CI.
+- **p5** — oracle-executing: record new input in tempdir → both companions pinned in one pass; unchanged-pin re-record refused with bytes untouched; stale pin regenerated. Skips in CI.
+- **p6** — static, advisory: coverage matrix (forward-arrow edge, default border, `[ ]` shape, flat graph, left-to-right flow, inline label) each derived from fixture inputs. CI: runs.
+
+**Gates run**
+1. `cargo test --workspace` — 5× "test result: ok", 0 failures
+2. `cargo clippy --workspace --all-targets -- -D warnings` — exit 0
+3. `spk lint specs/` — ok, 12 files, 0 issues, 0 warnings
+4. `ah check` — no issues, 0 structural, 0 execution
+5. `ah check --run-tests` — **OK — 69 passed, 0 findings; no-tests-ran count: 0** (p1–p7 all execute)
+6. `just gates` — exit 0
+
+**Beads closed**: gently-dk2 ✓, gently-mki ✓ (gently-q1x left open for the orchestrator)
+
+**Deviations**
+- RED and GREEN landed as one commit: the first `git add -A` swept the fixes into the test commit, and the repo's ddl-pretender pre-commit gate forced the refactor (file ≤400 lines, per-fn complexity caps) before anything could commit. Net: one commit instead of three.
+- The RED run exposed two real gaps, fixed as the tests dictated: (1) corpus companions lacked the c1 perl/seed metadata line — inserted after the pin header, **no oracle output bytes re-rendered**; (2) `tools/oracle.pl` couldn't distinguish wrong-version Graph::Easy from not-installed (perl doesn't auto-load the class) — changed to `eval { require Graph::Easy; Graph::Easy->VERSION }`.
+- `justfile` FIX made overridable (`${FIX:-tests/fixtures/graph-easy}`) in `oracle-record`/`oracle-verify` so p4 case 5 probes a stale-pinned tempdir corpus without touching the repo tree.
+- p4 case 3 targets the *off-checkout* clause (right version, wrong path) because this machine has a cpan-installed Graph::Easy 0.76 — a fully absent checkout surfaces as cpan-copy drift, still a typed c4 error.
+- One transient bug during development briefly pointed `oracle.pl record` at `/tmp`; verified no stray `.expected` companions were written there (parser rejected the unparseable inputs before any write).
+
+**Next**
+- Orchestrator: run `ah check --run-tests` + `just gates` on HEAD, then ship/close gently-q1x (push is yours — not done here, per brief).
