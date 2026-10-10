@@ -1,0 +1,38 @@
+## Report
+
+**Probe evidence** (corrected numbers)
+- The repo corpus is **8 fixtures** (not 149 — that figure is upstream's full fixture set, probed in an earlier session and recorded in `tests/repro/claims/`). Re-ran the admission sweep (`just repro` harness, 4 seeds) + a direct two-seed oracle run (seeds 1 vs 424242):
+  - **7 of 8 hash-stable**; **1 hash-dependent** (`txt-diamond` — as_ascii picks `b→d` vs `c→d` mid-path per seed); **0 fail under every seed** in this corpus.
+  - The committed corpus is **byte-consistent with seed 0** (all 16 companions' payloads reproduce identically; also matched under seeds 1 and 4 — the recording seed is not uniquely recoverable, but seed 0 is consistent and is now the documented contract).
+  - `admission.tsv` regenerated: classifications identical, timings jittered only.
+
+**Spec rows amended** — `specs/ge-oracle.md` (+ deployed mirror, + recompiled props)
+- **c1**: pin now names (a) upstream version+commit, (b) perl v5.44.0, (c) pinned `PERL_HASH_SEED` (corpus byte-consistent with seed 0; recordings declare perl version + seed in a metadata header line), (d) pinned source checkout on `PERL5LIB`, never a cpan-installed copy.
+- **c3**: byte-identical compare qualified — meaningful only at the recording seed for hash-dependent inputs.
+- **c4** (effect): extended drift set — non-checkout load path and unset `PERL_HASH_SEED` on a recording run are now typed errors.
+- **c7**: fixed the hash-stability definition ("across hash seeds, computed by the admission sweep" — the old "across repeated runs under the pinned seed" was vacuous: one seed is always deterministic).
+- **p1/p4**: predicates updated to match. No c7 re-wording beyond the stability fix (no every-seed-failure tier exists in this corpus).
+
+**Tooling fixes**
+- `tools/oracle.pl`: enforces the full pin (version **and** `$INC` load path **and** numeric `PERL_HASH_SEED`) with typed errors; dropped the invalid `cpanm Graph::Easy==0.69` remediation in favor of git-clone-at-commit (commit verified by construction; tarball noted as SIGNATURE-only); new recordings emit `# oracle: perl v5.44.0 PERL_HASH_SEED=<seed>` as a second header line (verifiers strip all leading `# oracle: ` lines — confirmed compatible). Fresh seed-0 recording into a scratch copy: payload-identical to committed corpus 16/16; c5 refusal still fires.
+- `justfile`: `oracle-record` requires the pinned checkout at `/var/tmp/ge0.69/Graph-Easy-0.69/lib`, defaults `PERL_HASH_SEED=0`, exports `PERL5LIB`; no `oracle-pin` references remain (already gone).
+- `tests/fixtures/graph-easy/README.md`: Recording section rewritten (source-checkout contract, seed, perl version); new Determinism section documenting the seed contract and `txt-diamond`'s c7 out-of-scope status.
+
+**Commits**
+- `3d78481` specs(ge.oracle): pin contract names perl version, pinned PERL_HASH_SEED, and PERL5LIB source checkout; runner enforces it (gently-ikm)
+
+**Gates run**
+- `spk lint specs/` — ok (0 findings, 0 warnings)
+- `cargo test --workspace` — ok (all suites pass)
+- `cargo clippy --workspace --all-targets -- -D warnings` — ok
+- `ah check` — ok
+- `ah check --run-tests` — **NOT fully green: pre-existing** `no-tests-ran` for ge-oracle p1–p6 and ge-perf p1–p5 (scenario test functions don't exist in `crates/gently-core/tests/scenarios/`; `ge_oracle.rs` only implements p7). Unchanged by this ticket; crates/** is outside my scope.
+- `just gates` — ok (compile 12/12, model-check 12/12, 0 blocking)
+
+**Deviations**
+- `.espectacular/ge-oracle/p{1..6}.toml`: corrected the test-filter flags from the unmatchable `scenarios::ge-oracle::pN` (hyphen) to `scenarios::ge_oracle::pN` — module path fix only; the underlying tests still need writing (see above), which is crates/** work outside my allowed list.
+- Corpus seed is stated as seed 0 based on byte-consistency evidence, not recoverable provenance (multiple seeds match) — noted in the spec as "byte-consistent with seed 0".
+- Ticket prose's "24 of 149 / 4 every-seed failures" corrected to the repo corpus numbers (8 fixtures, 1 hash-dependent, 0 every-seed failures).
+
+**Next**
+- File a follow-up bead: implement `scenarios::ge_oracle::p1`–`p6` and `ge_perf` scenario tests in `crates/gently-core/tests/scenarios/` so `ah check --run-tests` goes green. Otherwise ticket complete — orchestrator may review and close `gently-ikm`.

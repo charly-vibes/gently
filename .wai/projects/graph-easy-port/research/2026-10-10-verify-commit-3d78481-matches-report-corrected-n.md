@@ -1,0 +1,1 @@
+VERIFY: commit 3d78481 matches report (corrected numbers: 8-fixture corpus, 1 hash-dependent txt-diamond, 0 every-seed failures; c1/c3/c4/c7/p1/p4 amended, tooling enforces pin); cargo test 135/0, just gates green, ah check --run-tests 58 passed
