@@ -37,12 +37,23 @@ fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
         .stderr(Stdio::piped())
         .spawn()
         .expect("spawn gently");
-    child
+    // The child may exit before consuming stdin (e.g. unknown --as format
+    // dies with 255 without reading — cli.c4) — a broken pipe is that
+    // exit's observable signature, not a test failure. Any other IO error
+    // still panics; correctness of p1-p3 is guarded by their assertions on
+    // stdout/stderr/exit code.
+    if let Err(e) = child
         .stdin
         .as_mut()
         .expect("stdin piped")
         .write_all(stdin)
-        .expect("write stdin");
+    {
+        assert_eq!(
+            e.kind(),
+            std::io::ErrorKind::BrokenPipe,
+            "write stdin: unexpected IO error"
+        );
+    }
     let out = child.wait_with_output().expect("wait for gently");
     Run {
         stdout: out.stdout,
