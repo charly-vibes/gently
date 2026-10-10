@@ -6,7 +6,7 @@
 //! the header; any named subgraph becomes a group verbatim; records and
 //! HTML-like labels autosplit into `name.N` part nodes).
 
-use gently_core::graph::{Graph, Scope};
+use gently_core::graph::Graph;
 use gently_core::parse::dot;
 
 /// The index of the node with `name` (panics when missing — tests only).
