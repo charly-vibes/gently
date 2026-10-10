@@ -116,6 +116,8 @@ fn p4_source() -> Graph {
     let grp = g.add_group("grp");
     g.set_node_group(b, grp);
     g.set_node_group(c, grp);
+    let anon = g.add_group("");
+    g.set_node_group(a, anon);
     g
 }
 
@@ -144,10 +146,27 @@ fn member_names(g: &Graph, marker: &str) -> Vec<String> {
     grp.members.iter().map(|&i| g.nodes[i].name.clone()).collect()
 }
 
+/// Sorted group-name list (isomorphism: same group identity — a verbatim
+/// named name and an empty name for an anonymous group).
+fn group_names(g: &Graph) -> Vec<&str> {
+    let mut names: Vec<&str> = g.groups.iter().map(|grp| grp.name.as_str()).collect();
+    names.sort();
+    names
+}
+
+/// Member names of the anonymous group (empty name) — empty if none.
+fn anon_member_names(g: &Graph) -> Vec<String> {
+    match g.groups.iter().find(|grp| grp.name.is_empty()) {
+        Some(grp) => grp.members.iter().map(|&i| g.nodes[i].name.clone()).collect(),
+        None => Vec::new(),
+    }
+}
+
 /// ge.graphviz_render.p4 (c4): feeding the emitted DOT through
 /// ge.dot_parser yields a model isomorphic to the source model — same
 /// node names, same edges (endpoints, direction, attributes), same group
-/// membership.
+/// membership, and full group identity: the named group's verbatim name
+/// and the anonymous group's restored anonymity.
 #[test]
 fn p4() {
     let g = p4_source();
@@ -158,4 +177,10 @@ fn p4() {
     assert_eq!(edge_triples(&g), edge_triples(&reparsed), "same edges incl. direction");
     assert_eq!(reparsed.edges[0].attributes.get("style"), Some("dotted"), "edge attr preserved");
     assert_eq!(member_names(&g, "grp"), member_names(&reparsed, "grp"), "same group membership");
+    assert_eq!(group_names(&g), group_names(&reparsed), "verbatim group names");
+    assert_eq!(
+        anon_member_names(&g),
+        anon_member_names(&reparsed),
+        "anonymity restored (empty group name)"
+    );
 }
