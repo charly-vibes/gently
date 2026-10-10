@@ -3,13 +3,13 @@ source = "ge.html_render"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "Every grid cell maps to exactly one `td` element, with a CSS class derived from its content kind (node, edge, group, empty)."
+expr = "Every grid cell maps to exactly one `td` element, with a CSS class derived from its content kind (node, edge, group, empty). Re-derived (gently-dcp): the pinned oracle does NOT do this — its nodes span their block as a single `td colspan=4 rowspan=4` over the oracle's 4×4 subcell grid, with filler rows padding the machinery, so the oracle's td count is below its cell count (tests/repro/claims/td-colspan.observed). gently renders one `td` per grid cell as a documented simplification of that subcell machinery (skeleton, classes, and cell bytes otherwise follow the oracle) — the one-td-per-cell contract holds against the implementation while byte-compat with the oracle at the skeleton level is abandoned here by design."
 traces_to = "[[ge.html_render]]"
 
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label; label text and link URLs are HTML-escaped."
+expr = "Node cells carry the node's class name and label, and a node `link` attribute becomes an `a href` wrapping the label; label text is HTML-escaped. Re-derived (gently-dcp): link URLs are NOT HTML-escaped — the pinned oracle keeps ampersands raw in the href and only encodes space→`+` and `'`→`%27` (tests/repro/claims/href-escaping.observed); gently matches the oracle (`escape_href`)."
 traces_to = "[[ge.html_render]]"
 
 [[constraints]]
@@ -21,7 +21,7 @@ traces_to = "[[ge.html_render]]"
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "The emitted document embeds the CSS rules for every class it uses, so the output is self-contained."
+expr = "The emitted document embeds the CSS rules for every class it uses, so the output is self-contained. Re-derived (gently-dcp): the pinned oracle's `as_html` emits ONLY the table — the CSS rules are exposed separately via `css()` and embedded by the document form `as_html_file` (tests/repro/claims/html-css-rules.observed). gently mirrors this split: `render` (as_html) emits the bare table; `document` (as_html_file) embeds the `css()` rules in a `<style>` block ahead of the table."
 traces_to = "[[ge.html_render]]"
 
 [[constraints]]

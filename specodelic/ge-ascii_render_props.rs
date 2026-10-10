@@ -16,18 +16,18 @@ macro_rules! todo_predicate {
 
 // id: p1
 // generator: nodes with every border style
-// predicate: each rendered box border matches its declared style
+// predicate: each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed
 #[test]
 fn p1() {
-        todo_predicate!("each rendered box border matches its declared style");
+        todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed");
 }
 
 // id: p2
 // generator: graphs with every edge style
-// predicate: each edge's glyph run matches the style table byte-for-byte
+// predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less)
 #[test]
 fn p2() {
-        todo_predicate!("each edge's glyph run matches the style table byte-for-byte");
+        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less)");
 }
 
 // id: p3
@@ -56,9 +56,9 @@ fn p5() {
 
 // id: p6
 // generator: nodes with every shape in the upstream vocabulary, with and without color attributes
-// predicate: each shape's outline matches the upstream ASCII shape table and color attributes leave the output byte-identical
+// predicate: each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical
 #[test]
 fn p6() {
-        todo_predicate!("each shape's outline matches the upstream ASCII shape table and color attributes leave the output byte-identical");
+        todo_predicate!("each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical");
 }
 

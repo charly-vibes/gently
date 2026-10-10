@@ -16,18 +16,18 @@ macro_rules! todo_predicate {
 
 // id: p1
 // generator: arbitrary laid-out graphs
-// predicate: cell count equals grid size and each td carries the right content class
+// predicate: td count equals grid size (the documented one-td-per-cell simplification, not the oracle's colspan=4 rowspan=4 span) and each td carries the right content class
 #[test]
 fn p1() {
-        todo_predicate!("cell count equals grid size and each td carries the right content class");
+        todo_predicate!("td count equals grid size (the documented one-td-per-cell simplification, not the oracle's colspan=4 rowspan=4 span) and each td carries the right content class");
 }
 
 // id: p2
 // generator: nodes with plain labels, link attributes, and labels containing `&`, `<`, `>`, quotes
-// predicate: labels and links render as specified and fully escaped
+// predicate: labels render HTML-escaped and links follow the observed escaping rule (space→+, '→%27, raw `&`)
 #[test]
 fn p2() {
-        todo_predicate!("labels and links render as specified and fully escaped");
+        todo_predicate!("labels render HTML-escaped and links follow the observed escaping rule (space→+, '→%27, raw `&`)");
 }
 
 // id: p3
@@ -39,11 +39,11 @@ fn p3() {
 }
 
 // id: p4
-// generator: rendered documents of arbitrary graphs
-// predicate: every class referenced in the table has a matching CSS rule in the document
+// generator: rendered tables and documents of arbitrary graphs
+// predicate: the table renders bare (no CSS, as upstream `as_html`) and every class referenced in the table has a matching CSS rule in the document's `<style>` block
 #[test]
 fn p4() {
-        todo_predicate!("every class referenced in the table has a matching CSS rule in the document");
+        todo_predicate!("the table renders bare (no CSS, as upstream `as_html`) and every class referenced in the table has a matching CSS rule in the document's `<style>` block");
 }
 
 // id: p5

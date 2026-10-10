@@ -3,13 +3,13 @@ source = "ge.ascii_render"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "Each node renders as a box whose interior is its label and whose border style (solid, dotted, dashed, double, wave, bold, wide) comes from the node's border attributes."
+expr = "Each node renders as a box whose interior is its label and whose border style (solid, dotted, dashed, double, wave, bold, wide, broad, dot-dash, dot-dot-dash, double-dash, none) comes from the node's border attributes. Re-derived (gently-dcp): bold, wide, and broad render the SAME `#####` outline in ASCII — distinct attribute values only in the HTML border widths (tests/repro/claims/shape-outline-collapse.observed) — so the ASCII style table collapses them onto one glyph set (tests/repro/claims/ascii-render-tables.observed)."
 traces_to = "[[ge.ascii_render]]"
 
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "Edge style maps to glyph runs exactly as Graph::Easy does: solid `-->`, double `==>`, dotted `....>`, wave `~~~>`, dashed `- - >`, and arrow-less edges use the pattern without the arrow head."
+expr = "Edge style maps to glyph runs exactly as Graph::Easy does: at the minimum gap width the observed runs are solid `-->`, double `==>`, dotted `..>`, wave `~~>`, dashed `- >`, and bold `##>`, and arrow-less edges use the pattern without the arrow head; labelled or wider runs repeat the style's fill pattern up to the run length. Re-derived (gently-dcp): the earlier fixed-width forms `....>` and `- - >` are false at the probed minimum width — the oracle emits the minimum runs above (tests/repro/claims/ascii-render-tables.observed); gently implements exactly this table."
 traces_to = "[[ge.ascii_render]]"
 
 [[constraints]]
@@ -33,5 +33,5 @@ traces_to = "[[ge.ascii_render]]"
 [[constraints]]
 id = "c6"
 kind = "invariant"
-expr = "A node's `shape` attribute (upstream vocabulary: box, rounded, point, circle, ellipse, diamond, triangle, pentagon, hexagon, octagon, parallelogram, house, invisible, img) changes the rendered outline per the upstream ASCII shape table; color attributes do not affect ASCII output."
+expr = "A node's `shape` attribute (upstream vocabulary: rounded, point, circle, ellipse, diamond, triangle, pentagon, hexagon, octagon, parallelogram, house, invisible, img — `box` is NOT valid; the default shape is `rect`) changes the rendered outline per the upstream ASCII shape table; color attributes do not affect ASCII output. Re-derived (gently-dcp): the probed table collapses to four distinct outlines — every non-special shape renders the plain box for small nodes, `rounded` blanks the corners, `point` swaps the label for a centered `*`, `invisible` draws nothing, and `shape: box` is upstream-rejected (tests/repro/claims/ascii-render-tables.observed, shape-outline-collapse.observed); gently implements exactly this collapse."
 traces_to = "[[ge.ascii_render]]"
