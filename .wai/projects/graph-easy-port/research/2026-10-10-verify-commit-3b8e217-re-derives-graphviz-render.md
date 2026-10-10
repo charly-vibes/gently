@@ -1,0 +1,1 @@
+VERIFY: commit 3b8e217 re-derives graphviz_render c2 (oracle arrow follows graph type; gently mirrors model as documented divergence) + c4 + txt_render c3; spk lint 0, cargo test 134/0, just gates green, ah check clean; follow-ups j2i/8jf/dk2 filed
