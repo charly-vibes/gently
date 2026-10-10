@@ -1,0 +1,25 @@
+All gates green and the tree is clean (only the orchestrator's own `.wai` log remains untracked, which I'm not to touch).
+
+## Report
+
+**Commits**
+- `c15d1aa` test(cli): scenario tests p5–p8 for genesis surface (gently-ef5) — RED commit: one `#[test]` per property in `scenarios::cli` (p5 init/verbosity, p6 `--json` envelope, p7 suggestions, p8 doctor with `--fix`), all tempdir-scoped
+- `09de98a` refactor(cli): split genesis surfaces into pipeline/suggest/doctor modules (gently-ef5) — GREEN implementation: `main.rs` thin dispatcher (format-255 + exit contracts), `pipeline.rs` (source/read, render, `RawAscii` byte-compat, `--output`, json error envelopes), `suggest.rs` (`suggest_typo` registries, `DidYouMean`/`Fix` on stderr, exit 2), `doctor.rs` (4 `DoctorCheck`s through genesis `DoctorRunner`: oracle-availability, output-format-support, fixture-pin-freshness, genesis-registration auto-fix; `init` via `discovery::register`)
+- `62e1297` style(cli): clippy `is_some_and` for exit-code asserts (gently-ef5)
+
+**Gates run**
+- `cargo test --workspace` → all pass (cli 8/8 incl. p1–p4 unregressed; gently-core suites green)
+- `cargo clippy --workspace --all-targets -- -D warnings` → clean
+- `spk lint specs/` → 12 files, 0 findings
+- `ah check` → ok, 0 findings
+- `ah check --run-tests` → cli p1–p8 all execute now (58 passed); the 11 remaining `no-tests-ran` findings are exclusively ge-oracle (p1–p6) and ge-perf (p1–p5) — the pending beads gently-q1x / gently-4ln, outside this ticket's scope
+- `just gates` → exit 0 (compile 12/12, model-check 12/12, spk lint clean, pretender gate green after the module split)
+
+**Deviations**
+- Exit code for unknown subcommand/flag is **2** (clap's invalid-usage code) rather than 1 — c7 requires only "nonzero"; documented in main.rs header.
+- Subcommand detection: a first bare token is treated as a subcommand candidate only if it lacks path separators/extensions **and** is a Jaro-Winkler near-miss of `init`/`doctor` — existing filenames keep upstream positional semantics (p1 guards this).
+- Doctor's pin-freshness check scans `tests/fixtures/graph-easy/*.expected` headers against the justfile's pin constant (`ededa3d7…`); missing corpus is advisory-warn (unverifiable, not stale), with a `#[test]` in doctor.rs pinning the constant to the real fixture headers.
+- No README touch-up: README isn't in the allowed-files list.
+
+**Next**
+- Ticket complete for cli p5–p8 — orchestrator owns ship: verify, archive, `bd close gently-ef5`, push.
