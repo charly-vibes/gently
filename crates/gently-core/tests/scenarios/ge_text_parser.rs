@@ -270,13 +270,9 @@ fn p9() {
 /// Directed: mixed/repeated units accepted, style = last unit.
 fn directed_style_follows_the_last_unit() {
     let cases = [
-        ("..-..-..>", Some("dotted")),
-        (".-..-..>", Some("dotted")),
-        (".--->", None),
-        ("--.>", Some("dotted")),
-        (".->", Some("dot-dash")),
-        ("- >", Some("dashed")),
-        ("= >", Some("double-dash")),
+        ("..-..-..>", Some("dotted")), (".-..-..>", Some("dotted")),
+        (".--->", None), ("--.>", Some("dotted")), (".->", Some("dot-dash")),
+        ("- >", Some("dashed")), ("= >", Some("double-dash")),
     ];
     for (op, want) in cases {
         let src = format!("[ a ] {op} [ b ]\n");
@@ -288,11 +284,8 @@ fn directed_style_follows_the_last_unit() {
 /// Arrow-less: single `.-`/`..-` valid; mixed dot-units inherit (solid).
 fn arrowless_dot_singles_are_valid() {
     let cases = [
-        (".-", Some("dot-dash")),
-        ("..-", Some("dot-dot-dash")),
-        (".-.-", Some("dot-dash")),
-        ("..", Some("dotted")),
-        ("..-.-", None),
+        (".-", Some("dot-dash")), ("..-", Some("dot-dot-dash")),
+        (".-.-", Some("dot-dash")), ("..", Some("dotted")), ("..-.-", None),
     ];
     for (op, want) in cases {
         let src = format!("[ a ] {op} [ b ]\n");
@@ -305,13 +298,10 @@ fn arrowless_dot_singles_are_valid() {
 /// Arrow-less plain units: homogeneous reps name the style; mixed inherit.
 fn arrowless_plain_units() {
     let cases = [
-        ("[ a ] == [ b ]", None),
-        ("[ a ] ==[ b ]", Some("double")),
-        ("[ a ] ~~ [ b ]", Some("wave")),
-        ("[ a ] -- [ b ]", None),
+        ("[ a ] == [ b ]", None), ("[ a ] ==[ b ]", Some("double")),
+        ("[ a ] ~~ [ b ]", Some("wave")), ("[ a ] -- [ b ]", None),
         ("[ a ] - -[ b ]", Some("dot-dot-dash")),
-        ("[ a ] - - [ b ]", Some("dashed")),
-        ("[ a ] = = [ b ]", Some("double-dash")),
+        ("[ a ] - - [ b ]", Some("dashed")), ("[ a ] = = [ b ]", Some("double-dash")),
     ];
     for (src, want) in cases {
         let g = text::parse(src).unwrap_or_else(|e| panic!("{src:?} must parse: {e}"));
@@ -328,9 +318,8 @@ fn plain_singles_are_errors() {
     }
 }
 
-/// ge.text_parser.p10 (c10): attribute-value unquoting — the upstream
-/// two-layer composite. All expectations pinned byte-for-byte by the
-/// attr-quote-value probe (tests/repro/claims/attr-quote-value.observed).
+/// ge.text_parser.p10 (c10): attribute-value unquoting — the upstream two-layer
+/// composite, pinned byte-for-byte by tests/repro/claims/attr-quote-value.observed.
 #[test]
 fn p10() {
     // headline: single-quoted values lose their quotes (the bug report)
@@ -338,6 +327,7 @@ fn p10() {
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("hello"));
     quote_pairs_strip();
     store_unescape_set();
+    percent_entity_decode();
     quote_split_rules();
     names_and_labels_are_parser_layer_only();
 }
@@ -374,6 +364,21 @@ fn store_unescape_set() {
     // empty quoted value
     let g = text::parse("[ a ] { label: \"\"; } --> [ b ]\n").expect("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some(""));
+}
+
+/// The store-layer %XX layer (vs the oracle's unquote_attribute): printable
+/// band decodes, exploit band strips, bare `%` with no hex-pair tail stays.
+fn percent_entity_decode() {
+    let cases = [
+        ("%41", "A"), ("a%41b", "aAb"), ("%20", " "), ("%2B", "+"),
+        ("%7f", ""), ("%00", ""), ("%9f", ""), ("%A1", ""), ("%1A", ""),
+        ("100%", "100%"), ("%zz", "%zz"), ("%7F", "\u{7f}"),
+    ];
+    for (src, want) in cases {
+        let text = format!("[ a ] {{ label: {src}; }} --> [ b ]\n");
+        let g = text::parse(&text).unwrap_or_else(|e| panic!("{src:?} must parse: {e}"));
+        assert_eq!(g.get_attr(Scope::Node(0), "label"), Some(want), "value {src:?}");
+    }
 }
 
 /// The quoted-branch terminator: a closing quote must be followed by `;`
