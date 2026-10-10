@@ -21,7 +21,7 @@ traces_to = "[[ge.oracle]]"
 [[constraints]]
 id = "c4"
 kind = "effect"
-expr = "A missing or drifted oracle environment — perl absent, installed Graph::Easy version differs from the pin, Graph::Easy not loaded from the pinned source checkout, a recording run without an explicit `PERL_HASH_SEED`, or a stale pin header in a fixture — produces a typed error naming what is missing and the `just oracle-record` remediation."
+expr = "A missing or drifted oracle environment — perl absent, installed Graph::Easy version differs from the pin, Graph::Easy not loaded from the pinned source checkout, a recording run without an explicit `PERL_HASH_SEED`, or a stale pin header in a fixture — produces a typed error naming what is missing and the remediation — the pinned source-checkout setup from the README Recording recipe for perl/version/checkout/seed drift, and `just oracle-record` for a stale pin header."
 traces_to = "[[ge.oracle]]"
 
 [[constraints]]

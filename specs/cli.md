@@ -46,6 +46,7 @@ positionals are `[inputfile [outputfile]]`.
 | t3 | rendering | cli_failed | [[cli.c2]] |
 | t4 | reading | diagnosing | [[cli.c5]] |
 | t5 | diagnosing | cli_done | [[cli.c6]] |
+| t6 | reading | cli_failed | [[cli.c1]] [[cli.c5]] |
 
 ## Properties
 

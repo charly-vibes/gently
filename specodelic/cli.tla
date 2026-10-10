@@ -28,6 +28,8 @@ Next ==
   \/ vpc = "reading" /\ vpc' = "diagnosing"
   \* t5: diagnosing -> cli_done (guard: [[cli.c6]])
   \/ vpc = "diagnosing" /\ vpc' = "cli_done"
+  \* t6: reading -> cli_failed (guard: [[cli.c1]] [[cli.c5]])
+  \/ vpc = "reading" /\ vpc' = "cli_failed"
   \* stuttering: guards are prose (uninterpreted) — a terminal
   \* state must not read as an engine-side deadlock
   \/ UNCHANGED vpc

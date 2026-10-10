@@ -1,0 +1,22 @@
+Verification complete against HEAD (stable). Stopping here — no mutations, no commit (committing now would sweep the other agent's in-flight staged changes into a commit it doesn't own).
+
+## Report
+
+**Verdicts**
+- **Item 1 (cli.md reading→cli_failed):** NOT done by me — race detected (see Deviations). A concurrent, earlier-launched instance of this same brief (PID 2280170, `pi -p --name gently-liz-impl`, 17+ min elapsed of its 30m timeout, last file writes at 13:19) has already added `t6 reading→cli_failed` guarded `[[cli.c3]]` to `specs/cli.md` and regenerated `openspec/specs/cli/spec.md` + `specodelic/cli.{tla,check.json}`. Note: its staged/worktree `cli.md` currently contains **t6 twice** (duplicate `unique_id` violation — likely caught-and-fixed mid-flight, but unresolved as of my last read). Also confirmed against HEAD: `cli_failed` already declared `emits: [[cli.c4]]` (exactly one file-owned effect constraint) and t3/t6 give it ≥1 inbound transition, so only the t6 addition was needed.
+- **Item 2 (ge-oracle c4 remediation): verified-fixed at HEAD** (ikm, 3d78481). `tools/oracle.pl` `fail_pin` names the correct drifted-oracle remediation — the pinned source-checkout recipe (`git clone … /var/tmp/ge0.69/Graph-Easy-0.69`, `git checkout ededa3d…`, `PERL_HASH_SEED=0 PERL5LIB=… just oracle-record`), not bare `oracle-record`. c4's spec-row wording ("names what is missing and the `just oracle-record` remediation") plus c1's source-checkout contract and the README "Recording" section make the corpus coherent.
+- **Item 3 (justfile oracle-pin / cpanm): verified-fixed at HEAD.** No `oracle-pin` reference and no cpanm anywhere in the justfile; `oracle-record` checks perl, the fixture dir, and the pinned checkout (`$LIB/Graph/Easy.pm`), with setup delegated to `tests/fixtures/graph-easy/README.md` "Recording".
+- **Item 4 (pin checks commit): verified-fixed at HEAD, with a small residual.** `tools/oracle.pl` now checks version AND that `Graph::Easy.pm` loads from `$PIN_LIB` (the source checkout), and companion pin headers name version + commit (stale headers rejected per README/c4). Residual: `oracle.pl` never re-verifies the checkout's git commit (`git rev-parse HEAD` in `$PIN_LIB` would close it); the commit is enforced only by the setup recipe. Low severity — the other instance is mid-flight on ge-oracle.md and may address it.
+
+**Commits** — none (deliberately; see below)
+
+**Gates run** — none executable safely: `spk lint`/`cargo`/`ah check`/`just gates` would evaluate the other instance's half-applied edits (duplicate t6 in `cli.md` is a guaranteed `linter.unique_id` failure as of my last read), so results would not be attributable or stable.
+
+**Deviations**
+- **CRITICAL: duplicate-agent race.** The orchestrator's `pi -p --name gently-liz-impl` runner (PID 2280170 → pi 2280173, started ~13:05, 30m timeout expiring ~13:35) is still live and mutating exactly the files in this brief's scope: `specs/cli.md` (13:16), `openspec/specs/cli/spec.md` (13:19), `specodelic/cli.{tla,check.json}` (13:18), with changes partially staged. I performed read-only operations only (read/bash/git show HEAD) and made zero edits so as not to interleave with its writes. Items 2–4 verdicts above were therefore verified against HEAD, which is immune to its in-flight work.
+- No push, no bead close, no `wai close` — per brief.
+
+**Next**
+- The orchestrator must resolve the race before re-running this ticket: either (a) wait for PID 2280170 to finish (timeout ~13:35) and then review its commit/worktree — it will own the t6 fix, ge-oracle c4 work, mirrors, and gates; or (b) kill it (`kill 2280170`), then re-launch a fresh liz instance with a note that items 2–4 are already verified-fixed at HEAD and the only remaining work is item 1 (fix/keep the t6 transition, drop the duplicate t6 row if still present, deploy mirrors, run gates).
+- Whatever path is chosen: verify the duplicate `t6` row in `specs/cli.md` is gone before trusting `spk lint` results, and confirm `specs/ge-oracle.md`'s in-flight edits match the runner's `fail_pin` remediation wording.
+- Optional follow-up bead: have `tools/oracle.pl` fail_pin also verify the checkout's git commit (residual from item 4).
