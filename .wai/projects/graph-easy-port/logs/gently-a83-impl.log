@@ -1,0 +1,26 @@
+## Report
+
+**Corpus impact** — none — probe-scoped. `grep '%[0-9A-Fa-f]\{2\}'` over `tests/fixtures/graph-easy/*.txt` finds no fixture exercising %XX inside attribute values; no corpus re-record needed.
+
+**Commits**
+- `a38e68a` test(text_parser): pin store-layer %XX entity decode in p10 (RED) (gently-a83)
+- `d4fe6ae` fix(text_parser): store-layer %XX entity decode + exploit filtering in attr values (gently-a83)
+- `bc0cc6a` specs: name the store-layer %XX entity pass in text_parser c10/p10 (gently-a83)
+
+**Gates run**
+```
+cargo test --workspace   → green (5 suites ok, incl. p10 with 12 new %XX cases)
+cargo clippy --workspace --all-targets -- -D warnings → green
+spk lint specs/          → 0 findings, 0 warnings
+ah check                 → ok:true, 0 findings
+ah check --run-tests     → 58 passed for the executed set; 11 pre-existing `no-tests-ran` findings confined to ge-oracle/ge-perf contracts (dash-vs-underscore test-filter mismatch, `ge-oracle::p1` vs `ge_oracle::p1`) — untouched by this change, not fixable within the hard scope guard
+just gates               → compile 12/12, model-check 12/12, lint clean
+```
+
+**Deviations**
+- Implementation landed in `parse/text/attrs.rs` (where gently-8ol's store-layer composite already lives) rather than `graph/attributes.rs` — that file has no unquote path; the dot parser route (`parse/dot/attrs.rs`) has its own single-unescape `unquote` and was untouched, so no double-decode.
+- RED commit needed formatting-only compaction of three pre-existing case arrays in `ge_text_parser.rs` to satisfy the lefthook 400-line file gate (file landed at exactly 400).
+- Test expectations beyond the recorded `.observed` (12th case `%41`) were verified directly against the pinned oracle via `Graph::Easy->unquote_attribute` one-liner (all 12 cases match, including the quirks: `%7f` strips but `%7F` decodes to U+007F; `%A1`/`%q1`/`%1A` strip; `100%` and `%zz` stay literal).
+
+**Next**
+- Ticket complete — orchestrator should close `gently-a83` and consider a separate bead for the pre-existing ge-oracle/ge-perf contract filter mismatch surfaced by `ah check --run-tests`.
