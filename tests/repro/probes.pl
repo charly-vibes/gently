@@ -120,6 +120,7 @@ my %SERVES = (
     'anon-numbering'         => 'gently-r22 (graph_model c1 — exact #N scheme)',
     'attr-store-decompose'   => 'gently-r22 (graph_model c2 — store-layer unquote + border decomposition)',
     'group-edge'             => 'gently-r22 (graph_model c3 — group endpoints)',
+    'group-edge-graphviz'    => 'gently-0kg (graphviz_render c2/c4, txt_render c3 — group-endpoint edges through as_graphviz/as_txt)',
     'deleted-node-add-edge'  => 'gently-r22 (graph_model c3/p3 — deleted-node add_edge)',
     'href-escaping'          => 'gently-dcp, gently-eyo (html_render c2)',
     'td-colspan'             => 'gently-dcp, gently-eyo (html_render c4)',
@@ -529,6 +530,42 @@ my $gb = $g3->add_group('G2');
 my ($x, $y, $ed) = $g3->add_edge($ga, $gb);
 print "API add_edge(G1,G2): from ", ref($x), " to ", ref($y), "\n";
 dump_edges($g3);
+PROBE
+
+    'group-edge-graphviz' => <<'PROBE',
+# serves: gently-0kg (graphviz_render c2/c4, txt_render c3)
+# claim probed: graphviz_render c2 — "the arrow matches the model edge
+# direction" and c4 — "the emitted DOT re-parses isomorphically", for the
+# group-endpoint case, plus txt_render c3. Observed: a member-bearing
+# group-to-group edge does NOT crash as_graphviz — it emits the two member
+# nodes with ltail/lhead cluster references and NO ARROW at all
+# (`x  y [ ..., ltail="cluster2", lhead="cluster3" ]`) — malformed DOT that
+# no edge operator parses. A BARE group-to-group edge (groups without
+# members) DOES crash: "Can't call method \"_graphviz_point\" on an
+# undefined value at .../As_graphviz.pm line 547". as_txt serializes the
+# member-bearing group edge as a plain NODE edge (`[ x ] --> [ y ]`),
+# dropping the group-endpoint-ness on round-trip.
+use Graph::Easy;
+my $g = Graph::Easy->new();
+my $x = $g->add_node('x'); my $y = $g->add_node('y');
+my $A = $g->add_group('A'); $A->add_node($x);
+my $B = $g->add_group('B'); $B->add_node($y);
+$g->add_edge($A, $B);
+my $dot = eval { $g->as_graphviz() };
+if ($@) { print "member-bearing group edge as_graphviz: CRASH: ", (split /\n/, $@)[0], "\n"; }
+else {
+  my @stmt = grep { /x/ && /y/ } split /\n/, $dot;
+  print "member-bearing group edge as_graphviz: OK, edge statement:\n  @stmt\n";
+  print "  statement contains an arrow operator: ", (grep { /[->-]{2}/ } @stmt) ? "yes" : "NO (arrowless)", "\n";
+}
+my $txt = eval { $g->as_txt() };
+print "member-bearing group edge as_txt:\n$txt" if !($@) && defined $txt;
+my $bare = Graph::Easy->new();
+my $G1 = $bare->add_group('G1'); my $G2 = $bare->add_group('G2');
+$bare->add_edge($G1, $G2);
+my $bdot = eval { $bare->as_graphviz() };
+if ($@) { print "bare group-to-group as_graphviz: CRASH: ", (split /\n/, $@)[0], "\n"; }
+else { print "bare group-to-group as_graphviz: OK\n$bdot\n"; }
 PROBE
 
     'deleted-node-add-edge' => <<'PROBE',

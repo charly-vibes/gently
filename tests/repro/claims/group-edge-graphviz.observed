@@ -1,0 +1,14 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: group-edge-graphviz
+member-bearing group edge as_graphviz: OK, edge statement:
+    x  y [ color="#000000", ltail="cluster2", lhead="cluster3" ]
+  statement contains an arrow operator: NO (arrowless)
+member-bearing group edge as_txt:
+( A
+  [ x ]
+)
+
+( B
+  [ y ]
+)
+
+bare group-to-group as_graphviz: CRASH: Can't call method "_graphviz_point" on an undefined value at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/As_graphviz.pm line 547.

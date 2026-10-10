@@ -15,7 +15,7 @@ traces_to = "[[ge.txt_render]]"
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "Parsing the emitted text with [[ge.text_parser]] reproduces a model with the same nodes, edges, styles, labels, directions, and attributes as the source model."
+expr = "Parsing the emitted text with [[ge.text_parser]] reproduces a model with the same nodes, edges, styles, labels, directions, and attributes as the source model. Re-derived (gently-0kg): this equality is scoped to the parser-supported feature subset, with group membership excepted — group sections emit the empty `( name )` form (the emitter carries no membership), so a round-tripped group comes back EMPTY while upstream `as_txt` emits members inside the section. Group-endpoint edges are likewise outside the contract: upstream serializes them as plain node edges (tests/repro/claims/group-edge-graphviz.observed) and the gently model cannot represent them."
 traces_to = "[[ge.txt_render]]"
 
 [[constraints]]

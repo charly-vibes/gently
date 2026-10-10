@@ -40,9 +40,9 @@ fn p3() {
 
 // id: p4
 // generator: arbitrary graphs rendered to DOT and re-parsed
-// predicate: the re-parsed model is isomorphic to the source model
+// predicate: the re-parsed model is isomorphic to the source model, up to group renaming (named groups re-parse as `cluster_<name>`, anonymous ones as `cluster<N>`); group membership itself round-trips
 #[test]
 fn p4() {
-        todo_predicate!("the re-parsed model is isomorphic to the source model");
+        todo_predicate!("the re-parsed model is isomorphic to the source model, up to group renaming (named groups re-parse as `cluster_<name>`, anonymous ones as `cluster<N>`); group membership itself round-trips");
 }
 
