@@ -1,0 +1,1 @@
+VERIFY: commits 983e3ce/925d2f7/1ca8484/7c26cbe match report; membership emitted inside group section (upstream shape), parser untouched; cargo test 135/0, clippy clean, ah check --run-tests 58 passed, just gates green, spk lint 0

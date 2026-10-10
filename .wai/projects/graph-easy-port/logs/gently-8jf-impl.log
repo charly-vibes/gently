@@ -1,0 +1,30 @@
+## Report
+
+**Commits**
+- `983e3ce` test(txt_render): p3 red — group membership must round-trip, membership equality by name (gently-8jf)
+- `925d2f7` feat(txt_render): emit group member declarations inside the group section so membership round-trips (gently-8jf)
+- `1ca8484` docs(specs): ge-txt_render c3/p3 tightened to full model equality incl. group membership (gently-8jf)
+- `925d2f7` includes a tidy split: txt emitter tests moved to `src/render/txt/tests.rs` (pretender gate caps files at 400 lines); `7c26cbe` recompiles the specodelic props after the spec tightening (`just gates` regenerated them).
+
+**Emitter shape chosen** — member emission inside the group section, the upstream shape from `group-edge-graphviz.observed`:
+- Member-bearing group: `( name\n  [ x ] { attrs }\n  [ y ]\n) { group attrs }` — header `( name` (same group-name escaping), each member's node declaration (attributes included) indented two spaces, then `)` and the group attribute block after it (matches upstream `( inner\n  [ a ]\n) { group: outer; }`).
+- Empty groups keep the existing `( name ) { attrs }` form (no upstream evidence for empty sections; parser already reads it).
+- Duplicate handling: member nodes are excluded from pass 2 (declaration_pass) and marked in the `declared` set so pass 4 never re-emits them as isolated bare nodes — exactly one declaration per member. `group_pass` now takes `&mut HashSet<usize>`.
+- Parser untouched: a node line inside a group scope already joins that group (c6 rule in `parse/text/node.rs`), so the emitter's output round-trips with zero parser changes.
+
+**Spec rows amended** — `specs/ge-txt_render.md` c3 and p3: group-membership carve-out dropped (cited gently-0kg→gently-8jf closure), group-endpoint-edge exclusion retained; mirror deployed via `tools/deploy_specs.py` in the same commit; spk-compiled props recompiled in `7c26cbe`.
+
+**Gates run**
+- `cargo test --workspace` — all binaries ok, 0 failed
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean
+- `spk lint specs/` — 12 files, 0 findings, 0 warnings
+- `ah check` — 0 structural issues
+- `ah check --run-tests` — 58 passed; 11 `no-tests-ran` findings, all on **ge-oracle / ge-perf** (declared cargo filters match zero test fns) — verified pre-existing at the base commit, out of this ticket's scope
+- `just gates` — exit 0
+
+**Deviations**
+- `ah check --run-tests` is not fully green due to the pre-existing ge-oracle/ge-perf no-tests-ran findings above (not introduced by this change; other specs are out of scope).
+- Tidy commits added beyond the strict red/green/refactor triple: test-file split (forced by the 400-line pretender gate) and specodelic props recompile (forced by `just gates` regeneration).
+
+**Next**
+- Ticket complete. Orchestrator: ship the 4 commits; optional follow-up bead — fix the pre-existing ge-oracle/ge-perf contract filters (declared `scenarios::ge-oracle::p1..p6` / `ge-perf::p1..p5` match zero tests).
