@@ -1,0 +1,25 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: pod-triangle
+== seed 0 ==
+as_txt:
+[ Bonn ] --> [ Berlin ]
+[ Bonn ] --> [ Hamburg ]
+[ Berlin ] --> [ Hamburg ]
+as_ascii:
+
+  +---------------------------+
+  |                           v
++------+     +--------+     +---------+
+| Bonn | --> | Berlin | --> | Hamburg |
++------+     +--------+     +---------+
+== seed 1 ==
+as_txt:
+[ Bonn ] --> [ Berlin ]
+[ Bonn ] --> [ Hamburg ]
+[ Berlin ] --> [ Hamburg ]
+as_ascii:
+
+  +---------------------------+
+  |                           v
++------+     +--------+     +---------+
+| Bonn | --> | Berlin | --> | Hamburg |
++------+     +--------+     +---------+

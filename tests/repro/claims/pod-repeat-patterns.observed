@@ -1,0 +1,19 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: pod-repeat-patterns
+== seed 0 ==
+as_txt:
+[ A ] --> [ B ]
+[ B ] ~~> [ C ]
+[ C ] ..-> [ D ]
+as_ascii:
++---+     +---+     +---+      +---+
+| A | --> | B | ~~> | C | ..-> | D |
++---+     +---+     +---+      +---+
+== seed 1 ==
+as_txt:
+[ A ] --> [ B ]
+[ B ] ~~> [ C ]
+[ C ] ..-> [ D ]
+as_ascii:
++---+     +---+     +---+      +---+
+| A | --> | B | ~~> | C | ..-> | D |
++---+     +---+     +---+      +---+

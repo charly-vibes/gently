@@ -1,0 +1,17 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: pod-unicode
+== seed 0 ==
+as_txt:
+[ Bonn ] --> [ Köln ]
+[ Köln ] --> [ Zürich ]
+as_ascii:
++------+     +------+     +--------+
+| Bonn | --> | Köln | --> | Zürich |
++------+     +------+     +--------+
+== seed 1 ==
+as_txt:
+[ Bonn ] --> [ Köln ]
+[ Köln ] --> [ Zürich ]
+as_ascii:
++------+     +------+     +--------+
+| Bonn | --> | Köln | --> | Zürich |
++------+     +------+     +--------+

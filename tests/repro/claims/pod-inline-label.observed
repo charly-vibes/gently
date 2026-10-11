@@ -1,0 +1,29 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: pod-inline-label
+== seed 0 ==
+as_txt:
+[ Bonn ] -- label --> [ Berlin ]
+[ Bonn ] .. baz ..> [ Hamburg ]
+as_ascii:
++--------+  baz   +---------+
+|  Bonn  | .....> | Hamburg |
++--------+        +---------+
+  |
+  | label
+  v
++--------+
+| Berlin |
++--------+
+== seed 1 ==
+as_txt:
+[ Bonn ] -- label --> [ Berlin ]
+[ Bonn ] .. baz ..> [ Hamburg ]
+as_ascii:
++--------+  baz   +---------+
+|  Bonn  | .....> | Hamburg |
++--------+        +---------+
+  |
+  | label
+  v
++--------+
+| Berlin |
++--------+

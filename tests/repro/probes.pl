@@ -135,9 +135,202 @@ my %SERVES = (
     'graphviz-round-trip'    => 'gently-0kg, gently-b4v (graphviz c2/c4, txt_render c3)',
     'size-envelope'          => 'gently-k4u (perf c2/c5)',
     'perl5lib-pin'           => 'gently-ikm, gently-liz (oracle pin contract)',
+    'pod-edge-styles'        => 'gently-ni9.1 (POD mining — Easy.pm EXAMPLES edge-styles block is hash-dependent)',
+    'pod-fan'                => 'gently-ni9.1 (POD mining — Easy.pm EXAMPLES shared-source fan is hash-dependent)',
+    'pod-inline-label'       => 'gently-ni9.1 (POD mining — Parser.pm inline-label example is hash-dependent)',
+    'pod-parser-input'       => 'gently-ni9.1 (POD mining — Parser.pm Input section example is hash-dependent)',
+    'pod-anon-nodes'         => 'gently-ni9.1 (POD mining — Parser.pm anonymous-node example; gently renders boxed #N, oracle renders boxless → bug bead)',
+    'pod-group'              => 'gently-ni9.1 (POD mining — Parser.pm groups example; gently omits the dashed group border box → bug bead)',
+    'pod-bidir-label'        => 'gently-ni9.1 (POD mining — Parser.pm \'<-- label -->\' example; gently drops the start arrowhead → bug bead)',
+    'pod-label-attr'         => 'gently-ni9.1 (POD mining — Parser.pm arrowless-label example; gently draws a spurious target arrowhead → bug bead)',
+    'pod-repeat-patterns'    => 'gently-ni9.1 (POD mining — Parser.pm repeated-pattern example; gently collapses repeated styles to plain → bug bead)',
+    'pod-triangle'           => 'gently-ni9.1 (POD mining — Easy.pm interlinked-triangle example; gently layout diverges by 2 columns → bug bead)',
+    'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
+    'pod-style-family'       => 'gently-ni9.1 (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead)',
+    'pod-bidir'              => 'gently-ni9.1 (POD mining — Easy.pm \'<->\' example; same start-arrowhead family as pod-bidir-label)',
+    'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
 );
 
 my %CLAIMS = (
+    # POD-mining claims (gently-ni9.1): the example is tier-1 INADMISSIBLE
+    # (hash-dependent across seeds, ge.oracle.c7), so it ships as a claim
+    # probe, not a corpus fixture. Each probe renders the POD example under
+    # two hash seeds and shows the divergence the oracle itself cannot pin.
+    'pod-edge-styles' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy.pm POD "Different edge styles" EXAMPLES block.
+# Observed: seed-dependent layout divergence (bidirectional/double edges).
+pod_probe_body('pod-edge-styles', <<'EXAMPLE')
+[ Bonn ] <-> [ Berlin ]
+[ Berlin ] ==> [ Rostock ]
+[ Hamburg ] ..> [ Altona ]
+[ Dresden ] - > [ Bautzen ]
+[ Leipzig ] ~~> [ Kirchhain ]
+[ Hof ] .-> [ Chemnitz ]
+[ Magdeburg ] <=> [ Ulm ]
+[ Magdeburg ] -- [ Ulm ]
+EXAMPLE
+PROBE
+
+    'pod-fan' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy.pm POD "Three nodes" EXAMPLES block (fan-out).
+# Observed: seed-dependent layout divergence.
+pod_probe_body('pod-fan', <<'EXAMPLE')
+[ Bonn ] -> [ Berlin ]
+[ Bonn ] -> [ Hamburg ]
+EXAMPLE
+PROBE
+
+    'pod-inline-label' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD inline edge-label example
+# ("-- foo -->" / "... baz ...>" styles).
+# Observed: seed-dependent layout divergence.
+pod_probe_body('pod-inline-label', <<'EXAMPLE')
+[ Bonn ] -- label --> [ Berlin ]
+[ Bonn ] ... baz ...> [ Hamburg ]
+EXAMPLE
+PROBE
+
+    'pod-double-dash' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: POD edge-styles table row "= > double-dash"
+# (Parser.pm edges section). Observed: the oracle round-trips '[ A ] = >
+# [ B ]' verbatim in as_txt; gently collapses the style to '-->' —
+# fixture rejected, divergence bug (style-loss family).
+pod_probe_body('pod-double-dash', <<'EXAMPLE')
+[ A ] = > [ B ]
+EXAMPLE
+PROBE
+
+    'pod-bidir' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy.pm POD "Two nodes" variant — the '<->'
+# bidirectional edge from the edge-style list. Observed: the oracle draws
+# '<-->' with both arrowheads; gently draws '-->' — same start-arrowhead
+# root cause as the pod-bidir-label bug (gently-ni9.1 filed bead).
+pod_probe_body('pod-bidir', <<'EXAMPLE')
+[ Bonn ] <-> [ Berlin ]
+EXAMPLE
+PROBE
+
+    'pod-style-family' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: POD prose "There are also the styles bold, wide and broad"
+# (Parser.pm edges section), all three in one chain.
+# Observed: the oracle renders wide AND broad as '##>' (double-line
+# arrowhead); gently renders plain '-->' — fixture rejected, divergence bug.
+pod_probe_body('pod-style-family', <<'EXAMPLE')
+[ AB ] --> { style: bold; } [ ABC ]
+[ ABC ] --> { style: wide; } [ ABCD ]
+[ ABCD ] --> { style: broad; } [ ABCDE ]
+EXAMPLE
+PROBE
+
+    'pod-unicode' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: POD prose "The input ... encoded in UTF-8" (Parser.pm Input).
+# Observed: the oracle as_ascii sizes the 'Köln' node box by UTF-8 BYTE
+# length (extra column per multi-byte char); gently sizes by chars —
+# fixture rejected, divergence bug (unicode labels).
+pod_probe_body('pod-unicode', <<'EXAMPLE')
+[ Bonn ] --> [ Köln ]
+[ Köln ] --> [ Zürich ]
+EXAMPLE
+PROBE
+
+    'pod-triangle' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy.pm POD "Three nodes, interlinked" example
+# (the triangle). Observed: hash-stable in the oracle, but gently's layout
+# differs by 2 columns on the back-edge — fixture rejected, divergence bug.
+pod_probe_body('pod-triangle', <<'EXAMPLE')
+[ Bonn ] -> [ Berlin ]
+[ Berlin ] -> [ Hamburg ]
+[ Bonn ] -> [ Hamburg ]
+EXAMPLE
+PROBE
+
+    'pod-repeat-patterns' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD repeated edge-style patterns
+# ("--->", "~~~~~>", "..-..-..->").
+# Observed: the oracle renders '..-..-..->' with dot-dot-dash styling
+# ('..->') and extra column spacing; gently collapses it to plain '-->' —
+# fixture rejected, divergence bug.
+pod_probe_body('pod-repeat-patterns', <<'EXAMPLE')
+[ A ] ---> [ B ]
+[ B ] ~~~~~> [ C ]
+[ C ] ..-..-..-> [ D ]
+EXAMPLE
+PROBE
+
+    'pod-label-attr' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD arrowless edge with label attribute
+# ("[ AB ] -- { label: edgelabel; } [ CD ]").
+# Observed: the oracle as_ascii renders NO arrowheads on the '--' edge;
+# gently appends a spurious '>' at the target end — fixture rejected,
+# divergence bug (arrowhead family).
+pod_probe_body('pod-label-attr', <<'EXAMPLE')
+[ AB ] -- { label: edgelabel; } [ CD ]
+EXAMPLE
+PROBE
+
+    'pod-bidir-label' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD bidirectional inline-label example
+# ("[ A ] <-- label --> [ B ]").
+# Observed: the oracle as_ascii draws arrowheads at BOTH endpoints ("v"
+# at source) with the label above the edge; gently drops the start
+# arrowhead and renders the label inline — fixture rejected, divergence bug.
+pod_probe_body('pod-bidir-label', <<'EXAMPLE')
+[ A ] <-- label --> [ B ]
+[ A ] --> { color: red; } [ B ]
+EXAMPLE
+PROBE
+
+    'pod-group' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD named-group example
+# ("( Cities: [ Bonn ] -> [ Berlin ] )").
+# Observed: the oracle as_ascii draws a dashed '+ - - -+' border box with
+# the group title; gently renders only the member nodes, no border —
+# byte-compat fixture rejected, filed as a divergence bug.
+pod_probe_body('pod-group', <<'EXAMPLE')
+( Cities:
+
+  [ Bonn ] -> [ Berlin ]
+)
+EXAMPLE
+PROBE
+
+    'pod-anon-nodes' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD anonymous-nodes example
+# ("[ ] -> [ Bonn ] -> [ ]").
+# Observed: the oracle's as_ascii draws anonymous nodes with NO border and
+# NO name; gently renders them as boxed '#1'/'#3' — byte-compat fixture
+# rejected, filed as a divergence bug.
+pod_probe_body('pod-anon-nodes', <<'EXAMPLE')
+[ ] -> [ Bonn ] -> [ ]
+EXAMPLE
+PROBE
+
+    'pod-parser-input' => <<'PROBE',
+# serves: gently-ni9.1
+# claim probed: Graph::Easy::Parser POD Input section example
+# (<=>, = > double-dash forms).
+# Observed: seed-dependent layout divergence.
+pod_probe_body('pod-parser-input', <<'EXAMPLE')
+[ Bonn ]      --> [ Berlin ]
+[ Frankfurt ] <=> [ Dresden ]
+[ Bonn ]      --> [ Frankfurt ]
+[ Bonn ]      = > [ Frankfurt ]
+EXAMPLE
+PROBE
+
     'sharp-escape' => <<'PROBE',
 # serves: gently-6j0, gently-bzx (text_parser c7)
 # claim probed: the text_parser spec's sharp/quote escaping rows.
@@ -1004,6 +1197,37 @@ commit verification: NOT POSSIBLE from an installed dist — the pin names
   commit. This is the open pin-contract question gently-ikm redesigns
   (source checkout vs cpanm, commit verification mechanism).
 EOF
+}
+
+# Renders one POD-mined example (gently-ni9.1) under two hash seeds via
+# run_perl_snippet and prints both renders — making seed divergence visible
+# in the recorded claim without ever pretending the bytes are stable.
+sub pod_probe_body {
+    my ($name, $example) = @_;
+    my $child = <<'CHILD';
+use strict; use warnings;
+use Graph::Easy::Parser;
+my ($file) = @ARGV;
+local $/; open my $fh, '<:encoding(UTF-8)', $file or die "open: $!";
+my $text = <$fh>;
+my $g = Graph::Easy::Parser->new->from_text($text);
+die "parse failed\n" unless $g;
+print "as_txt:\n", $g->as_txt();
+print "as_ascii:\n", $g->as_ascii();
+CHILD
+    my $tmp = File::Temp->newdir('pod-probe-XXXXXX', TMPDIR => 1, CLEANUP => 1);
+    my $file = "$tmp/example.txt";
+    open my $fh, '>', $file or die "probes: cannot write example: $!\n";
+    print $fh $example;
+    close $fh;
+    for my $seed (0, 1) {
+        print "== seed $seed ==\n";
+        local $ENV{PERL_HASH_SEED} = $seed;
+        my ($status, $out, $err) = run_perl_snippet($child, 30, $file);
+        chomp(my $msg = $err // '');
+        die "probes: pod claim '$name' seed $seed: $status $msg" if $status ne 'ok';
+        print $out;
+    }
 }
 
 if ($mode eq 'claims') {
