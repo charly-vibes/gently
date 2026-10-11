@@ -1,0 +1,20 @@
+`.beads/issues.jsonl` is gitignored (embedded-Dolt beads; git sync happens via `refs/dolt/data` by the orchestrator), and the brief/run artifacts follow the same untracked-until-orchestrator pattern as gently-ni9.1. Work complete — not pushing per brief.
+
+## Final summary — gently-ni9.3
+
+**Issues triaged: 8/8** (the tracker's full `state=all` set; rt.cpan.org unreachable, skipped per brief)
+- #9 spam; #7/#5/#2 Module::Signature failures; #6 macOS install; #3/#1 feature requests — all carry **no graph input** → skip, no fixture
+- **#4 (closed) — "Wrong drawing when the nodes are declared first (graphviz)"** — the only reproducible case (two DOT inputs)
+
+**Oracle v0.69 verdict (the contract):** the bug **still reproduces bug-for-bug** — input `a` yields the spurious `[ baz ] --> [ baz ]` self-edge and the reported wrong drawing; input `b` renders correctly. Hash-stable across seeds 0/1.
+
+**gently verdict:** diverges at *parse time* on both inputs (`expected a statement`). Two divergence classes isolated and filed:
+- **gently-a0k** — graph-scope attribute statements (`rankdir="LR"`) unsupported (oracle maps rankdir→`flow: east`)
+- **gently-2n5** — bare scope as edge-chain endpoint (`{foo bar} -> baz`) unsupported (oracle links both scope nodes to the target)
+
+**Artifacts:**
+- Probe `gh-4-nodes-first` in `tests/repro/probes.pl` with recorded evidence `tests/repro/claims/gh-4-nodes-first.observed`
+- Triage table: `.wai/projects/graph-easy-port/research/2026-10-11-gh-issues-triage.md`
+- Commit `7f12744` (triage notes + probe + evidence)
+
+**Gates (all green):** `ah check` 0 findings · `cargo test` 146 passed · `just oracle-verify` green · `probes.pl claims` lists `gh-4-nodes-first` · `bd close gently-ni9.3` ✓
