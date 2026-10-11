@@ -1,0 +1,23 @@
+Done — `gently-ni9.4` implemented, committed (`0e168b1`), and closed. Not pushed (orchestrator pushes).
+
+## Summary
+
+**Pairs recorded — 5 oracle-verified community pairs**, all from Stack Overflow (the only programmatically accessible source):
+
+| Probe | Source | Outcome |
+|---|---|---|
+| `so-graph-convert` | SO 71869025 accepted answer (Graph.pm→Graph::Easy URI tree) | oracle matches the answerer's posted bytes; gently **diverges** → `gently-5vf` (vertical stem off by one column) |
+| `so-edge-labels` | SO 47661180 (bare-number edge labels) | **byte-identical** to the community-posted output in gently too |
+| `so-flowchart-size` | SO 47323345 question (`{ size: 5,10; }`, `\n` label escape, line-continuation) | gently **diverges** → `gently-527` (`\n` printed raw) |
+| `so-start-port-index` | SO 47323345 answer (`{start: front,0}` indexed ports, zero-space `{..}[Node]` junction) | gently **diverges** → `gently-byq` (port indexes ignored) |
+| `so-graphviz-unknown-attrs` | SO 59659560 (Parser::Graphviz dot dump) | oracle: unknown attrs **warn** and render anyway — pinned as claim evidence |
+
+All recorded under the pinned oracle v0.69 @ ededa3d7 across hash seeds 0/1 (hash-stable); recorded to `tests/repro/claims/so-*.observed`. Kept as claim probes, not corpus fixtures, per the brief (several diverge in gently, so they can't be byte-comparison fixtures yet).
+
+**Sources searched** (log with queries/counts/dedupe rationale in `.wai/projects/graph-easy-port/research/2026-10-11-community-mining.md`):
+- Stack Overflow API: 16 hits, 9 question bodies + all answers fetched — 5 pairs mined, 4 posts deduped away (passing mentions / covered classes)
+- Reddit, PerlMonks, DuckDuckGo-blogs: all serve bot-block/challenge pages to scripts — documented, candidates for a follow-up bead with a browser-based fetch
+
+**Beads filed:** `gently-5vf`, `gently-527`, `gently-byq` (bug, P2)
+
+**Gates:** `ah check` 0 findings · `cargo test` 146 pass · `just oracle-verify` green · pre-commit hooks (spk lint 0) green
