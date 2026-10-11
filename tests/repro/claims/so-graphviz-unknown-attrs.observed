@@ -1,0 +1,11 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: so-graphviz-unknown-attrs
+warnings: 4
+  WARN Warning: Ignoring unknown attribute 'lheight' for class graph at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 1299.  WARN Warning: Ignoring unknown attribute 'lwidth' for class graph at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 1299.  WARN Warning: Ignoring unknown attribute 'penwidth' for class graph at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 1299.  WARN Warning: Ignoring unknown attribute 'penwidth' for class node at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 1299.+---+     +---+
+| c | <-- | a |
++---+     +---+
+            |
+            |
+            v
+          +---+
+          | b |
+          +---+

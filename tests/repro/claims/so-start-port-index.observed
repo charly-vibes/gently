@@ -1,0 +1,37 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: so-start-port-index
+== seed 0 ==
+as_txt:
+[ Msg Server ] -- 1. Number X of unread --> { start: front,0; } [ Client ]
+[ Msg Server ] -- 3. X Msg --> { start: front,3; } [ Client ]
+[ Client ] -- 2. read X --> { end: front,2; } [ Msg Server ]
+as_ascii:
++------------+  1. Number X of unread   +-----------+
+|            | -----------------------> |  Client   | -+
+|            |                          +-----------+  |
+|            |                            ^            |
+|            |                            | 3. X Msg   |
+| Msg Server |                            |            |
+|            |  2. read X                 |            |
+|            | <--------------------------+------------+
+|            |                            |
+|            |                            |
+|            | ---------------------------+
++------------+
+== seed 1 ==
+as_txt:
+[ Msg Server ] -- 1. Number X of unread --> { start: front,0; } [ Client ]
+[ Msg Server ] -- 3. X Msg --> { start: front,3; } [ Client ]
+[ Client ] -- 2. read X --> { end: front,2; } [ Msg Server ]
+as_ascii:
++------------+  1. Number X of unread   +-----------+
+|            | -----------------------> |  Client   | -+
+|            |                          +-----------+  |
+|            |                            ^            |
+|            |                            | 3. X Msg   |
+| Msg Server |                            |            |
+|            |  2. read X                 |            |
+|            | <--------------------------+------------+
+|            |                            |
+|            |                            |
+|            | ---------------------------+
++------------+

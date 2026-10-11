@@ -1,0 +1,41 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: so-flowchart-size
+== seed 0 ==
+as_txt:
+[ Client ] { size: 5,10; }
+[ Msg Server ] { size: 5,10; }
+
+[ Server ] -- put msg\n via http --> [ Msg Server ]
+[ Msg Server ] -- 1. Number X of unread --> [ Client ]
+[ Msg Server ] -- 3. X Msg --> [ Client ]
+[ Client ] -- 2. read X --> [ Msg Server ]
+as_ascii:
++--------+  put msg    +------------+                          +--------+
+| Server |  via http   |            |  3. X Msg                |        |
+|        | ----------> |            | -----------------------> |        |
++--------+             |            |                          |        |
+                       | Msg Server |  1. Number X of unread   | Client |
+                       |            | -----------------------> |        |
+                       |            |                          |        |
+                       |            |  2. read X               |        |
+                       |            | <----------------------- |        |
+                       +------------+                          +--------+
+== seed 1 ==
+as_txt:
+[ Client ] { size: 5,10; }
+[ Msg Server ] { size: 5,10; }
+
+[ Server ] -- put msg\n via http --> [ Msg Server ]
+[ Msg Server ] -- 1. Number X of unread --> [ Client ]
+[ Msg Server ] -- 3. X Msg --> [ Client ]
+[ Client ] -- 2. read X --> [ Msg Server ]
+as_ascii:
++--------+  put msg    +------------+                          +--------+
+| Server |  via http   |            |  3. X Msg                |        |
+|        | ----------> |            | -----------------------> |        |
++--------+             |            |                          |        |
+                       | Msg Server |  1. Number X of unread   | Client |
+                       |            | -----------------------> |        |
+                       |            |                          |        |
+                       |            |  2. read X               |        |
+                       |            | <----------------------- |        |
+                       +------------+                          +--------+

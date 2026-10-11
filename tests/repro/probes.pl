@@ -159,6 +159,11 @@ my %SERVES = (
     'bg-joint-classes'       => 'gently-ni9.2 (bloodgate mining — syntax.html joint-node class:border example; PINNED PARSER REJECTS it — site rendered by a newer Graph::Easy)',
     'bg-start-right'         => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html start:right port attr; gently ignores it → bug bead)',
     'bg-textwrap'            => 'gently-ni9.2 (bloodgate mining — syntax.html textwrap:auto + textwrap:10; gently does not wrap → bug bead)',
+    'so-graph-convert'       => 'gently-ni9.4 (community mining — SO 71869025 accepted answer: Graph.pm→Graph::Easy URI tree; stem column off by one → gently-5vf)',
+    'so-edge-labels'         => 'gently-ni9.4 (community mining — SO 47661180: bare-number edge labels on a text-frequency digraph)',
+    'so-flowchart-size'      => 'gently-ni9.4 (community mining — SO 47323345 question: { size: 5,10; } node attrs + literal-\\n edge label printed raw → gently-527)',
+    'so-start-port-index'    => 'gently-ni9.4 (community mining — SO 47323345 answer: {start: front,N} indexed start/end port attrs ignored → gently-byq)',
+    'so-graphviz-unknown-attrs' => 'gently-ni9.4 (community mining — SO 59659560: Graph::Easy::Parser::Graphviz unknown dot attrs warn and render anyway)',
 );
 
 my %CLAIMS = (
@@ -304,6 +309,104 @@ graph { textwrap: auto; }
 
 [ Long Node Label left right center ] -- A long edge label --> { textwrap: 10; } [ B ]
 EXAMPLE
+PROBE
+
+    # Stack Overflow-mining claims (gently-ni9.4): real-world inputs pasted
+    # in SO questions/answers, rendered under the pinned oracle across
+    # seeds 0/1. Community inputs are the messy edge cases POD never shows.
+    'so-graph-convert' => <<'PROBE',
+# serves: gently-ni9.4
+# claim probed: SO 71869025 / answer 71869162 (accepted) — converting a
+# Graph.pm URI tree to Graph::Easy and printing as_ascii. Parsed input
+# equivalent of the API-built edges ('/', '/a'), ('/', '/c'), ('/a', '/b').
+# Observed (pinned oracle): /a → /b on the top row, /c hanging below /
+# — matches the bytes the answerer posted. gently: stem column off by
+# one ('   |' vs '  |') → bug bead gently-5vf.
+pod_probe_body('so-graph-convert', <<'EXAMPLE')
+[ / ] --> [ /a ]
+[ / ] --> [ /c ]
+[ /a ] --> [ /b ]
+EXAMPLE
+PROBE
+
+    'so-edge-labels' => <<'PROBE',
+# serves: gently-ni9.4
+# claim probed: SO 47661180 / answer 47661977 — bare-number edge labels
+# from text-frequency counts (the asker's 'frequency' attr was invalid;
+# the answerer relabeled edges with the counts). Observed (pinned
+# oracle): numeric labels ride above the arrowheads, three parallel
+# chains laid out side by side.
+pod_probe_body('so-edge-labels', <<'EXAMPLE')
+[ 14 ] -- 2 --> [ million ]
+[ digital ] -- 2 --> [ humanities ] -- 2 --> [ research ]
+[ participants ] -- 2 --> [ may ] -- 3 --> [ want ]
+EXAMPLE
+PROBE
+
+    'so-flowchart-size' => <<'PROBE',
+# serves: gently-ni9.4
+# claim probed: SO 47323345 (question body) — a real flowchart input with
+# { size: 5,10; } node attribute blocks (comma inside the braces plus a
+# trailing semicolon), a literal '\n' escape inside an edge label, and a
+# label continued onto the next line with leading whitespace. Observed
+# (pinned oracle): parses clean; the \\n splits the 'put msg / via http'
+# label over two centered rows. gently: prints the \\n escape raw on one
+# line, different layout → bug bead gently-527.
+pod_probe_body('so-flowchart-size', <<'EXAMPLE')
+[Client] { size: 5,10; }
+[Msg Server] { size: 5,10; }
+[Server]
+
+[Server] -- put msg\n
+            via http  -->  [Msg Server]
+
+
+[Msg Server] -- 1. Number X of unread --> [Client]
+[Msg Server] -- 3. X Msg --> [Client]
+
+[Client] -- 2. read X --> [Msg Server]
+EXAMPLE
+PROBE
+
+    'so-start-port-index' => <<'PROBE',
+# serves: gently-ni9.4
+# claim probed: SO 47323345 / answer 48119766 — the community workaround
+# for label ordering uses INDEXED port attrs ({start: front,0},
+# {start: front,3}, {end: front,2}) glued to the target with NO space
+# ('{...}[Client]'). Observed (pinned oracle): edges land at the indexed
+# ports; parser accepts the zero-space form. gently: ignores the port
+# index (bg-start-right family) and draws a loop layout → bug bead
+# gently-byq.
+pod_probe_body('so-start-port-index', <<'EXAMPLE')
+[Msg Server] -- 1. Number X of unread --> {start: front,0}[Client]
+[Msg Server] -- 3. X Msg --> {start: front,3} [Client]
+[Client] -- 2. read X --> {end: front,2}[Msg Server]
+EXAMPLE
+PROBE
+
+    'so-graphviz-unknown-attrs' => <<'PROBE',
+# serves: gently-ni9.4
+# claim probed: SO 59659560 — converting a go-callvis dot dump with
+# Graph::Easy::Parser::Graphviz. Real dot dumps carry attributes v0.69
+# does not know (lheight, lwidth, penwidth). Observed (pinned oracle):
+# 'Ignoring unknown attribute ... for class graph/node' WARNINGS on
+# stderr while the render still succeeds — warnings, not errors.
+# gently: dot parser rejects the attribute-statement form.
+use Graph::Easy::Parser::Graphviz;
+my $dot = <<'DOT';
+digraph G {
+  graph [lheight=0.37, lwidth=0.37, penwidth=0.8];
+  node [penwidth=0.8];
+  a -> b;
+  a -> c;
+}
+DOT
+my @warns;
+local $SIG{__WARN__} = sub { push @warns, $_[0] };
+my $g = Graph::Easy::Parser::Graphviz->from_text($dot);
+print "warnings: ", scalar(@warns), "\n";
+for my $w (@warns) { my ($m) = split /\n/, $w; print "  WARN $m"; }
+print $g->as_ascii();
 PROBE
 
     'gh-4-nodes-first' => <<'PROBE',
