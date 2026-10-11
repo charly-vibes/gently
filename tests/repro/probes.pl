@@ -149,9 +149,55 @@ my %SERVES = (
     'pod-style-family'       => 'gently-ni9.1 (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead)',
     'pod-bidir'              => 'gently-ni9.1 (POD mining — Easy.pm \'<->\' example; same start-arrowhead family as pod-bidir-label)',
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
+    'gh-4-nodes-first'       => 'gently-ni9.3 (GitHub issue #4 — nodes declared first; gently parse-errors on graph-scope attrs → gently-a0k, bare-scope edge endpoints → gently-2n5)',
 );
 
 my %CLAIMS = (
+    # GitHub-mining claims (gently-ni9.3): reproducible inputs from the
+    # upstream GitHub issue tracker, rendered under the pinned oracle.
+    'gh-4-nodes-first' => <<'PROBE',
+# serves: gently-ni9.3 (GitHub issue #4, closed upstream — still reproduces
+# against the PINNED oracle v0.69, which is the contract).
+# claim probed: issue #4's two inputs. The reported bug reproduces exactly:
+# input 'a' (nodes declared first) yields the spurious self-edge
+# '[ baz ] --> [ baz ]' and the wrong drawing; input 'b' (no declarations)
+# is correct. Hash-stable across seeds 0/1 — but tier-1 INADMISSIBLE as a
+# corpus fixture: gently parse-errors on BOTH inputs (graph-scope attribute
+# statement 'rankdir="LR"' and bare-scope edge endpoint '{foo bar} -> baz'),
+# so no byte-comparison is even reachable yet. Divergence beads: dot parser
+# missing graph-level attribute statements; bare scope unsupported as an
+# edge-chain endpoint.
+use Graph::Easy::Parser::Graphviz;
+my $p = Graph::Easy::Parser::Graphviz->new();
+my @cases = (
+  [ 'nodes declared first', <<'A' ],
+digraph {
+  rankdir="LR"
+
+  foo
+  bar [label="bar-label!"]
+  baz
+
+  {foo bar} -> baz
+}
+A
+  [ 'no declarations',      <<'B' ],
+digraph {
+  rankdir="LR"
+  {foo bar} -> baz
+}
+B
+);
+for my $c (@cases) {
+  my ($label, $text) = @$c;
+  my $g = eval { $p->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; $m =~ s/ at \(eval \d+\) line \d+\.//; print "ERR  [$label]\n     $m\n"; next; }
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//;
+  print "OK   [$label]\n     as_txt:\n$txt\n";
+  print "     as_ascii:\n", $g->as_ascii();
+}
+PROBE
+
     # POD-mining claims (gently-ni9.1): the example is tier-1 INADMISSIBLE
     # (hash-dependent across seeds, ge.oracle.c7), so it ships as a claim
     # probe, not a corpus fixture. Each probe renders the POD example under
