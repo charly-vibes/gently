@@ -1,0 +1,31 @@
+Done. **gently-ni9.5 complete** — commit `70005b5` (not pushed; orchestrator pushes).
+
+## What shipped
+
+**`examples/` — 7 byte-verified examples** (each `examples/<name>/input.gv` + `expected.txt`, mined from `tests/fixtures/graph-easy/`, oracle v0.69 pin header stripped, cross-checked byte-identical against `gently --as ascii`):
+
+| example | coverage |
+|---|---|
+| `simple-chain/` | linear chain `a --> b --> c` |
+| `edge-styles/` | solid `------>` + double `========>` styles |
+| `edge-attributes/` | inline `{ style: bold; label: foo; }` |
+| `diamond/` | fan-out/fan-in branching layout |
+| `self-loop/` | self-edge |
+| `parallel-edges/` | duplicate edges between a pair |
+| `isolated-node/` | isolated node beside an edge pair |
+
+Coverage note: **groups** and **DOT input** were skipped per the brief's skip rule — groups diverge (open bug `gently-7rx`) and the CLI's render path parses text-format only. `examples/README.md` documents one-liners + the oracle-verification provenance.
+
+**`docs/known-hard-cases.md`** — compatibility-status table of all 13 open divergence beads (0d6, 1kv, 2n5, 51d, 58m, 7qz, 7rx, a0k, b0z, bpq, bvb, klf, oy2) plus the three scope-off classes from the byte-compat decision (hash-randomized inputs, beyond-envelope sizes, upstream round-trip gaps). Titled as status, not a to-do.
+
+**`README.md`** — lean quickstart added after the status block: build + one parse-to-ascii pipe (with rendered output), one `--as`/file-argument example, pointers to `examples/` and the hard-cases page. Wai badge and structure preserved. (`--as dot` example corrected to `--as ascii` — the CLI advertises `valid formats: ascii` until later renderers are wired, and the quickstart says so honestly.)
+
+**`justfile`** — new `examples-verify` recipe: builds the CLI, renders every `examples/*/input.gv`, diffs against `expected.txt`, fails on mismatch or missing expected output (anti-goal enforced).
+
+## Gates
+- `just examples-verify` ✅ all 7 byte-identical
+- `just gates` ✅ 12 compiled, 12 model-checked, 0 failed
+- `cargo test --workspace` ✅ **146 passed** (50+87+8+1)
+- `ah check --run-tests` ✅ 69 passed, 0 findings
+- lefthook pre-commit ✅ (all hooks green)
+- `bd close gently-ni9.5` ✅
