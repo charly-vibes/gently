@@ -1,0 +1,28 @@
+**gently-ni9.1 complete** — committed in two, closed, not pushed (orchestrator pushes).
+
+## Summary
+
+**Oracle-verified pairs recorded: 60**
+- **4 new corpus fixtures** (8 pairs, txt + ascii each): `pod-one-node`, `pod-bold-style`, `pod-bold-label`, `pod-inline-styles` — recorded under the pin with headers, `just oracle-verify` green
+- **14 POD claim probes** (`tests/repro/claims/pod-*.observed`, 52 pairs): each records the pinned oracle's as_txt + as_ascii render under hash seeds 0/1 via new `pod_probe_body` runner support in `probes.pl`
+
+**12 divergences found, each with a filed bug bead** (evidence = claim probe):
+- gently-58m — anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` → parse error
+- gently-b0z — anon nodes rendered boxed `#N`; oracle draws boxless/unnamed
+- bead — arrowless `.-.-` rendered as `---`
+- bead — named groups: dashed border box + title omitted
+- bead — `<--` start arrowhead dropped (also covers `<->`, claim-only) + inline label placement
+- bead — arrowless `--` gets spurious `>` arrowhead
+- bead — repeated patterns `..-..-..->`/`.-.-.->` collapse to plain `-->`
+- bead — `= >` double-dash collapses to `-->`
+- bead — `wide`/`broad` styles render `-->` instead of oracle's `##>`
+- bead — interlinked-triangle layout drifts 2 columns (oracle hash-stable)
+- bead — UTF-8 label width: oracle counts bytes, gently chars
+
+**Hash-dependent (out of byte-compat scope, ge.oracle.c7):** `pod-edge-styles`, `pod-fan`, `pod-inline-label`, `pod-parser-input` — claims only, never fixtures.
+
+**Edge cases surfaced** (quoting, style-grammar repetition rules, inline-labels-need-arrows, group membership, UTF-8) — recorded in `.wai/projects/graph-easy-port/research/2026-10-11-pod-mining-notes.md`.
+
+**Deferral:** `Graph::Easy::Manual` POD is a separate CPAN dist, absent from the pinned checkout; archive.org/metacpan fetches returned 503. Manual/FAQ/cookbook mining should be a follow-up (noted in the notes file).
+
+**Gates:** `ah check` 0 findings · `cargo test` 146 passing · `just oracle-verify` green · `probes.pl claims` lists all 14 probes with `gently-ni9.1` attribution.
