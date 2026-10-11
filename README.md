@@ -20,3 +20,37 @@ just gates           # compile + model-check the corpus
 just oracle-verify   # differential compat gate (needs fixtures; spec ge.oracle)
 just perf-check      # performance budgets (spec ge.perf)
 ```
+
+## Quickstart
+
+Build the CLI and render a graph to ASCII art — the Graph::Easy text
+format goes in on stdin, the layout comes out:
+
+```sh
+cargo build -p gently-cli
+echo '[ Bonn ] --> [ Berlin ] --> [ Hamburg ]' | target/debug/gently --as ascii
+```
+
+```
++------+     +--------+     +---------+
+| Bonn | --> | Berlin | --> | Hamburg |
++------+     +--------+     +---------+
+```
+
+`--as` selects the output format (so does the output filename's
+extension, as in upstream). Rendering from a file argument instead of
+stdin:
+
+```sh
+target/debug/gently --as ascii examples/simple-chain/input.gv
+```
+
+Other upstream formats (boxart, HTML, Graphviz DOT) land in later slices
+— the CLI advertises `valid formats: ascii` until their renderers are
+wired.
+
+More worked examples (chain, edge styles, diamonds, self-loops, …) with
+committed, byte-verified output live in [`examples/`](examples/README.md).
+Where gently still differs from the pinned Graph::Easy oracle — and which
+classes are deliberately outside byte-compat — see
+[docs/known-hard-cases.md](docs/known-hard-cases.md).

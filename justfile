@@ -121,6 +121,34 @@ oracle-verify:
     cargo test -q -p gently-core --test scenarios tb::oracle::
     echo "oracle-verify: green — corpus verified against pin v0.69 @ ededa3d7"
 
+# Byte-verify the published examples (gently-ni9.5): for every
+# examples/<name>/, render input.gv with the built CLI and diff against
+# expected.txt. Fails on any mismatch — no example is published without
+# its expected-output file.
+examples-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -d examples ] || { echo "examples-verify: no examples/ directory"; exit 1; }
+    ls examples/*/input.gv >/dev/null 2>&1 || { echo "examples-verify: no examples/*/input.gv found"; exit 1; }
+    for dir in examples/*/; do
+        name=$(basename "$dir")
+        [ -f "$dir/expected.txt" ] || { echo "examples-verify: $name has no expected.txt — an example is never published without its expected output"; exit 1; }
+    done
+    cargo build -q -p gently-cli
+    BIN=target/debug/gently
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    for dir in examples/*/; do
+        name=$(basename "$dir")
+        "$BIN" --as ascii < "$dir/input.gv" > "$tmp/out" 2>/dev/null \
+            || { echo "examples-verify: gently failed on $name/input.gv"; exit 1; }
+        if ! cmp -s "$tmp/out" "$dir/expected.txt"; then
+            echo "examples-verify: MISMATCH example=$name — rendered output differs from expected.txt"
+            diff "$dir/expected.txt" "$tmp/out" | head -n10 || true
+            exit 1
+        fi
+    done
+    echo "examples-verify: all examples byte-identical to their committed expected output"
+
 # Run the performance budget gates (spec: ge.perf c1-c5)
 perf-check:
     #!/usr/bin/env bash
