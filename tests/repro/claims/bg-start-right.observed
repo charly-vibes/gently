@@ -1,0 +1,33 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-start-right
+== seed 0 ==
+as_txt:
+[ Bonn ] --> [ Koblenz ]
+[ Koblenz ] --> [ Frankfurt ]
+[ Koblenz ] --> { start: right; } [ Trier ]
+[ Frankfurt ] --> [ Dresden ]
+[ Trier ] --> [ Frankfurt ]
+as_ascii:
+
+                          +------------------+
+                          |                  v
++------+     +---------+  |  +-------+     +-----------+     +---------+
+| Bonn | --> | Koblenz | -+  | Trier | --> | Frankfurt | --> | Dresden |
++------+     +---------+     +-------+     +-----------+     +---------+
+               |               ^
+               +---------------+
+== seed 1 ==
+as_txt:
+[ Bonn ] --> [ Koblenz ]
+[ Koblenz ] --> [ Frankfurt ]
+[ Koblenz ] --> { start: right; } [ Trier ]
+[ Frankfurt ] --> [ Dresden ]
+[ Trier ] --> [ Frankfurt ]
+as_ascii:
+
+                          +------------------+
+                          |                  v
++------+     +---------+  |  +-------+     +-----------+     +---------+
+| Bonn | --> | Koblenz | -+  | Trier | --> | Frankfurt | --> | Dresden |
++------+     +---------+     +-------+     +-----------+     +---------+
+               |               ^
+               +---------------+

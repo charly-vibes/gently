@@ -1,0 +1,19 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-anon-chain
+== seed 0 ==
+as_txt:
+[ ] --> [ Karlsruhe ]
+[ Karlsruhe ] --> [ ]
+[ ] --> [ Plauen ]
+as_ascii:
+        +-----------+             +--------+
+    --> | Karlsruhe | -->     --> | Plauen |
+        +-----------+             +--------+
+== seed 1 ==
+as_txt:
+[ ] --> [ Karlsruhe ]
+[ Karlsruhe ] --> [ ]
+[ ] --> [ Plauen ]
+as_ascii:
+        +-----------+             +--------+
+    --> | Karlsruhe | -->     --> | Plauen |
+        +-----------+             +--------+

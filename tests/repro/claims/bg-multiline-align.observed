@@ -1,0 +1,21 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-multiline-align
+== seed 0 ==
+as_txt:
+[ Long Node Label\l left\r right\c center ] -- A\r long\n edge label --> [ B ]
+as_ascii:
++-----------------+               +---+
+| Long Node Label |  A            |   |
+| left            |        long   | B |
+|           right |  edge label   |   |
+|     center      | ------------> |   |
++-----------------+               +---+
+== seed 1 ==
+as_txt:
+[ Long Node Label\l left\r right\c center ] -- A\r long\n edge label --> [ B ]
+as_ascii:
++-----------------+               +---+
+| Long Node Label |  A            |   |
+| left            |        long   | B |
+|           right |  edge label   |   |
+|     center      | ------------> |   |
++-----------------+               +---+

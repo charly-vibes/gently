@@ -150,11 +150,162 @@ my %SERVES = (
     'pod-bidir'              => 'gently-ni9.1 (POD mining — Easy.pm \'<->\' example; same start-arrowhead family as pod-bidir-label)',
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
     'gh-4-nodes-first'       => 'gently-ni9.3 (GitHub issue #4 — nodes declared first; gently parse-errors on graph-scope attrs → gently-a0k, bare-scope edge endpoints → gently-2n5)',
+    'bg-multiline-align'     => 'gently-ni9.2 (bloodgate mining — syntax.html \l\r\c alignment escapes; gently prints them raw → bug bead)',
+    'bg-comma-lists'         => 'gently-ni9.2 (bloodgate mining — syntax.html comma-chained node lists; gently parse-errors → bug bead)',
+    'bg-trailing-node-attr'  => 'gently-ni9.2 (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
+    'bg-anon-chain'          => 'gently-ni9.2 (bloodgate mining — syntax.html anon nodes in chain; gently renders boxed #N, oracle hides them → bug bead)',
+    'bg-minlen-bypass'       => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html minlen:3; gently ignores it → bug bead)',
+    'bg-edge-node'           => 'gently-ni9.2 (bloodgate mining — tutorial_edges.html shape:edge nodes; gently path-cells render error → bug bead)',
+    'bg-joint-classes'       => 'gently-ni9.2 (bloodgate mining — syntax.html joint-node class:border example; PINNED PARSER REJECTS it — site rendered by a newer Graph::Easy)',
+    'bg-start-right'         => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html start:right port attr; gently ignores it → bug bead)',
+    'bg-textwrap'            => 'gently-ni9.2 (bloodgate mining — syntax.html textwrap:auto + textwrap:10; gently does not wrap → bug bead)',
 );
 
 my %CLAIMS = (
     # GitHub-mining claims (gently-ni9.3): reproducible inputs from the
     # upstream GitHub issue tracker, rendered under the pinned oracle.
+    # bloodgate.com-mining claims (gently-ni9.2): inputs mined from the
+    # live bloodgate.com Graph::Easy pages (manual/syntax.html,
+    # manual/tutorial_*.html — the rendered Graph::Easy::Manual POD).
+    # Each renders under the pinned oracle across seeds 0/1; gently's
+    # divergence is named per probe.
+    'bg-multiline-align' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/syntax.html multiline-label section.
+# Observed (pinned oracle): \l / \r / \c become per-line alignment inside
+# the node box, \n / \r split the edge label across lines. gently prints
+# every escape raw on one line.
+pod_probe_body('bg-multiline-align', <<'EXAMPLE')
+[ Long Node Label\l left\r right\c center ] -- A\r long\n edge label --> [ B ]
+EXAMPLE
+PROBE
+
+    'bg-comma-lists' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/syntax.html comma-chained node lists
+# (shared-source fan-out and multi-source fan-in). Observed: oracle lays
+# them out with the extra node(s) hanging off the chain. gently:
+# parse error, line 1: ',' not recognized.
+pod_probe_body('bg-comma-lists', <<'EXAMPLE')
+[ A ] -> [ B ], [ C ], [ D ]
+
+[ A ], [ B ], [ C ] --> [ D ]
+EXAMPLE
+PROBE
+
+    'bg-trailing-node-attr' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/syntax.html quoting section
+# (21" edge label, "Huge" node label). Observed (pinned oracle): the
+# trailing node attribute block { label: "Huge"; } renames Big → Huge;
+# the 21" label renders quoted-free. gently drops the trailing node
+# attribute block entirely and renders Big. Edge attr blocks mid-chain
+# DO work (see examples/edge-attributes) — trailing NODE blocks don't.
+pod_probe_body('bg-trailing-node-attr', <<'EXAMPLE')
+[ "Monitor Size" ] --> { label: 21"; } [ Big ] { label: "Huge"; }
+EXAMPLE
+PROBE
+
+    'bg-anon-chain' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/syntax.html anonymous nodes in a
+# chain. Observed (pinned oracle): anon nodes render INVISIBLE — only
+# Karlsruhe/Plauen boxes plus the floating incoming/outgoing arrows.
+# gently renders boxed #1/#3 nodes (anon-numbering family, gently-2wt).
+pod_probe_body('bg-anon-chain', <<'EXAMPLE')
+[ ] -> [ Karlsruhe ] -> [ ] -> [ Plauen ]
+EXAMPLE
+PROBE
+
+    'bg-minlen-bypass' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/tutorial_bypass.html minlen example
+# (Bonn→Koblenz→{minlen:3}→Frankfurt→Dresden plus Koblenz→Trier→Frankfurt
+# bypass). Observed (pinned oracle): minlen:3 stretches the edge and the
+# Trier bypass routes across the TOP. gently ignores minlen and routes
+# Trier below.
+pod_probe_body('bg-minlen-bypass', <<'EXAMPLE')
+[ Bonn ] --> [ Koblenz ] --> { minlen: 3; } [ Frankfurt ] --> [ Dresden ]
+
+[ Koblenz ] --> [ Trier ] --> [ Frankfurt ]
+EXAMPLE
+PROBE
+
+    'bg-edge-node' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/tutorial_edges.html edge-as-node
+# example (train/car { shape: edge; } nodes fed by anon buy/rent edges).
+# Observed (pinned oracle): shape:edge nodes dissolve into their edges;
+# anon feed nodes invisible. gently: render error "edge path cells are
+# not orthogonally adjacent".
+pod_probe_body('bg-edge-node', <<'EXAMPLE')
+[ Bonn ] -- [ train ] --> [ Ulm ] -- [ car ] --> [ Hof ]
+
+[ ] -- buy --> [ train ] { shape: edge; }
+[ ] -- rent --> [ car ] { shape: edge; }
+EXAMPLE
+PROBE
+
+    # bloodgate divergence (oracle-side, NOT a gently bug): the site's
+    # joint-node class:border example is rendered by a NEWER Graph::Easy —
+    # the pinned v0.69 parser rejects 'class: |1' outright. Documented so
+    # nobody mistakes the site bytes for pin-reachable output.
+    'bg-joint-classes' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/syntax.html joint-node class example
+# (node.1..3 border styles, [ AAAA|BBBB ] { class: |1; } ...). Observed:
+# the PINNED v0.69 parser REJECTS the input — "'1' is not a valid class
+# for a node" — so the site's shown boxart (dotted/dashed/dot-dash cell
+# borders) is NOT pin-reachable. The site runs a newer Graph::Easy.
+use Graph::Easy::Parser;
+my $text = <<'EXAMPLE';
+node.1 { border: dotted; }
+node.2 { border: dashed; }
+node.3 { border: dot-dash; }
+node { border: double; }
+
+[ AAAA|BBBB ] { class: |1; }
+[ CCCC|DDDD ] { class: 2|; }
+[ EEEE|FFFF ] { class: 3; }
+EXAMPLE
+for my $seed (0, 1) {
+  print "== seed $seed ==\n";
+  local $ENV{PERL_HASH_SEED} = $seed;
+  my $g = eval { Graph::Easy::Parser->new->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; $m =~ s/ at .* line \d+\.$//; print "ERR  pinned parser rejects: $m\n"; next; }
+  print $g->as_ascii();
+}
+PROBE
+
+    'bg-start-right' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/tutorial_bypass.html start-port
+# example (Bonn→Koblenz→Frankfurt→Dresden plus { start: right; }
+# Koblenz→Trier→Frankfurt). Observed (pinned oracle): the port attr
+# makes Trier sit INLINE on Koblenz's right, edge leaving horizontally.
+# gently ignores start: and routes Trier below.
+pod_probe_body('bg-start-right', <<'EXAMPLE')
+[ Bonn ] --> [ Koblenz ] --> [ Frankfurt ] --> [ Dresden ]
+
+[ Koblenz ] --> { start: right; } [ Trier ] --> [ Frankfurt ]
+EXAMPLE
+PROBE
+
+    'bg-textwrap' => <<'PROBE',
+# serves: gently-ni9.2
+# claim probed: bloodgate.com/manual/syntax.html textwrap section
+# (graph { textwrap: auto; } plus edge attr { textwrap: 10; } — note the
+# SITE shows 'text-wrap: 10' but the PINNED parser only accepts
+# 'textwrap'; the site page itself is newer).
+# Observed (pinned oracle): node label wrapped into a 7-row box at 10
+# columns. gently: single unwrapped line — textwrap unimplemented.
+pod_probe_body('bg-textwrap', <<'EXAMPLE')
+graph { textwrap: auto; }
+
+[ Long Node Label left right center ] -- A long edge label --> { textwrap: 10; } [ B ]
+EXAMPLE
+PROBE
+
     'gh-4-nodes-first' => <<'PROBE',
 # serves: gently-ni9.3 (GitHub issue #4, closed upstream — still reproduces
 # against the PINNED oracle v0.69, which is the contract).

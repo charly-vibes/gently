@@ -1,0 +1,49 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-edge-node
+== seed 0 ==
+as_txt:
+[ car ] { shape: edge; }
+[ train ] { shape: edge; }
+
+[ ] -- rent --> [ car ]
+[ ] -- buy --> [ train ]
+[ Bonn ] -- [ train ]
+[ train ] --> [ Ulm ]
+[ Ulm ] -- [ car ]
+[ car ] --> [ Hof ]
+as_ascii:
+          rent    car          +-----+
+         ------> ------------> | Hof |
+                               +-----+
+
+                 ----------------+
+                                 |
++------+          train        +-----+
+| Bonn | --------------------> | Ulm |
++------+                       +-----+
+                   ^
+                   | buy
+                   |
+== seed 1 ==
+as_txt:
+[ car ] { shape: edge; }
+[ train ] { shape: edge; }
+
+[ ] -- rent --> [ car ]
+[ ] -- buy --> [ train ]
+[ Bonn ] -- [ train ]
+[ train ] --> [ Ulm ]
+[ Ulm ] -- [ car ]
+[ car ] --> [ Hof ]
+as_ascii:
+          rent    car          +-----+
+         ------> ------------> | Hof |
+                               +-----+
+
+                 ----------------+
+                                 |
++------+          train        +-----+
+| Bonn | --------------------> | Ulm |
++------+                       +-----+
+                   ^
+                   | buy
+                   |

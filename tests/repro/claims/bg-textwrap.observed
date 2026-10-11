@@ -1,0 +1,29 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-textwrap
+== seed 0 ==
+as_txt:
+graph { textwrap: auto; }
+
+[ Long Node Label left right center ] -- A long edge label --> { textwrap: 10; } [ B ]
+as_ascii:
++--------+           +---+
+|  Long  |           |   |
+|  Node  |           |   |
+| Label  |  A long   | B |
+|  left  |  edge     |   |
+| right  |  label    |   |
+| center | --------> |   |
++--------+           +---+
+== seed 1 ==
+as_txt:
+graph { textwrap: auto; }
+
+[ Long Node Label left right center ] -- A long edge label --> { textwrap: 10; } [ B ]
+as_ascii:
++--------+           +---+
+|  Long  |           |   |
+|  Node  |           |   |
+| Label  |  A long   | B |
+|  left  |  edge     |   |
+| right  |  label    |   |
+| center | --------> |   |
++--------+           +---+

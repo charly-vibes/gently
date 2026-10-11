@@ -1,0 +1,19 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-trailing-node-attr
+== seed 0 ==
+as_txt:
+[ Big ] { label: Huge; }
+
+[ "Monitor Size" ] -- 21" --> [ Big ]
+as_ascii:
++----------------+  21"   +------+
+| "Monitor Size" | -----> | Huge |
++----------------+        +------+
+== seed 1 ==
+as_txt:
+[ Big ] { label: Huge; }
+
+[ "Monitor Size" ] -- 21" --> [ Big ]
+as_ascii:
++----------------+  21"   +------+
+| "Monitor Size" | -----> | Huge |
++----------------+        +------+

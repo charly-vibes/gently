@@ -1,0 +1,29 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: bg-minlen-bypass
+== seed 0 ==
+as_txt:
+[ Bonn ] --> [ Koblenz ]
+[ Koblenz ] --> { minlen: 3; } [ Frankfurt ]
+[ Koblenz ] --> [ Trier ]
+[ Frankfurt ] --> [ Dresden ]
+[ Trier ] --> [ Frankfurt ]
+as_ascii:
+
+               +-----------------------------+
+               |                             v
++------+     +---------+     +-------+     +-----------+     +---------+
+| Bonn | --> | Koblenz | --> | Trier | --> | Frankfurt | --> | Dresden |
++------+     +---------+     +-------+     +-----------+     +---------+
+== seed 1 ==
+as_txt:
+[ Bonn ] --> [ Koblenz ]
+[ Koblenz ] --> { minlen: 3; } [ Frankfurt ]
+[ Koblenz ] --> [ Trier ]
+[ Frankfurt ] --> [ Dresden ]
+[ Trier ] --> [ Frankfurt ]
+as_ascii:
+
+               +-----------------------------+
+               |                             v
++------+     +---------+     +-------+     +-----------+     +---------+
+| Bonn | --> | Koblenz | --> | Trier | --> | Frankfurt | --> | Dresden |
++------+     +---------+     +-------+     +-----------+     +---------+
