@@ -7,12 +7,12 @@ build graphs (nodes/edges/groups), lay them out deterministically on a
 flat surface, and render them as ASCII art, boxart, HTML, or Graphviz
 DOT — plus parse graphs from the Graph::Easy text format and from DOT.
 
-**Status: specification phase.** The capability corpus lives in
-`specs/` (Specodelic four-layer format); no implementation yet.
-The CLI will be built on the [genesis-vibes](https://github.com/charly-vibes/genesis)
-foundation; compatibility is gated differentially against the original
-Perl tool via a pinned oracle (`just oracle-verify`), and performance
-via budget gates (`just perf-check`).
+**Status: initial capability wave complete.** The full pipeline ships —
+parse → model → layout → render (ASCII art, boxart, HTML, text, Graphviz
+DOT) → CLI — with the capability corpus in `specs/` (Specodelic
+four-layer format). Compatibility is gated differentially against the
+original Perl tool via a pinned oracle (v0.69, `just oracle-verify`),
+and performance via budget gates (`just perf-check`).
 
 ```bash
 just lint            # all specs must be lint-clean
