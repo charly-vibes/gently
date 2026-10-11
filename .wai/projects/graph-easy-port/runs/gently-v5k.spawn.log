@@ -1,0 +1,15 @@
+Done. Summary:
+
+**What changed** — `README.md` status paragraph rewritten (nothing else touched; no examples section added):
+> **Status: initial capability wave complete.** The full pipeline ships — parse → model → layout → render (ASCII art, boxart, HTML, text, Graphviz DOT) → CLI — with the capability corpus in `specs/` (Specodelic four-layer format). Compatibility is gated differentially against the original Perl tool via a pinned oracle (v0.69, `just oracle-verify`), and performance via budget gates (`just perf-check`).
+
+**Gate results**
+- `just lint` → 12 files linted, 0 findings ✅
+- `ah check` → 0 findings ✅ (also re-verified by lefthook pre-commit)
+- `cargo test` → 146 passed, 0 failed ✅
+- `just gates` skipped (optional for README-only change)
+
+**Ship**
+- Commit: `7e872c5` — `docs(readme): status now reflects shipped capability wave (gently-v5k)` (README.md only)
+- `bd close gently-v5k` → closed ✅
+- Not pushed, per brief — orchestrator pushes.
