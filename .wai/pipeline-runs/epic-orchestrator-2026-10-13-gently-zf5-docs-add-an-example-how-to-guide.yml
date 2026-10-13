@@ -2,7 +2,7 @@ run_id: epic-orchestrator-2026-10-13-gently-zf5-docs-add-an-example-how-to-guide
 pipeline: epic-orchestrator
 topic: 'gently-zf5 docs: add-an-example how-to guide'
 created_at: '2026-10-13T19:36:06.662328936+00:00'
-current_step: 2
+current_step: 7
 approvals: {}
 epic: null
 child_issues: []
