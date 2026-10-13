@@ -4,3 +4,8 @@ brief_path:
 steps: []
 claim (15fa635)
 gates (15fa635)
+brief committed (66a120a)
+spawn (66a120a)
+verify (749b225)
+ship (749b225)
+stop (749b225) — run complete; gently-pua closed+pushed; next run: cbk Edge::Cell render continuation

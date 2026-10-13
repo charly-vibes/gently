@@ -1,0 +1,18 @@
+## gently-pua — COMPLETE (closed, pushed)
+
+**Commits** (pushed `15fa635..749b225`):
+- `0f82dcc` test(gently-pua): RED pin — oracle node cells for bg-edge-node (`ge_layout_edge_node_ranking.rs`, registered as `ge_layout::p4_edge_node`)
+- `37cad0b` feat(gently-pua): east placement pass processes edges in upstream's **chain order** — new `src/layout/chains.rs`
+- `749b225` docs(spec): ge.layout c4 re-derivation + openspec mirror + specodelic artifacts + known-hard-cases row, same commit
+
+**Fresh oracle dump vs bead**: re-derived (`Graph::Easy::Parser`, pin v0.69 @ ededa3d7) — `#2(0,0), car(2,0), Hof(4,0), Bonn(0,2), train(2,2), Ulm(4,2), #4(2,4)` — **agrees with the bead**, no follow-up needed.
+
+**The rule** (decoded from the pinned upstream source with an instrumented copy, then verified against canon shapes): chains are tracked from roots (never `e.to`) along the flow; a walk hitting an already-chained node **absorbs** its suffix (the later root re-owns it — upstream merge); chains lay out root-anchored first / longest first / name; placement ownership races to the first chain; inter-chain links splice the reached chain in; a fully-absorbed chain re-ranks as a leftover leaf attaching west→east→below its placed successor. Verified general: diamond, shared-target, bypass (gently-jrr), ports, parallels, full corpus all stay green.
+
+**cbk scaffold amendment**: the orthogonality error is **gone** — the render completes. The error pin was amended (`p2_edge_node_renders_after_ranking_fix_but_bytes_diverge`) to the truthful RED state: renders Ok, bytes still diverge, placement ranks match the oracle. The `#[ignore]`d oracle-bytes test stays ignored (cbk's scope, untouched).
+
+**Gates** (all exit 0): cargo test 129 pass/0 fail (1 ignore = cbk bytes) · clippy `-D warnings` clean · `ah check --run-tests` 74 pass/0 findings · `just gates` 12/12 · examples-verify green · oracle-verify green · `spk lint openspec` 0 findings · pretender clean (chains.rs split from placement.rs for the 400-line ratchet) · tree clean except `.whisper`/`.wai` session files · `origin/main..HEAD` empty.
+
+**Tickets**: `gently-pua` CLOSED (close comment with full detail), `bd export` run (81 issues; `.beads/` is gitignored on this host — Dolt DB is source of truth). `gently-cbk` untouched, still in_progress.
+
+**Deviations**: (1) tests serve p4 not p2 (they pin the c4 amendment; the existing `p4.toml` filter substring-matches — no contract edit needed); (2) chain-linking emits consecutive-member links only (upstream also spans skip-ahead in-chain links — none in the pinned corpus, noted in the log); (3) bead-export JSONL not committable (global gitignore). Findings persisted to `.wai/projects/graph-easy-port/logs/gently-pua-impl.log`.
