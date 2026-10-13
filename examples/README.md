@@ -22,6 +22,10 @@ gently's, so what you see in `expected.txt` is what the CLI prints.
 | `parallel-edges/` | two separate edges between the same pair of nodes |
 | `isolated-node/` | an isolated node laid out next to an edge-connected pair |
 
+Every example also appears as a visual gallery entry — CLI ASCII art plus an
+SVG rendering from gently's DOT output — in
+[`docs/gallery.md`](../docs/gallery.md).
+
 Build the CLI first (see the main README quickstart), then run any example
 through it:
 

@@ -149,6 +149,31 @@ examples-verify:
     done
     echo "examples-verify: all examples byte-identical to their committed expected output"
 
+# Drift gate for the visual gallery (gently-irk): regenerate every
+# docs/gallery/<name>.svg through the gallery generator (gently's own DOT
+# render) piped through `dot -Tsvg`, and fail on any byte mismatch with the
+# committed artifact — same culture as examples-verify. Needs graphviz's
+# dot on PATH.
+gallery-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v dot >/dev/null || { echo "gallery-verify: dot not found — spec ge.graphviz_render pipeline needs graphviz (remediation: install graphviz)"; exit 1; }
+    ls docs/gallery/*.svg >/dev/null 2>&1 || { echo "gallery-verify: no committed SVGs under docs/gallery/"; exit 1; }
+    tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    for svg in docs/gallery/*.svg; do
+        name=$(basename "$svg" .svg)
+        input="examples/$name/input.gv"
+        [ -f "$input" ] || { echo "gallery-verify: orphan SVG $svg — no examples/$name/input.gv"; exit 1; }
+        target/debug/examples/gallery "$input" | dot -Tsvg > "$tmp/out" 2>/dev/null \
+            || { echo "gallery-verify: regeneration failed for $name"; exit 1; }
+        if ! cmp -s "$tmp/out" "$svg"; then
+            echo "gallery-verify: MISMATCH example=$name — committed SVG differs from regenerated output"
+            diff "$tmp/out" "$svg" | head -n10 || true
+            exit 1
+        fi
+    done
+    echo "gallery-verify: all committed SVGs byte-identical to the regenerated path"
+
 # Run the performance budget gates (spec: ge.perf c1-c5)
 perf-check:
     #!/usr/bin/env bash

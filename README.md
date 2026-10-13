@@ -36,7 +36,9 @@ target/debug/gently --as ascii examples/simple-chain/input.gv
 ```
 
 More worked examples (chain, edge styles, diamonds, self-loops, …) with
-committed, byte-verified output live in [`examples/`](examples/README.md).
+committed, byte-verified output live in [`examples/`](examples/README.md);
+a visual gallery of every example — CLI ASCII art plus SVG renderings — is
+at [`docs/gallery.md`](docs/gallery.md).
 Where gently still differs from the pinned Graph::Easy oracle — and which
 classes are deliberately outside byte-compat — see
 [docs/known-hard-cases.md](docs/known-hard-cases.md).
@@ -66,4 +68,5 @@ just gates           # compile + model-check the corpus
 just oracle-verify   # differential compat gate (needs fixtures; spec ge.oracle)
 just perf-check      # performance budgets (spec ge.perf)
 just examples-verify # published examples stay byte-identical to expected output
+just gallery-verify  # docs/gallery/*.svg stay byte-identical to regenerated output
 ```
