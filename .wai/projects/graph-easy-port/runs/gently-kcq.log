@@ -1,0 +1,19 @@
+Done. Summary:
+
+**What changed** — `examples/README.md` only: the run instruction block now starts with the build step, mirroring the main README quickstart:
+
+```sh
+cargo build -p gently-cli
+gently --as ascii < examples/simple-chain/input.gv
+```
+
+with a one-line pointer "(see the main README quickstart)" in the lead-in sentence. No other files touched; surrounding structure left stable for gently-zf5/irk.
+
+**Gate results** — all green:
+- `just gates`: exit 0 (compile 12/12, model-check 12/12, 0 failures)
+- `just examples-verify`: all examples byte-identical to committed expected output
+- `ah check`: 0 findings (also re-verified green in the pre-commit hook)
+
+**Commit** — `b19937557ec5a60bd6b602209f1dae7d8c92f5d3` (only `examples/README.md`, +3/−1)
+
+**Issue** — `bd close gently-kcq` ✓. Not pushed (orchestrator pushes), per brief.
