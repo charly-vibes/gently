@@ -16,10 +16,8 @@ when it is byte-identical to the oracle.
 | `gently-51d` | wide/broad edge styles — oracle renders `##>` double-line arrowhead, gently renders plain `-->` |
 | `gently-527` | literal `\n` in an edge label — oracle splits into a two-row label, gently prints it raw |
 | `gently-5vf` | vertical stem column — gently indents 2 spaces where the oracle uses 3 (SO 71860) |
-| `gently-7qz` | `<--` bidirectional edges — oracle draws both arrowheads and places inline labels above, gently drops the start arrowhead and inlines the label |
 | `gently-7rx` | node groups — oracle draws the dashed `+ - - -+` border box with the group title, gently draws no border |
 | `gently-b0z` | anonymous nodes — oracle draws them boxless/unnamed, gently draws boxed `#N` |
-| `gently-bpq` | arrowless `--` edges — oracle draws no arrowhead, gently draws a target arrowhead |
 | `gently-bvb` | Unicode box width — oracle counts UTF-8 bytes (`Köln` box is 1 column wider), gently counts characters |
 | `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path |
 | `gently-klf` | interlinked triangle layout — gently's back-edge drifts 2 columns from the oracle drawing |
