@@ -13,7 +13,7 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path |
+| `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path. Re-derived (gently-cbk run 2): the render error sits on a RANKING divergence — the oracle ranks `Bonn(0,2) → train(2,2) → Ulm(4,2)` inline on one row with the anon `buy` cross node BELOW train `(2,4)` (probed: `perl -MGraph::Easy` node dump), gently ranks `Bonn(4,2)` east of train, `Ulm(2,4)` below, anon `(0,2)` inline-west — so the merged `Ulm -- car` path skips train's row. Fix order: ranking first (Bonn west, Ulm inline-east, anon below), then the Edge::Cell render (EDGE_HOR + EDGE_LABEL_CELL, dash continuation through the cell, label above, Scout.pm start/end flag stripping). RED scaffold pinned in `ge_ascii_render_edge_node.rs` (error reproduction + `#[ignore]`d oracle bytes, tests/repro/claims/bg-edge-node.observed). |
 
 ### Text parser
 

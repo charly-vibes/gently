@@ -329,17 +329,13 @@ fn p6() {
 }
 
 /// ge.ascii_render p2 additions (gently-klf, gently-yhg): the POD triangle's
-/// back-edge attachments and the minlen straight-gap stretch, pinned from
-/// the recorded oracle bytes. Kept in a side file so ge_ascii_render.rs
-/// stays under the 400-line ratchet.
+/// back-edge attachments and the minlen straight-gap stretch. Side file.
 #[path = "ge_ascii_render_klf.rs"]
 mod p2;
 
 /// ge.ascii_render p4 additions (gently-527, gently-y7i): the straight
-/// edge's label rows — the `\n` split, the `\r`/`\l`/`\c` alignment and
-/// the grown band. Side file for the 400-line ratchet; the nested module
-/// names resolve to the same `ge_ascii_render::p4`/`p5` test filters as
-/// the contract TOMLs declare.
+/// edge's label rows — `\n` split, `\r`/`\l`/`\c` alignment, grown band.
+/// Side file; nested name keeps the contract `p4` test filter.
 #[path = "ge_ascii_render_edge_labels.rs"]
 mod p4;
 
@@ -348,9 +344,8 @@ mod p4;
 #[path = "ge_ascii_render_node_labels.rs"]
 mod p5;
 
-/// ge.ascii_render p5 additions (gently-emd): `textwrap: auto` / numeric
-/// textwrap wrap label text. Side file for the 400-line ratchet; the
-/// nested module name keeps the `p5` test-filter prefix.
+/// ge.ascii_render p5 additions (gently-emd): textwrap label wrapping.
+/// Side file; keeps the `p5` test-filter prefix.
 #[path = "ge_ascii_render_textwrap.rs"]
 mod p5_textwrap;
 
@@ -358,6 +353,10 @@ mod p5_textwrap;
 /// (SO 71869025). Side file for the 400-line ratchet.
 #[path = "ge_ascii_render_stem.rs"]
 mod p2_stem;
+
+/// ge.ascii_render p2 scaffold (gently-cbk): `shape: edge` nodes — RED reproduction + #[ignore]d oracle bytes. Side file.
+#[path = "ge_ascii_render_edge_node.rs"]
+mod p2_edge_node;
 
 /// ge.ascii_render.p7 (c7, gently-b0z): anonymous nodes render boxless —
 /// the oracle's `node.anon` class carries borderstyle none and the label
