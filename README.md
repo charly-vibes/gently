@@ -1,6 +1,8 @@
 # gently
 
 [![tracked with wai](https://img.shields.io/badge/tracked%20with-wai-blue)](https://github.com/charly-vibes/wai)
+[![CI](https://github.com/charly-vibes/gently/actions/workflows/ci.yml/badge.svg)](https://github.com/charly-vibes/gently/actions/workflows/ci.yml)
+[![License: GPL-2.0-or-later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 
 A Rust port of Perl's [Graph::Easy](https://github.com/ironcamel/Graph-Easy):
 build graphs (nodes/edges/groups), lay them out deterministically on a
