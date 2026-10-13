@@ -13,7 +13,6 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-51d` | wide/broad edge styles — oracle renders `##>` double-line arrowhead, gently renders plain `-->` |
 | `gently-527` | literal `\n` in an edge label — oracle splits into a two-row label, gently prints it raw |
 | `gently-5vf` | vertical stem column — gently indents 2 spaces where the oracle uses 3 (SO 71860) |
 | `gently-7rx` | node groups — oracle draws the dashed `+ - - -+` border box with the group title, gently draws no border |

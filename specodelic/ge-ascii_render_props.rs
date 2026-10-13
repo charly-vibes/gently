@@ -22,6 +22,10 @@ macro_rules! todo_predicate {
 pub mod spec_gen {
     use super::*;
 
+    pub fn style() -> impl Strategy<Value = String> {
+        Just("style".into())
+    }
+
     pub fn bidirectional() -> impl Strategy<Value = String> {
         Just("bidirectional".into())
     }
@@ -38,11 +42,11 @@ fn p1() {
 
 proptest! {
     // id: p2
-    // generator: graphs with every edge style, in straight gaps and chains, plus bidirectional (`<-->`, `<-- label -->`) and labeled-undirected edges straight and bent
-    // predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box
+    // generator: graphs with every edge style (bold/wide/broad as one aliased family), in straight gaps and chains, plus bidirectional (`<-->`, `<-- label -->`) and labeled-undirected edges straight and bent
+    // predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box
     #[test]
-    fn p2(v0 in spec_gen::bidirectional()) {
-        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box");
+    fn p2(v0 in spec_gen::style(), v1 in spec_gen::bidirectional()) {
+        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box");
     }
 }
 
