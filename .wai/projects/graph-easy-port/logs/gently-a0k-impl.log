@@ -1,0 +1,26 @@
+## Report — gently-a0k (dot_parser: graph-scope attribute statements + bare-scope endpoints)
+
+### Re-derived oracle rule (Graph::Easy v0.69 @ ededa3d7, probed empirically)
+- **Graph-scope attr statements**: `key=value` (quoted or bare value) at statement position applies to the parent — the graph, or the innermost enclosing named group. `rankdir` remaps to `flow`: LR→east, RL→west, TB→south, BT→north, unrecognized→east.
+- **Node-stack linkage** (replaces the old per-scope `pending` model): the stack survives scope boundaries; a group-scope node statement *replaces* it, a bare-scope node statement *pushes*; an edge operator links **every** stack node; a plain `}` **resets** it (a `} ->` continuation keeps it). This yields gh-4's spurious `baz->baz` (leaked pre-declared node links first), `{a b} -> baz` linking both scope nodes, `a -> { b c } -> d` linking both scope nodes from `a`, and empty-stack operators as the oracle's not-recognized error.
+- Bonus fix (same surface): `subgraph g { x } -> y` now links `x` (no node `g`) — oracle-faithful.
+
+### Commits (pushed, `origin/main..HEAD` empty)
+| sha | one-line |
+|---|---|
+| `9a2462c` | test: pin the graph-scope attr + scope-endpoint oracle bytes (gently-a0k) |
+| `2bbc115` | feat(dot_parser): graph-scope attr statements + node-stack scope endpoints (gently-a0k) |
+| `15e1e6c` | docs(spec): re-derive ge-dot_parser c1/c3/c4 + openspec mirror + specodelic artifacts + known-hard-cases |
+
+### Gates (all exit 0)
+`cargo test -p gently-core` ✓ (92) · `cargo clippy --workspace --all-targets -- -D warnings` ✓ · `ah check --run-tests` ✓ (69 passed) · `just gates` ✓ · `just examples-verify` ✓ · `just oracle-verify` ✓ · `spk lint openspec` ✓ (0 findings) · probe `gh-4-nodes-first` re-recorded **byte-identical** · `git status` clean (only `.wai`/`.whisper` session files) · pushed.
+
+### Tickets
+- **Closed**: `gently-a0k`, bonus-close `gently-2n5` (both acceptance criteria covered: p4 scenarios + c4 spec row + stable observed).
+- **Filed**: `gently-fb1` — bare scope nested inside a named subgraph joins the enclosing group in the oracle; gently keeps it ungrouped (latent, only diverges inside subgraphs).
+
+### Deviations
+- Landed **test+feat as two commits but red pin is in the same commit series** — the pretender ratchet caught `endpoint()` at 47 lines (split into `scope_endpoint()` helper); the spec-drift-gate forced the 51d stash dance (spec-side stashed during the first two commits, restored for the docs commit).
+- Deleted two tracked-but-empty scratch files (`scope.rs.fragment`, `stmt_moved.rs.fragment`) — dead weight in the dot module.
+- Bounded divergence documented in c3: gently stores non-`rankdir` graph-scope keys verbatim (no oracle-style name validation/remap, e.g. `colorscheme`→`x-colorscheme`); and a missing/odd attr *value* is a typed error where the oracle's regex can swallow a stray brace.
+- Did NOT run `wai close` (orchestrator owns session close).
