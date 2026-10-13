@@ -25,9 +25,7 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-58m` | anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` — oracle parses, gently is a parse error |
-| `gently-8xd` | trailing node attribute block (`{ label: "Huge"; }` after the name) — oracle applies it, gently silently drops it |
-| `gently-m4i` | comma-chained node lists (`[ A ], [ B ] --> [ C ]`) — oracle parses, gently is a parse error |
+| `gently-58m` | group-endpoint edges from the anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` — the oracle's as_txt omits the group-only-connected node (Berlin is only reachable through the dropped group edge), gently lists it as a plain node (the parse itself is fixed, gently-m4i); the ascii group border is gently-7rx |
 | `gently-y7i` | `\l` `\r` `\c` label-alignment escapes — oracle aligns, gently renders them raw |
 
 ### Layout & edge attributes

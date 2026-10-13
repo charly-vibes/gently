@@ -94,3 +94,27 @@ fn p10() {
         todo_predicate!("single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\\\"`, `\\'`, `\\;`, and `\\\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive; printable-band `%XX` entities decode (`%41` → `A`), exploit-band escapes (`%00`-`%1f`, `%7f`, high-bit) strip, and a bare `%` with no hex-pair tail stays literal");
 }
 
+// id: p11
+// generator: comma-separated node lists, fan-in and fan-out, with trailing and bare attribute blocks, across line breaks, directed and bidirectional
+// predicate: fan-out reuses the operator's remembered left side for each follower and fan-in links every list element; trailing and bare attribute blocks land on every listed node; the stack and remembered operator survive line breaks and are reset by a new bare node statement; bidirectional operators mark both arrows on every created edge
+#[test]
+fn p11() {
+        todo_predicate!("fan-out reuses the operator's remembered left side for each follower and fan-in links every list element; trailing and bare attribute blocks land on every listed node; the stack and remembered operator survive line breaks and are reset by a new bare node statement; bidirectional operators mark both arrows on every created edge");
+}
+
+// id: p12
+// generator: groups closed and followed by edge operators — anonymous and named, with and without body attributes
+// predicate: the statement parses and links the group; the group keeps its members and name (`Group #N` for anonymous); no edge is recorded (group endpoints are not representable); body attributes still land on the nodes
+#[test]
+fn p12() {
+        todo_predicate!("the statement parses and links the group; the group keeps its members and name (`Group #N` for anonymous); no edge is recorded (group endpoints are not representable); body attributes still land on the nodes");
+}
+
+// id: p13
+// generator: nodes with trailing attribute blocks, rendered to txt and ascii
+// predicate: the trailing block lands on the node; the canonical txt form keeps name + attribute; the ascii render displays the label value, falling back to the name when absent
+#[test]
+fn p13() {
+        todo_predicate!("the trailing block lands on the node; the canonical txt form keeps name + attribute; the ascii render displays the label value, falling back to the name when absent");
+}
+

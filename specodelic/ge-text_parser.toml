@@ -33,7 +33,7 @@ traces_to = "[[ge.text_parser]]"
 [[constraints]]
 id = "c6"
 kind = "invariant"
-expr = "A group block `( Name: ... )` produces a group whose name includes the colon (the oracle names it literally `G:`); a node declared inside belongs to exactly one group — referencing the node again inside a later group moves it there (the earlier group empties). Nested groups: a node declared in an inner group belongs only to that inner group, and the outer group contains only its directly declared nodes. An anonymous group `( [ A ] )` is named `Group #N` by the oracle."
+expr = "A group block `( Name: ... )` produces a group whose name includes the colon (the oracle names it literally `G:`); a node declared inside belongs to exactly one group — referencing the node again inside a later group moves it there (the earlier group empties). Nested groups: a node declared in an inner group belongs only to that inner group, and the outer group contains only its directly declared nodes. An anonymous group `( [ A ] )` is named `Group #N` by the oracle, and a closed group becomes the statement's current object — an edge operator following it links the group to the right node (c12); group-body attribute blocks still land on the nodes."
 traces_to = "[[ge.text_parser]]"
 
 [[constraints]]
@@ -58,4 +58,22 @@ traces_to = "[[ge.text_parser]]"
 id = "c10"
 kind = "invariant"
 expr = '''An attribute value is finalized with the upstream two-layer unquoting: after the parser-layer unescape and whitespace collapse, the store layer strips one pair of surrounding quotes — either `"` or `'`, mixed ends allowed, greedy first-and-last — then unescapes `\#`, `\"`, `\'`, `\;`, and `\\` to their bare characters; a value whose opening quote is never closed is accepted verbatim (quotes kept) and its first unescaped `;` still terminates the declaration, while a `;` inside a properly closed `"..."` value does not split and mid-value quotes are kept. Re-derived (gently-a83): the store layer also applies the upstream %XX pass — a `%` followed by a head outside `%2X`-`%7X` and a hex digit (the exploit band `%00`-`%1f`/`%80`-`%ff`/`%A1`-style), plus the literal `%7f`, is dropped; a `%` in the `%2X`-`%7X` band followed by a hex digit decodes to its character (`%41` → `A`, `%20` → space, `%7F` → U+007F); a `%` with no hex-pair tail stays literal. (Probe evidence: tests/repro/claims/attr-quote-value.observed.)'''
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c11"
+kind = "invariant"
+expr = "A comma-separated node list extends the current statement's node stack: `[ A ], [ B ], [ C ] --> [ D ]` links every listed node to D (fan-in) and `[ A ] -> [ B ], [ C ], [ D ]` links A to each of B, C, D (fan-out — the operator's remembered left side is reused for every following list element). A trailing attribute block on a list element (`[ A ], [ B ] { color: red; }`) applies to every node listed so far and itself, and a bare attribute block after a list applies to the whole stack; the statement stack and the remembered operator survive line breaks, while a new bare `[ node ]` statement or a class section resets the remembered left side. A bidirectional operator fans out with both arrows on every created edge. (Probe evidence: tests/repro/claims/bg-comma-lists.observed, gently-m4i.)"
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c12"
+kind = "invariant"
+expr = """After a group closes, the group itself is the statement's current object (upstream makes the closed group the node stack), so an edge operator following a group — `( [ Bonn ] ) -> [ Berlin ]`, the POD anonymous-group example — parses without error and links the group to the right node. Group endpoints are not representable in the graph model, so gently records no edge for them (bounded divergence: upstream's model holds the group-endpoint edge, but its own layouter drops it — "could only place 2 nodes/0 edges out of 2/1"); the group's members and attributes are unaffected. (Probe evidence: tests/repro/claims/pod-anon-group.observed, gently-58m.)"""
+traces_to = "[[ge.text_parser]]"
+
+[[constraints]]
+id = "c13"
+kind = "invariant"
+expr = """An attribute block following a node name — trailing a chain element (`[ Big ] { label: "Huge"; }`) or any list element — applies to that node, never silently dropped, and the node's `label` value is its display label in rendered output (ascii/boxart render the label value, falling back to the name when absent; upstream Node::label). (Probe evidence: tests/repro/claims/bg-trailing-node-attr.observed, gently-8xd.)"""
 traces_to = "[[ge.text_parser]]"
