@@ -6,3 +6,8 @@ claim (f687c84)
 claim (f687c84)
 gates (f687c84)
 brief (f687c84)
+brief committed (c701b76)
+spawn (c701b76)
+verify (5f35aaf)
+ship (5f35aaf)
+stop (5f35aaf) — run complete; cbk handoff: next run re-authors scenario from bg-edge-node.observed, implements Edge::Cell node placement + renderer shape class

@@ -1,0 +1,28 @@
+Done. Report:
+
+## Report — gently-cbk brief (budget-capped)
+
+### Commits (pushed to origin/main)
+| sha | one-line |
+|---|---|
+| `3d32c3f` | test(ascii_render): pin the shared-middle bypass ranking — middle node inline, skip-edge over the band (gently-jrr) |
+| `aa4c4f1` | feat(layout): east placement honors the longest-path rank one slot east — bypass middle stays inline, skip-edge bends over the band (gently-jrr) |
+| `5f35aaf` | docs(spec): re-derive ge.layout c4 — openspec mirror redeployed + specodelic artifacts regenerated in the same commit; probes.pl `serves:` notes now name gently-jrr/gently-cbk |
+
+### Gates (all exit 0)
+- `cargo test -p gently-core` — 59 + 128 + … all green (incl. ge_perf)
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean
+- `ah check --run-tests` — 74 passed, 0 findings
+- `just gates` / `spk lint specs` / `spk lint openspec` — 12 files, 0 findings, 0 warnings
+- `just examples-verify` — byte-identical
+- `just oracle-verify` — green vs pin v0.69 @ ededa3d7
+- `git status` clean except `.wai` session files; `origin/main..HEAD` empty (pushed)
+
+### Tickets
+- **gently-jrr — CLOSED** (bonus covered): fix is rank-aware east extension in `crates/gently-core/src/layout/placement.rs` (`extend_or_below` takes the node's longest-path rank column when it sits exactly one east of the source's east slot). Renders byte-identical to `bg-minlen-bypass.observed`; verified the un-minlen'd variant renders the same bytes. `bd export` run (issues.jsonl is git-ignored in this embedded-dolt repo — nothing to commit for it).
+- **gently-cbk — still OPEN (remaining delta)**: fixture `bg-edge-node.observed` was already pinned (no probe authoring needed); scenario was authored and reproduced the error (`edge 4 path cells (2,3) -> (2,1) are not orthogonally adjacent`). Upstream evidence gathered: a `shape:edge` node becomes an `Edge::Cell` (EDGE_HOR + EDGE_LABEL_CELL) — edge endpoints treat it as an edge-cell (Scout.pm strips start/end flags, dashes continue through, label rides above). That is a full-pipeline feature (placement through the node's cells + renderer shape class), not a waypoint patch; it did not fit the remaining budget after the jrr fix and a mid-session stash mishap (recovered cleanly to HEAD). No failing test was committed for it; the repro scenario should be re-authored from `bg-edge-node.observed` when picked up.
+
+### Deviations
+- Brief's `tests/scenarios.rs` — registration edit not needed (klf module already registered).
+- One `git stash` accident mid-session (failed `push -f`, then popped an old unrelated stash entry) — recovered; pre-existing `stash@{0}` intact; verify with `git stash list` if you care.
+- Spec re-derivation covered ge.layout c4 only (jrr scope); the ascii_render spec amendment for cbk remains part of the open cbk delta.
