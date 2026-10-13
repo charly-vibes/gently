@@ -1,0 +1,25 @@
+**Run complete.** Report:
+
+## Commits (pushed to `origin/main`)
+| sha | one-line |
+|---|---|
+| `ee78cfc` | test(ascii_render): pin the triangle back-edge left+2 attachments and the minlen straight-gap stretch (gently-klf, gently-yhg) |
+| `e5e3753` | feat(ascii_render): vertical edge runs attach at the cell's left+2; minlen ≥ 2 widens the straight gap one column (gently-klf, gently-yhg) |
+| `d9d7bac` | docs(spec): re-derive ascii_render c2/p2 for left+2 vertical attachments and the minlen gap stretch (gently-klf, gently-yhg) — mirror redeployed + specodelic artifacts regenerated in the same commit |
+
+## Gate results (all exit 0)
+- `cargo test -p gently-core` — 107+52 pass (incl. 2 new byte pins: POD triangle `pod-triangle.observed`, new `bg-minlen-stretch.observed`)
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean (removed the now-dead `center()` helper)
+- `ah check --run-tests` — 74 passed, 0 findings; `just gates` — 12 compiled / 12 model-checked, 0 failed; `spk lint openspec` — 0 issues
+- `just oracle-verify` — green vs pin v0.69 @ ededa3d7; `just examples-verify` — byte-identical
+- `git status` clean (only `.wai`/`.whisper` session files); `origin/main..HEAD` empty
+
+## Tickets
+- **CLOSED**: `gently-klf`, `gently-yhg` (+ `bd export` run)
+- **Open / remaining delta**: `gently-emd` (textwrap) — **not covered**; it's a label-wrapping concern that changes node box heights (variable row heights), a structural render change beyond this run's budget
+- **NEW**: `gently-jrr` — the *real* divergence behind bg-minlen-bypass: the shared-middle bypass shape (oracle ranks Trier inline + routes the skip-edge over the top; gently attaches below). **Key re-derivation: the bypass renders byte-identically WITHOUT `minlen: 3`** (probed) — the tutorial's minlen was incidental; minlen's actual effect is the one-column gap stretch (probed: minlen 2..5 identical, 4-seed stable, new claim probe `bg-minlen-stretch`)
+
+## Deviations
+- The divergences turned out **render-side**, not layout-side (both covered by the brief's render-side carve-out, justified in the feat commit message): klf = attachment geometry (upstream `_printfb_ver($fb, 2, 0, …)` fixed offset 2), yhg = gap-column width. `specs/ge-layout.md` needed no amendment; both re-derivations landed in `ge.ascii_render` c2/p2 (house style).
+- The `pod-fan` byte pin was dropped: the fan is in the documented hash-randomized scope-off class and its placement diverges independently — out of klf scope.
+- Pretender ratchet fired once (scenario file >400 lines) — new tests split into the `ge_ascii_render::p2` side module; spec-drift gate handled via the stash dance for the test/feat commits.
