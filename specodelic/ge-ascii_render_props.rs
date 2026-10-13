@@ -23,11 +23,11 @@ fn p1() {
 }
 
 // id: p2
-// generator: graphs with every edge style
-// predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less)
+// generator: graphs with every edge style, in straight gaps and chains
+// predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), undirected runs shift with the gap's absolute column, and dot-dot-dash widens its gap to 6
 #[test]
 fn p2() {
-        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less)");
+        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), undirected runs shift with the gap's absolute column, and dot-dot-dash widens its gap to 6");
 }
 
 // id: p3
