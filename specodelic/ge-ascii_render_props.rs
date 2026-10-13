@@ -38,6 +38,10 @@ pub mod spec_gen {
         Just("glyphs".into())
     }
 
+    pub fn scopes() -> impl Strategy<Value = String> {
+        Just("scopes".into())
+    }
+
     pub fn chain() -> impl Strategy<Value = String> {
         Just("chain".into())
     }
@@ -79,11 +83,11 @@ proptest! {
         todo_predicate!("no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed)");
     }
     // id: p5
-    // generator: node labels with long text, explicit `\n` breaks, `\l`/`\r`/`\c` alignment escapes, and multi-byte glyphs (`中`, `Köln`)
-    // predicate: each label line occupies one interior row placed by its `l`/`r`/`c` alignment (the escape aligning the FOLLOWING line), a multiline box grows to lines+2 with vertically centered rows, and all width arithmetic follows UTF-8 byte length — the 中 box is 7 bytes wide and Köln's 7-dash box renders byte-identically to the pinned oracle bytes (tests/repro/claims/label-byte-width.observed)
+    // generator: node labels with long text, explicit `\n` breaks, `\l`/`\r`/`\c` alignment escapes, multi-byte glyphs (`中`, `Köln`), and `textwrap: auto` / numeric `textwrap` on graph and edge scopes (gently-emd)
+    // predicate: each label line occupies one interior row placed by its `l`/`r`/`c` alignment (the escape aligning the FOLLOWING line), a multiline box grows to lines+2 with vertically centered rows, and all width arithmetic follows UTF-8 byte length — the 中 box is 7 bytes wide and Köln's 7-dash box renders byte-identically to the pinned oracle bytes (tests/repro/claims/label-byte-width.observed); with textwrap set, wrapping replaces the escape split and the wrapped rows size the boxes byte-identically to the pinned oracle bytes (tests/repro/claims/bg-textwrap.observed)
     #[test]
-    fn p5(v0 in spec_gen::glyphs()) {
-        todo_predicate!("each label line occupies one interior row placed by its `l`/`r`/`c` alignment (the escape aligning the FOLLOWING line), a multiline box grows to lines+2 with vertically centered rows, and all width arithmetic follows UTF-8 byte length — the 中 box is 7 bytes wide and Köln's 7-dash box renders byte-identically to the pinned oracle bytes (tests/repro/claims/label-byte-width.observed)");
+    fn p5(v0 in spec_gen::glyphs(), v1 in spec_gen::scopes()) {
+        todo_predicate!("each label line occupies one interior row placed by its `l`/`r`/`c` alignment (the escape aligning the FOLLOWING line), a multiline box grows to lines+2 with vertically centered rows, and all width arithmetic follows UTF-8 byte length — the 中 box is 7 bytes wide and Köln's 7-dash box renders byte-identically to the pinned oracle bytes (tests/repro/claims/label-byte-width.observed); with textwrap set, wrapping replaces the escape split and the wrapped rows size the boxes byte-identically to the pinned oracle bytes (tests/repro/claims/bg-textwrap.observed)");
     }
 }
 
