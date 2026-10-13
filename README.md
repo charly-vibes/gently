@@ -19,6 +19,7 @@ just lint            # all specs must be lint-clean
 just gates           # compile + model-check the corpus
 just oracle-verify   # differential compat gate (needs fixtures; spec ge.oracle)
 just perf-check      # performance budgets (spec ge.perf)
+just examples-verify # published examples stay byte-identical to expected output
 ```
 
 ## Quickstart

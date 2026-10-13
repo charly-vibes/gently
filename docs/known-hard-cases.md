@@ -7,23 +7,50 @@ is tracked in the issue tracker (beads), and gently is deliberately
 conservative — an example is only published in [`examples/`](../examples/)
 when it is byte-identical to the oracle.
 
-## Rendering divergences (open)
+## Divergences (open)
+
+### ASCII rendering
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
 | `gently-0d6` | arrowless dot-dash edge `.-.-` — oracle renders `-.`-style arrowless, gently renders `---` |
 | `gently-1kv` | `= >` double-dash edges — oracle renders `= >` as written, gently renders plain `-->` |
-| `gently-2n5` | DOT parser: bare scope `{a b}` as an edge-chain endpoint — oracle parses, gently is a parse error |
 | `gently-51d` | wide/broad edge styles — oracle renders `##>` double-line arrowhead, gently renders plain `-->` |
-| `gently-58m` | anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` — oracle parses, gently is a parse error |
+| `gently-527` | literal `\n` in an edge label — oracle splits into a two-row label, gently prints it raw |
+| `gently-5vf` | vertical stem column — gently indents 2 spaces where the oracle uses 3 (SO 71860) |
 | `gently-7qz` | `<--` bidirectional edges — oracle draws both arrowheads and places inline labels above, gently drops the start arrowhead and inlines the label |
 | `gently-7rx` | node groups — oracle draws the dashed `+ - - -+` border box with the group title, gently draws no border |
-| `gently-a0k` | DOT parser: graph-scope attribute statements (`rankdir=LR`) — oracle parses, gently is a parse error |
 | `gently-b0z` | anonymous nodes — oracle draws them boxless/unnamed, gently draws boxed `#N` |
 | `gently-bpq` | arrowless `--` edges — oracle draws no arrowhead, gently draws a target arrowhead |
 | `gently-bvb` | Unicode box width — oracle counts UTF-8 bytes (`Köln` box is 1 column wider), gently counts characters |
+| `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path |
 | `gently-klf` | interlinked triangle layout — gently's back-edge drifts 2 columns from the oracle drawing |
 | `gently-oy2` | repeated edge-style patterns (`..-..-..->`, `.-.-.->`) — oracle keeps `..->`/`..-` rendering, gently collapses to plain styles |
+
+### Text parser
+
+| bead | behavior delta (oracle → gently) |
+|------|----------------------------------|
+| `gently-58m` | anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` — oracle parses, gently is a parse error |
+| `gently-8xd` | trailing node attribute block (`{ label: "Huge"; }` after the name) — oracle applies it, gently silently drops it |
+| `gently-m4i` | comma-chained node lists (`[ A ], [ B ] --> [ C ]`) — oracle parses, gently is a parse error |
+| `gently-y7i` | `\l` `\r` `\c` label-alignment escapes — oracle aligns, gently renders them raw |
+
+### DOT parser
+
+| bead | behavior delta (oracle → gently) |
+|------|----------------------------------|
+| `gently-2n5` | bare scope `{a b}` as an edge-chain endpoint — oracle parses, gently is a parse error |
+| `gently-a0k` | graph-scope attribute statements (`rankdir=LR`) — oracle parses, gently is a parse error |
+
+### Layout & edge attributes
+
+| bead | behavior delta (oracle → gently) |
+|------|----------------------------------|
+| `gently-89r` | `start:`/`end:` port attributes — oracle routes edges from the named port, gently ignores them |
+| `gently-byq` | indexed ports `{ start: front, N }` — oracle honors the index, gently ignores it (SO 47323345) |
+| `gently-emd` | `textwrap: auto` / `textwrap` edge attribute — oracle wraps labels, gently ignores it |
+| `gently-yhg` | `minlen` edge attribute — oracle enforces the minimum path length, gently ignores it |
 
 ## Byte-compat scope-off (deliberate, no divergence claims)
 
