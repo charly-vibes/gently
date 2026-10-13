@@ -1,0 +1,24 @@
+## gently-cbk run-3 report — GREEN shipped, byte-identical, closed, pushed
+
+**Commits**
+- `05d5ddb` — feat(gently-cbk): shape:edge nodes render as edge cells — GREEN for bg-edge-node (code + tests + spec re-derivation + regenerated openspec/specodelic artifacts, one atomic commit per the drift gate)
+- `a117efa` — docs: run-3 research note (the probed shape:edge oracle rules for future fixtures)
+
+**The GREEN delta (all verified against `tests/repro/claims/bg-edge-node.observed`, seed 0/1 byte-identical)**
+- `shape:edge` nodes render as upstream's `EDGE_HOR | EDGE_LABEL_CELL` cell: full-width dash line on the band's middle row, label left-aligned at offset 1 (the fresh edge's `align` default — the node's center align is not consulted), no borders
+- Scout.pm endpoint-flag stripping, both rules: short-cell (directed arrowheads survive — rent's `>` rides into the car cell; undirected keeps only `START_W` — the `--------` chain; shape:edge source loses all STARTs — `--->` flush into Ulm) and multi-cell path (end flags zeroed — no stub/corner into the edge cell)
+- straight vertical single-gap edges render their `EDGE_VER` short cell: pipes at left+2, `^` at the target-adjacent end, `| buy` at offset 4 (previously vertical labels never rendered)
+- west-going multi-band routes bend north/south out of the source first (Ulm→car no longer drove through train's node cell — the root geometry bug behind the original orthogonality error)
+- anon nodes no longer hold the render's trailing floor open
+- oracle-bytes test un-ignored and green; RED pin converted to a placement diagnostic
+
+**Gates (all exit 0)**: `cargo test --workspace` (198 pass, 0 ignored), `cargo clippy --workspace --all-targets -- -D warnings`, `ah check --run-tests` (74 pass), `just gates`, `just examples-verify`, `just oracle-verify`, `just lint`, `spk lint openspec`, pretender gate. Pre-commit + pre-push hooks green.
+
+**Tickets**: `gently-cbk` CLOSED (close reason recorded), `bd export` run (81 issues; `.beads` is gitignored in this repo, so the JSONL stays uncommitted). `git log origin/main..HEAD` empty — everything pushed.
+
+**Remaining byte delta**: none.
+
+**Deviations to flag**
+1. Scope guard: I amended `specs/ge-layout.md` c4 (the west-going route rule) beyond the brief's "ascii_render specs" allowlist — the layout fix is part of the GREEN target and the routing shape needed its re-derivation recorded; followed the gently-pua precedent.
+2. `bd export` initially wrote to stdout only — used `-o .beads/issues.jsonl` to refresh the export, then discovered `.beads` is gitignored here, so no beads commit exists (DB is the tracker).
+3. Two pre-existing pin divergences from the oracle surfaced while fixing the trailing floor (border:none keeps `\n x\n\n` vs oracle `\n x\n`; shape:invisible keeps `\n\n\n` vs oracle `\n`) — left untouched per "keep all existing pins green"; documented in the research note as pre-dating this ticket.

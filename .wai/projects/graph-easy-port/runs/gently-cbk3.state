@@ -16,3 +16,6 @@ gates (0c19166)
 brief (0c19166)
 brief committed (b065893)
 spawn (b065893)
+verify (a117efa)
+ship (a117efa)
+stop (a117efa) — run complete; gently-cbk CLOSED, byte-identical, pushed; pua->cbk chain DONE
