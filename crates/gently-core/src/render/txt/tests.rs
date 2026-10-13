@@ -39,6 +39,33 @@ fn undirected_trailing_space_styles_double() {
     assert_eq!(super::render(&g), "[ a ] -- [ b ]\n");
 }
 
+/// Oracle (gently-oy2/1kv): the dot families keep their styling in
+/// as_txt — the unit token and the `>` concatenate directly
+/// (`.-` + `> ` = `.->`; edge-style-short-runs.observed).
+#[test]
+fn dot_family_styles_keep_their_operator() {
+    let mut g = Graph::default();
+    let a = g.add_node("a");
+    let b = g.add_node("b");
+    let e = g.add_edge(a, b, true).expect("live");
+    for (style, want) in [
+        ("dot-dash", "[ a ] .-> [ b ]\n"),
+        ("dot-dot-dash", "[ a ] ..-> [ b ]\n"),
+        ("double-dash", "[ a ] = > [ b ]\n"),
+    ] {
+        g.set_attr(Scope::Edge(e), "style", style);
+        assert_eq!(super::render(&g), want, "{style} arrowed");
+    }
+    g.edges[e].arrows = Default::default();
+    for (style, want) in [
+        ("dot-dash", "[ a ] .- [ b ]\n"),
+        ("dot-dot-dash", "[ a ] ..- [ b ]\n"),
+    ] {
+        g.set_attr(Scope::Edge(e), "style", style);
+        assert_eq!(super::render(&g), want, "{style} undirected");
+    }
+}
+
 /// Oracle: node names escape `[`, `]`, `|`, `{`, `}`, `#`.
 #[test]
 fn node_names_escape_brackets_and_friends() {
