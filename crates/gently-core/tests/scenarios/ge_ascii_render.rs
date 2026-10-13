@@ -325,6 +325,13 @@ fn p6() {
     assert_eq!(art, "+---+\n| x |\n+---+\n", "color must not change ascii bytes");
 }
 
+/// ge.ascii_render p2 additions (gently-klf, gently-yhg): the POD triangle's
+/// back-edge attachments and the minlen straight-gap stretch, pinned from
+/// the recorded oracle bytes. Kept in a side file so ge_ascii_render.rs
+/// stays under the 400-line ratchet.
+#[path = "ge_ascii_render_klf.rs"]
+mod p2;
+
 /// ge.ascii_render.p7 (c7, gently-b0z): anonymous nodes render boxless —
 /// the oracle's `node.anon` class carries borderstyle none and the label
 /// `' '`, so the node's own 3×3 cell renders blank and the edges attach
