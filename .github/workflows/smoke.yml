@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: cargo build -p gently-cli
 
-      - name: Smoke: render a sample graph to ASCII
+      - name: "Smoke: render a sample graph to ASCII"
         run: |
           echo '[ Bonn ] --> [ Berlin ] --> [ Hamburg ]' \
             | target/debug/gently --as ascii > /tmp/out.txt
