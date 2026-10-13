@@ -1,0 +1,19 @@
+Done — pushed and closed. Final report:
+
+## gently-89r — complete (bonus gently-byq: partially, left open)
+
+**Commits (pushed to origin/main):**
+| sha | one-line |
+|---|---|
+| `f9d2d24` | test(layout): pin the disentangled start:/end: port-side attachment rule — claim probe `port-side-minimal`, 5 recorded `port-*` fixtures, RED `ge_layout_ports` scenario module (10 failing on tree); also fixes a **pre-existing** `probes.pl` syntax error (raw apostrophe broke compilation at HEAD) |
+| `f8eeaa0` | feat(layout): honor start:/end: port side attributes in east-flow attachment — `Route::PortBelow/PortAbove`, `layout::port_dip` side parser, floor-bounded trailing-blank trim in the ascii canvas |
+| `5d7d85f` | test(layout): fix the p4 port-skip assertion to name its endpoints |
+| `8dd19d0` | docs(spec): re-derive layout c4 for the port-side routing rule — openspec mirror redeployed + specodelic artifacts regenerated in the same commit |
+
+**Key derivation (the disentangling the brief demanded):** the no-port chain `[Bonn]→[Koblenz]→…→[Trier]→[Frankfurt]` renders **byte-identically inline** under the pinned oracle — the tutorial_bypass layout divergence is **jrr's shared-middle bypass shape, not the port's**. The port's own effect is attachment-only: `right` = inflow+90 = **south** (dip below, `^` into target's south), `left`/`north` bends above, `front` = no-op, placement never changes (upstream `Attributes.pm::_flow_as_side` read against oracle probes p1–q6).
+
+**Gates — all exit 0:** `cargo test -p gently-core` (118 scenarios ok) · `cargo clippy --workspace --all-targets -D warnings` · `ah check --run-tests` (74 passed, 0 findings) · `just gates` · `just oracle-verify` (19-fixture corpus green) · `just examples-verify` · `spk lint openspec` · worktree clean · `origin/main..HEAD` empty.
+
+**Tickets:** `gently-89r` **closed** (+ `bd export -o`, `.beads/` is untracked in this setup — Dolt-remote mode). `gently-byq` **stays open**: the indexed `front,N` form needs variable node heights (oracle stretches a 1-row box to 5 lines for a slot) and the `back` (west) wrap runs outside the bounding box — both documented in `docs/known-hard-cases.md` and the c4 clause with rationale.
+
+**Deviations:** ① pre-existing `probes.pl` compile break fixed minimally (escaped apostrophe); ② `.espectacular/` untouched per scope guard, so the port rule lives as a c4 clause citing `ge_layout_ports` tests rather than a new `p7` contract row; ③ the admission manifest regenerated with `PERL_HASH_SEED=0` (pinned header preserved).
