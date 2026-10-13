@@ -1,0 +1,31 @@
+Done — all gates green, pushed. Final report:
+
+## gently-527 report
+
+### Commits (all pushed to `origin/main`)
+| sha | one-line |
+|---|---|
+| `d6a82d6` | test(ascii_render): pin the `\n` edge-label split, `\l`/`\r`/`\c` alignment escapes, and byte-width label rule (527, y7i, bvb) |
+| `eee3072` | feat(ascii_render): `\n` splits edge labels into aligned rows, escapes align label lines, label widths count UTF-8 bytes |
+| `51921ff` | docs(spec): re-derive ascii_render c4/c5 for multiline aligned label rows + the byte-width rule |
+
+TDD order held: test commit verified RED on the pre-feat tree (stash dance: all 6 new/updated tests failed), feat turned them green.
+
+### What was implemented (`crates/gently-core/src/render/ascii/`)
+- **New `labels.rs`** — port of upstream `Node::_aligned_label`: each `\n`/`\r`/`\l`/`\c` terminator ends a trimmed, unescaped segment whose alignment is the *previous* terminator's (node default `center`, edge default `left` per `Attributes.pm`); `\n` falls back to the object default; trailing terminator adds no line.
+- **`canvas.rs`** — grid became a **byte grid** (`Vec<Vec<u8>>`); per-row band heights (prefix `band_tops`); node boxes grow to lines+2 with vertically centered rows and per-line `l/r/c` alignment; sides run the full grown height.
+- **`edges.rs`** — straight-edge labels render one row per line, bottom-aligned in the `H-2` field at byte offset 2 (`w-5` eastward / `w-4` westward); arrow stays on the band's `H-2` line; single-line behavior byte-identical to all existing pins (left-align at offset 2 ≡ old centered when gap = len+5).
+- **`geometry.rs`/`groups.rs`** — `byte_width` (upstream's byte-string `length()`), gap = widest line + 5, anon 3×3 floor preserved; band-aware group frames. `layout/` untouched (renderer concern — justified in the feat message).
+- New probes: `edge-label-split-minimal` (disentangles the `\n` split from the `{ size:` attrs + 2×2 layout, out of scope) and `label-byte-width` (raw-bytes `from_text` child — the decoded-input path renders char-width, documented in the probe header); `serves:` comments updated to 527/y7i/bvb. `docs/known-hard-cases.md` rows moved out; openspec mirror + specodelic artifacts regenerated **in the same commit** as the corpus spec.
+
+### Gates (all exit 0)
+`cargo test -p gently-core` (182 tests) · `cargo clippy --workspace --all-targets -- -D warnings` · `ah check --run-tests` (74 passed, 0 findings) · `just gates` (12 compiled/checked) · `just examples-verify` · `just oracle-verify` (corpus byte-identical) · `spk lint openspec`
+
+### Tickets closed
+`gently-527` (primary), `gently-y7i`, `gently-bvb` (both bonus) — all closed + `bd export` (79→80 issues incl. the follow-up below). `gently-dcp` was already closed; the c5 display-width divergence it recorded is now superseded by the byte rule in the spec.
+
+### Deviations
+- `ah sync` **refused** to refresh derived contracts — it runs `ah lint`, which has 50 pre-existing `total_refs` warnings on unrelated deployed specs (verified identical on the stashed baseline); the actual gate (`ah check --run-tests`) passes with 0 findings. Contract TOMLs untouched and green.
+- The byte-width rule matches the **pinned** `ascii-render-tables.observed` (中 = 7-byte box) and the bvb bead's evidence; note the oracle's *decoded-input* path (its CLI's `:utf8` binmode, also `pod-unicode.observed`) renders char-width — recorded in the probe header as the recording-path distinction.
+- Follow-up filed: **`gently-awd`** — so-flowchart-size `{ size: 5,10; }` + 2×2 layout remainder (out of scope by brief; the new variable-band renderer unblocks part of it).
+- Out of scope untouched: textwrap/auto (emd), bent/vertical edge label rows (single-line surface, unpinned).
