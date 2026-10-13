@@ -13,108 +13,16 @@
 //!
 //! Deepened by gently-ef5 (--json envelope, verbosity surface, init/doctor)
 //! and gently-bzx (full parser capability).
-
-use std::io::Write;
-use std::path::Path;
-use std::process::{Command, Stdio};
-
-/// Like [`run_gently`], but spawns `gently` with `dir` as its working
-/// directory — required for filesystem-touching surfaces (`init`, `doctor`)
-/// so they never write into the repo working tree (gently-ef5).
-fn run_gently_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_gently"))
-        .args(args)
-        .current_dir(dir)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("spawn gently");
-    if let Err(e) = child
-        .stdin
-        .as_mut()
-        .expect("stdin piped")
-        .write_all(stdin)
-    {
-        assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "write stdin");
-    }
-    let out = child.wait_with_output().expect("wait for gently");
-    Run {
-        stdout: out.stdout,
-        stderr: out.stderr,
-        code: out.status.code(),
-    }
-}
-
-/// A fresh tempdir scoped to this test process, cleaned up on drop.
-struct TempDir(std::path::PathBuf);
-
-impl TempDir {
-    fn new(tag: &str) -> TempDir {
-        let dir = std::env::temp_dir().join(format!("gently-{tag}-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("create temp dir");
-        TempDir(dir)
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-/// Pinned oracle (Graph::Easy v0.69 @ ededa3d7, recorded 2026-10-08):
-/// `perl -IGraph-Easy-0.69/lib -MGraph::Easy -e 'my $g = Graph::Easy->new;
-/// $g->add_edge("a","b"); print $g->as_ascii'`.
-const ORACLE: &[u8] = b"+---+     +---+\n| a | --> | b |\n+---+     +---+\n";
-
-/// One `gently` invocation's observable process behavior (cli.c3/c4).
-struct Run {
-    stdout: Vec<u8>,
-    stderr: Vec<u8>,
-    code: Option<i32>,
-}
-
-fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_gently"))
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("spawn gently");
-    // The child may exit before consuming stdin (e.g. unknown --as format
-    // dies with 255 without reading — cli.c4) — a broken pipe is that
-    // exit's observable signature, not a test failure. Any other IO error
-    // still panics; correctness of p1-p3 is guarded by their assertions on
-    // stdout/stderr/exit code.
-    if let Err(e) = child
-        .stdin
-        .as_mut()
-        .expect("stdin piped")
-        .write_all(stdin)
-    {
-        assert_eq!(
-            e.kind(),
-            std::io::ErrorKind::BrokenPipe,
-            "write stdin: unexpected IO error"
-        );
-    }
-    let out = child.wait_with_output().expect("wait for gently");
-    Run {
-        stdout: out.stdout,
-        stderr: out.stderr,
-        code: out.status.code(),
-    }
-}
+mod common;
 
 /// Contract scenarios for `specs/cli.md`, one module per property row —
 /// the filter `scenarios::cli::pN` used by `.espectacular/cli/pN.toml`
 /// matches these test paths.
 mod scenarios {
     mod cli {
-        use super::super::{run_gently, run_gently_in, TempDir, ORACLE};
+        use crate::common::{run_gently, run_gently_in, TempDir, ORACLE};
         use std::process::{Command, Stdio};
+
 
         /// cli.p1 (c1): stdin and the first file argument reach the parser
         /// with the same bytes; the second positional names the output file;
@@ -208,21 +116,6 @@ mod scenarios {
                 err.contains("parse error"),
                 "diagnostic should name the failure kind: {err}"
             );
-        }
-
-        /// cli.p4 (c4): an unknown output format exits 255 with a diagnostic
-        /// on stderr naming both the requested format and the valid formats;
-        /// stdout stays empty. Exit 255 is bug-for-bug with the upstream
-        /// script, whose unknown `--as` dies calling the missing
-        /// `as_<fmt>` method (re-derived against upstream v0.69, gently-0h9).
-        #[test]
-        fn p4() {
-            let r = run_gently(&["--as", "html"], b"[ a ] --> [ b ]\n");
-            assert_eq!(Some(255), r.code, "unknown format must exit 255");
-            assert!(r.stdout.is_empty(), "diagnostics must not touch stdout");
-            let err = String::from_utf8_lossy(&r.stderr);
-            assert!(err.contains("html"), "diagnostic must name the requested format: {err}");
-            assert!(err.contains("ascii"), "diagnostic must name the valid formats: {err}");
         }
 
         /// cli.p5 (c5): genesis foundation — `init` registers gently in

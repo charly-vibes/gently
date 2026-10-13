@@ -118,6 +118,7 @@ my %SERVES = (
     'dot-direction'          => 'gently-13f (dot_parser c1/c2 — header×operator direction matrix)',
     'dot-records-ports'      => 'gently-13f (dot_parser c5 — records, HTML-like labels, port references)',
     'cli-flags'              => 'gently-0h9 (closed — kept as upstream evidence)',
+    'cli-formats'            => 'gently-4ig (cli c2/c4 — the wired --as format surface)',
     'node-unnamed'           => 'gently-r22 (graph_model c1)',
     'anon-numbering'         => 'gently-r22 (graph_model c1 — exact #N scheme)',
     'attr-store-decompose'   => 'gently-r22 (graph_model c2 — store-layer unquote + border decomposition)',
@@ -1178,6 +1179,42 @@ my @cases = (
   ['second positional is output', qq{"$bin" "$input" /tmp/probes-cli-out2 && echo "out:\$(cat /tmp/probes-cli-out2)"}],
   ['extra positionals ignored', qq{"$bin" "$input" /tmp/probes-cli-out3 extra junk && echo "out:\$(cat /tmp/probes-cli-out3)"}],
   ['unknown format exit 255', qq{"$bin" --as nosuch "$input"; echo "exit=\$?"}],
+);
+for my $case (@cases) {
+  my ($label, $cmd) = @$case;
+  my $out = `$cmd 2>/dev/null`;
+  $out =~ s/\s+\z//;
+  print "[$label]\n$out\n";
+}
+PROBE
+
+    'cli-formats' => <<'PROBE',
+# serves: gently-4ig (cli c2/c4 — the wired --as format surface)
+# claim probed: the upstream --as format map on bin/graph-easy v0.69.
+# Observed: html/txt/dot render via in-dist methods (as_html_file /
+# as_txt_file / as_graphviz_file typeglob aliases, Easy.pm top). boxart,
+# vcg, gdl, graphml ALSO exit 0 upstream (in-dist as_*_file aliases) —
+# gently keeps them exit-255 as documented scope-offs (no gently renderer
+# for vcg/gdl/graphml; boxart deliberately unwired in this slice).
+# svg DIES (exit 2 observed: `Can't locate Graph/Easy/As_svg.pm in
+# @INC`) — As_svg is NOT part of the pinned Graph-Easy 0.69 dist and
+# the bin's shebang perl has no site_perl copy; gently pins svg to 255
+# (the uncaught-die family, cli.c4). Note: `perl bin/graph-easy` from
+# PATH (brew perl 5.44) DOES find As_svg 0.28 in site_perl and renders —
+# that is environment contamination outside the pin, not oracle behavior.
+my $bin = do { my $d = $INC{'Graph/Easy.pm'}; $d =~ s|lib/Graph/Easy\.pm$|bin/graph-easy|; $d };
+my $input = '/tmp/probes-cli-formats.txt';
+open my $fh, '>', $input or die $!; print $fh "[ a ] --> [ b ]\n"; close $fh;
+my @cases = (
+  ['--as html', qq{"$bin" --as html "$input"}],
+  ['--as txt', qq{"$bin" --as txt "$input"}],
+  ['--as dot', qq{"$bin" --as dot "$input"}],
+  ['--as graphviz', qq{"$bin" --as graphviz "$input"}],
+  ['--as svg exit', qq{"$bin" --as svg "$input" 2>/tmp/probes-svg.err >/dev/null; echo "exit=\$?"; grep -v Useless /tmp/probes-svg.err | head -2}],
+  ['--as boxart exit', qq{"$bin" --as boxart "$input" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--as vcg exit', qq{"$bin" --as vcg "$input" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--as gdl exit', qq{"$bin" --as gdl "$input" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--as graphml exit', qq{"$bin" --as graphml "$input" >/dev/null 2>&1; echo "exit=\$?"}],
 );
 for my $case (@cases) {
   my ($label, $cmd) = @$case;
