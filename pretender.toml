@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────────────
+# pretender.toml — gently structural-quality configuration
+# (ddl convention: dulce-de-leche/pretender.toml, DDL-dqr / pretender-1te)
+# ─────────────────────────────────────────────────────────────────────
+# The ddl-pretender-gate lefthook command runs `pretender check --mode
+# gate`. In pretender 0.7.0, gate-by-default is the release default and
+# advisory modes (tiered/guidance) require a dated advisory lease —
+# missing or expired fails closed (exit 1).
+# This toml supplies the lease + repo mode so local runs match CI exactly.
+# renewal = push the date forward (reviewable diff) — ddl convention;
+# horizon matches wai + testaruda.
+
+[pretender]
+mode = "guidance"
+advisory_until = "2027-03-31"
+
+[roles.test]
+paths = ["tests/**", "crates/*/tests/**", "**/*_test.*", "spec/**"]
+
+[roles.library]
+paths = ["crates/*/src/**", "specodelic/**"]
+
+[roles.script]
+paths = ["tools/**", "examples/**", "crates/*/examples/**"]
+
+[roles.generated]
+paths = ["target/**"]

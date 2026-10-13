@@ -9,7 +9,10 @@
 # deltas exist.
 
 pre-commit:
+  parallel: true
   commands:
+    bd:
+      run: bd hooks run pre-commit
 # ah:managed:start
     ah-check:
       run: ah check
@@ -21,7 +24,10 @@ pre-commit:
     ddl-ah-check:
       run: ah check
     ddl-pretender-gate:
-      run: pretender check --mode gate
+      # no --mode override: the toml's guidance lease governs (ddl parity —
+      # "the toml supplies the lease + repo mode so local runs match CI
+      # exactly"); --mode gate would defeat the dated advisory lease.
+      run: pretender check
     ddl-spk-lint:
       run: spk lint openspec
     # ddl:managed:end (pre-commit)
@@ -47,6 +53,8 @@ pre-commit:
 
 pre-push:
   commands:
+    bd:
+      run: bd hooks run pre-push
     # ddl:managed:start (pre-push)
     ddl-ah-check:
       run: ah check
