@@ -57,8 +57,9 @@ to the CLI.
 
 ## For contributors
 
-Work is tracked with [wai](https://github.com/charly-vibes/wai); the
-capability corpus in `specs/` is written in the
+Work is tracked with [wai](https://github.com/charly-vibes/wai); notable
+changes are recorded in [CHANGELOG.md](CHANGELOG.md) (Keep a Changelog);
+the capability corpus in `specs/` is written in the
 [Specodelic](https://crates.io/crates/specodelic) four-layer format
 (intent statement + state model + constraints/properties per spec).
 
