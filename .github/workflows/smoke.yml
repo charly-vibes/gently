@@ -1,0 +1,40 @@
+# Smoke workflow — build on a plain checkout and pipe a sample graph
+# through the CLI. Fast signal that a fresh clone actually works.
+#
+# ddl-standard parity: mirrors dulce-de-leche's smoke.yml role.
+
+name: Smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  smoke:
+    name: Fresh-clone CLI smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build -p gently-cli
+
+      - name: Smoke: render a sample graph to ASCII
+        run: |
+          echo '[ Bonn ] --> [ Berlin ] --> [ Hamburg ]' \
+            | target/debug/gently --as ascii > /tmp/out.txt
+          grep -q 'Bonn' /tmp/out.txt && grep -q 'Berlin' /tmp/out.txt \
+            || { echo "smoke: rendered output missing expected nodes" >&2; cat /tmp/out.txt >&2; exit 1; }

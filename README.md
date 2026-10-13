@@ -2,6 +2,8 @@
 
 [![tracked with wai](https://img.shields.io/badge/tracked%20with-wai-blue)](https://github.com/charly-vibes/wai)
 [![CI](https://github.com/charly-vibes/gently/actions/workflows/ci.yml/badge.svg)](https://github.com/charly-vibes/gently/actions/workflows/ci.yml)
+[![Release](https://github.com/charly-vibes/gently/actions/workflows/release.yml/badge.svg)](https://github.com/charly-vibes/gently/actions/workflows/release.yml)
+[![crates.io](https://img.shields.io/crates/v/gently-cli.svg)](https://crates.io/crates/gently-cli)
 [![License: GPL-2.0-or-later](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 
 A Rust port of Perl's [Graph::Easy](https://github.com/ironcamel/Graph-Easy):
