@@ -1,28 +1,29 @@
-//! Purpose: the char-grid canvas the ascii renderer draws on — column
-//! widths per the char-grid mapping, per-node border/shape resolution,
-//! per-edge style runs, selfloop elbows and polyline plumbing.
+//! Purpose: the char-grid canvas the ascii renderer draws on — the
+//! blank grid, per-node box stamping, per-edge dispatch, selfloop
+//! elbows and the polyline plumbing.
 //! Responsibilities: build the blank grid from the layout's cell grid
-//! (node columns take their boxes' width, gap columns the 5-char floor,
-//! labelled straight edges widen their gap), stamp bordered/rounded/
-//! point/invisible nodes and edge runs, and join the lines with per-line
-//! trailing-space trimming (the oracle does not pad lines).
+//! (column widths per `geometry`, widened by group titles and expanded
+//! by the group-frame margins), stamp bordered/rounded/point/invisible
+//! nodes and edge runs, stamp the group frames, and join the lines with
+//! per-line trailing-space trimming (the oracle does not pad lines).
 //! Rationale: split from monolithic mod.rs past the tidy file limit; the
-//! glyph tables live in styles.rs, probed from the pinned oracle
-//! (tests/repro/claims/ascii-render-tables.observed — gently-0cq).
+//! glyph tables live in styles.rs, the label/style/column resolution in
+//! geometry.rs, the group frames in groups.rs (gently-b0z).
 
+use super::geometry::{
+    column_geometry, column_offsets, edge_styles, node_label, node_styles, object_attr, selfloops,
+};
+use super::groups::{self, Frame};
 use super::polyline;
-use super::styles::{self, border, display_width, edge_gap_width, h_run, shape, Shape};
+use super::styles::{self, border, display_width, h_run, Shape};
 use super::RenderError;
 use crate::graph::{Graph, ObjectKind, Scope};
-use crate::layout::{Cell, Layout};
+use crate::layout::Layout;
 
 /// Width in chars of a gap (edge-routing) grid column.
 pub(super) const GAP_WIDTH: usize = 5;
 /// Height in lines of one grid row's char band (border, label, border).
 pub(super) const BAND_HEIGHT: usize = 3;
-/// Minimum box width for a selfloop node: the loop elbow spans the box,
-/// so the cell widens to fit both corners (oracle: `+------+` over `a`).
-const SELFLOOP_MIN_WIDTH: usize = 8;
 
 /// The blank char grid plus the column-width mapping it is drawn against.
 pub(super) struct Canvas {
@@ -39,6 +40,11 @@ pub(super) struct Canvas {
     pub(super) edge_arrow_end: Vec<bool>,
     /// Bidirectionality (arrowheads at BOTH ends) per edge, in model order.
     pub(super) edge_bidir: Vec<bool>,
+    /// Group frames in unshifted coordinates, stamped after the edges.
+    pub(super) frames: Vec<Frame>,
+    /// Left/top canvas margins the frames demanded.
+    pub(super) margin_left: usize,
+    pub(super) margin_top: usize,
 }
 
 /// The point node's label row: blank sides with a centered `*`.
@@ -60,132 +66,6 @@ pub(super) fn centered(text: &str, width: usize) -> String {
     format!("{}{}{}", " ".repeat(left), text, " ".repeat(width - len - left))
 }
 
-/// The node's display label: its `label` attribute (per-object, falling
-/// back to the node class) when set, else its name (upstream Node::label).
-fn node_label(graph: &Graph, idx: usize) -> &str {
-    object_attr(graph, Scope::Node(idx), ObjectKind::Node, "label")
-        .unwrap_or(&graph.nodes[idx].name)
-}
-
-/// Box width of a node: display width of the label (double-width glyphs
-/// count two columns, ge.ascii_render.c5) plus two border chars per side
-/// — or one per side for a `none` border — widened for selfloop nodes so
-/// the loop elbow fits above the box.
-fn box_width(name: &str, style: &str, selfloop: bool) -> usize {
-    let pad = if style == "none" { 1 } else { 2 };
-    let w = display_width(name) + 2 * pad;
-    if selfloop {
-        w.max(SELFLOOP_MIN_WIDTH)
-    } else {
-        w
-    }
-}
-
-/// The value of `key` on the object at `scope`, falling back to the base
-/// class of `kind` (per-object attributes win over class attributes).
-fn object_attr<'a>(graph: &'a Graph, scope: Scope, kind: ObjectKind, key: &str) -> Option<&'a str> {
-    graph
-        .get_attr(scope, key)
-        .or_else(|| graph.get_attr(Scope::Class(kind, String::new()), key))
-}
-
-/// Which nodes carry a selfloop edge (their boxes widen for the elbow).
-fn selfloops(graph: &Graph) -> Vec<bool> {
-    (0..graph.nodes.len())
-        .map(|i| graph.edges.iter().any(|e| e.from == i && e.to == i))
-        .collect()
-}
-
-/// Per-node (border style, shape), per-object attributes over class ones.
-fn node_styles(graph: &Graph) -> Vec<(String, Shape)> {
-    (0..graph.nodes.len())
-        .map(|i| {
-            let scope = Scope::Node(i);
-            let style = object_attr(graph, scope.clone(), ObjectKind::Node, "border_style")
-                .unwrap_or("solid")
-                .to_string();
-            (style, shape(object_attr(graph, scope, ObjectKind::Node, "shape")))
-        })
-        .collect()
-}
-
-/// Per-edge style string, per-object attributes over class ones.
-fn edge_styles(graph: &Graph) -> Vec<String> {
-    (0..graph.edges.len())
-        .map(|i| {
-            object_attr(graph, Scope::Edge(i), ObjectKind::Edge, "style")
-                .unwrap_or("solid")
-                .to_string()
-        })
-        .collect()
-}
-
-/// Column widths per the char-grid mapping and their prefix offsets:
-/// node columns take exactly their boxes' width (a `none`-border box is
-/// narrower than the gap floor — oracle: ` x`), gap columns keep
-/// GAP_WIDTH, and labelled straight edges widen their gap column (the
-/// label hosts on the box-top row — oracle: `+---+  go   +---+` over
-/// ` ----> `).
-fn column_geometry(
-    graph: &Graph,
-    layout: &Layout,
-    node_style: &[(String, Shape)],
-    selfloop_node: &[bool],
-    edge_style: &[String],
-) -> (Vec<usize>, Vec<usize>) {
-    let mut node_width = vec![0usize; layout.width];
-    let mut node_col = vec![false; layout.width];
-    for (idx, &(cx, _)) in layout.node_cells.iter().enumerate() {
-        let (style, _) = &node_style[idx];
-        let w = box_width(node_label(graph, idx), style, selfloop_node[idx]);
-        node_width[cx] = node_width[cx].max(w);
-        node_col[cx] = true;
-    }
-    let mut col_width = vec![GAP_WIDTH; layout.width];
-    for c in 0..layout.width {
-        if node_col[c] {
-            col_width[c] = node_width[c];
-        }
-    }
-    for (ei, path) in layout.edge_paths.iter().enumerate() {
-        if path.len() == 1 {
-            widen_edge_column(graph, layout, edge_style, &mut col_width, ei, path);
-        }
-    }
-    let mut offsets = vec![0usize; layout.width + 1];
-    for c in 0..layout.width {
-        offsets[c + 1] = offsets[c] + col_width[c];
-    }
-    (col_width, offsets)
-}
-
-/// Widen the gap column of one straight single-gap edge (gently-7qz): the
-/// label's width plus the 5-char label padding, the style's minimum gap
-/// width (gently-oy2: upstream `_correct_size` widens the cell for
-/// dot-dot-dash — the ` ..-> ` gap; the other styles keep the 5-column
-/// floor), and the BD short-cell's +1 (upstream `_correct_size` w++ for a
-/// bidirectional EDGE_HOR cell with arrows — the ` <--> ` gap), the last
-/// only for the horizontal straight edge through the gap column.
-fn widen_edge_column(
-    graph: &Graph,
-    layout: &Layout,
-    edge_style: &[String],
-    col_width: &mut [usize],
-    ei: usize,
-    path: &[Cell],
-) {
-    let c = path[0].0;
-    let e = &graph.edges[ei];
-    let bd_hor = e.arrows.start
-        && e.arrows.end
-        && layout.node_cells[e.from].1 == layout.node_cells[e.to].1;
-    let extra = if bd_hor { 1 } else { 0 };
-    if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
-        col_width[c] = col_width[c].max(display_width(label) + 5 + extra);
-    }
-    col_width[c] = col_width[c].max(edge_gap_width(&edge_style[ei]) + extra);
-}
-
 impl Canvas {
     /// Build the blank grid: column widths per the char-grid mapping
     /// (widened for labelled straight edges, whose gap hosts the label on
@@ -195,10 +75,22 @@ impl Canvas {
         let selfloop_node = selfloops(graph);
         let node_style = node_styles(graph);
         let edge_style = edge_styles(graph);
-        let (col_width, offsets) =
+        let (mut col_width, title_widths) =
             column_geometry(graph, layout, &node_style, &selfloop_node, &edge_style);
-        let total_width = offsets[layout.width];
-        let grid = vec![vec![' '; total_width]; layout.height * BAND_HEIGHT];
+        // group titles widen their leftmost member's column (c8)
+        for (c, w) in title_widths {
+            if c < col_width.len() {
+                col_width[c] = col_width[c].max(w);
+            }
+        }
+        let offsets = column_offsets(&col_width);
+        // group frames demand canvas margins (c8)
+        let frames = groups::frames(graph, layout, &col_width, &offsets);
+        let (ml, mt, mr, mb) =
+            groups::margins(&frames, offsets[layout.width], layout.height * BAND_HEIGHT);
+        let offsets: Vec<usize> = offsets.into_iter().map(|o| o + ml).collect();
+        let total_width = offsets[layout.width] + mr;
+        let grid = vec![vec![' '; total_width]; layout.height * BAND_HEIGHT + mt + mb];
         let edge_arrow_end: Vec<bool> = graph.edges.iter().map(|e| e.arrows.end).collect();
         let edge_bidir: Vec<bool> = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
         Canvas {
@@ -209,6 +101,9 @@ impl Canvas {
             edge_style,
             edge_arrow_end,
             edge_bidir,
+            frames,
+            margin_left: ml,
+            margin_top: mt,
         }
     }
 
@@ -244,7 +139,7 @@ impl Canvas {
             " ".repeat(inner - len - left),
             b.side
         );
-        let top_line = cy * BAND_HEIGHT;
+        let top_line = self.band_top(cy);
         self.stamp(top_line, cx, &format!("{}{}{}", b.tl, run, b.tr));
         self.stamp(top_line + 1, cx, &mid);
         self.stamp(top_line + 2, cx, &format!("{}{}{}", b.bl, run, b.br));
@@ -254,7 +149,7 @@ impl Canvas {
     /// blank, `  *`, blank for a width-5 point node).
     fn draw_point(&mut self, cy: usize, cx: usize) {
         let mid = centered_point_row(self.col_width[cx] - 2);
-        let top_line = cy * BAND_HEIGHT;
+        let top_line = self.band_top(cy);
         self.stamp(top_line + 1, cx, &mid);
     }
 
@@ -294,8 +189,8 @@ impl Canvas {
     fn draw_selfloop(&mut self, (c, r): (usize, usize)) {
         let x0 = self.offsets[c];
         let w = self.col_width[c];
-        let y_mid = (r - 1) * BAND_HEIGHT + 1;
-        let y_attach = r * BAND_HEIGHT - 1;
+        let y_mid = self.mid(r - 1);
+        let y_attach = self.band_top(r) - 1;
         let (xl, xr) = (x0 + 2, x0 + w - 3);
         for x in xl + 1..xr {
             self.grid[y_mid][x] = '-';
@@ -306,9 +201,14 @@ impl Canvas {
         self.grid[y_attach][xl] = 'v';
     }
 
+    /// Char line of band row `r`'s top border line (margin-shifted).
+    pub(super) fn band_top(&self, r: usize) -> usize {
+        r * BAND_HEIGHT + self.margin_top
+    }
+
     /// Char line of row `r`'s middle (label) line.
     pub(super) fn mid(&self, r: usize) -> usize {
-        r * BAND_HEIGHT + 1
+        self.band_top(r) + 1
     }
 
     /// Center char of column `c`.
@@ -321,6 +221,19 @@ impl Canvas {
         let x0 = self.offsets[cx];
         for (k, ch) in text.chars().enumerate() {
             self.grid[line][x0 + k] = ch;
+        }
+    }
+
+    /// Write `text` starting at absolute char offset `x` on `line`,
+    /// bounds-guarded (never panics; typed render philosophy).
+    pub(super) fn stamp_at(&mut self, line: usize, x: usize, text: &str) {
+        if line >= self.grid.len() {
+            return;
+        }
+        for (k, ch) in text.chars().enumerate() {
+            if x + k < self.grid[line].len() {
+                self.grid[line][x + k] = ch;
+            }
         }
     }
 

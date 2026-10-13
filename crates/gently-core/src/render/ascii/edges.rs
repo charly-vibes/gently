@@ -9,7 +9,7 @@
 //! rules live in styles.rs, pinned by the recorded claims
 //! (pod-bidir*.observed, pod-label-attr.observed).
 
-use super::canvas::{centered, BAND_HEIGHT, Canvas};
+use super::canvas::{centered, Canvas};
 use super::styles::{self, edge_fill, edge_run_at};
 
 /// The run mirrored for a westward edge: reversed, head flipped.
@@ -42,7 +42,7 @@ pub(super) fn draw_straight(
     let run = if canvas.edge_bidir[edge_index] {
         if let Some(label) = &label {
             canvas.stamp(
-                sr * BAND_HEIGHT,
+                canvas.band_top(sr),
                 c,
                 &format!("  {}", centered(label, width - 5)),
             );
@@ -56,7 +56,7 @@ pub(super) fn draw_straight(
     } else {
         run
     };
-    canvas.stamp(sr * BAND_HEIGHT + 1, c, &centered(&run, width));
+    canvas.stamp(canvas.band_top(sr) + 1, c, &centered(&run, width));
 }
 
 /// The plain (non-bidirectional) straight run of one edge: the style's
@@ -86,7 +86,7 @@ fn plain_straight_run(
             if head == 1 {
                 s.push('>');
             }
-            canvas.stamp(sr * BAND_HEIGHT, c, &centered(label, width));
+            canvas.stamp(canvas.band_top(sr), c, &centered(label, width));
             s
         }
         None => edge_run_at(style, arrowed, width, canvas.offsets[c]),

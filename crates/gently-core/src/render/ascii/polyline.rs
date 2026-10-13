@@ -9,7 +9,7 @@
 //! under the tidy gates; geometry shaped by the recorded v0.69 @ ededa3d7
 //! companions (the parallel elbow, the diamond's verticals and c->d route).
 
-use super::canvas::{BAND_HEIGHT, Canvas};
+use super::canvas::Canvas;
 use super::RenderError;
 use crate::layout::{Cell, Layout};
 
@@ -140,8 +140,8 @@ fn exit_attachment(
     let pt = match dir {
         Dir::East => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
         Dir::West => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
-        Dir::North => (Some(canvas.center(c)), (r * BAND_HEIGHT).checked_sub(1)),
-        Dir::South => (Some(canvas.center(c)), Some(r * BAND_HEIGHT + 2 + 1)),
+        Dir::North => (Some(canvas.center(c)), canvas.band_top(r).checked_sub(1)),
+        Dir::South => (Some(canvas.center(c)), Some(canvas.band_top(r) + 3)),
     };
     attachment(canvas, pt, ei, "leaves")
 }
@@ -159,8 +159,8 @@ fn entry_attachment(
     let pt = match dir {
         Dir::East => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
         Dir::West => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
-        Dir::South => (Some(canvas.center(c)), (r * BAND_HEIGHT).checked_sub(1)),
-        Dir::North => (Some(canvas.center(c)), Some(r * BAND_HEIGHT + 2 + 1)),
+        Dir::South => (Some(canvas.center(c)), canvas.band_top(r).checked_sub(1)),
+        Dir::North => (Some(canvas.center(c)), Some(canvas.band_top(r) + 3)),
     };
     attachment(canvas, pt, ei, "enters")
 }

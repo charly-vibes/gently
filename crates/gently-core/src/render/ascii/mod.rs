@@ -12,6 +12,8 @@
 
 mod canvas;
 mod edges;
+mod geometry;
+mod groups;
 mod polyline;
 mod styles;
 
@@ -54,6 +56,7 @@ pub fn render(graph: &Graph, layout: &Layout) -> Result<String, RenderError> {
     for edge_index in 0..graph.edges.len() {
         canvas.draw_edge(graph, layout, edge_index)?;
     }
+    canvas.stamp_frames();
     Ok(canvas.into_string())
 }
 
