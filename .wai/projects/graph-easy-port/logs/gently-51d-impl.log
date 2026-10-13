@@ -1,0 +1,27 @@
+Done. Final report:
+
+## gently-51d — complete, pushed
+
+**Root cause & fix:** Upstream `As_ascii.pm` `$edge_styles` rows `'wide'`/`'broad'` are byte-identical to `'bold'` (`'##'` hor pattern), and `_correct_size` does not widen their gap (only `dot-dot-dash`). gently's `edge_pattern`/`edge_fill` fell through to the solid default. Fix: wide/broad joined to the bold arm.
+
+**Commits** (all hooks green, pushed `c9a12e5..08f4f4e`):
+- `b36a0ae` test: pin the wide/broad edge-style oracle bytes (gently-51d)
+- `c01dee6` feat(render): wide/broad edge styles alias the bold '##' glyph (gently-51d)
+- `08f4f4e` docs(spec): re-derive ge-ascii_render c2/p2 for the wide/broad bold alias (gently-51d)
+
+**Evidence pinned:**
+- New probe `edge-style-wide-undirected` → `tests/repro/claims/edge-style-wide-undirected.observed`: arrowless wide/broad render `###` (hash-stable, seeds 0/1) — the case pod-style-family didn't cover. `pod-style-family` SERVES updated to `gently-ni9.1, gently-51d`.
+- RED confirmed before the fix (`edge wide arrowed=true: left "-->", right "##>"`).
+
+**Files changed:** `crates/gently-core/src/render/ascii/styles.rs`, `tests/scenarios/ge_ascii_render.rs`, `tests/repro/probes.pl`, new `.observed`, `specs/ge-ascii_render.md` (c2 unit-token list + minimum-run table + gently-51d re-derivation; p2 generator/predicate), `openspec/` mirror redeployed in the same commit, `specodelic/` artifacts regenerated, `docs/known-hard-cases.md` (gently-51d row moved out).
+
+**Gates (all exit 0):**
+- `cargo test -p gently-core` — 144 passed, 0 failed
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean
+- `ah check --run-tests` — 69 passed, 0 findings
+- `just gates`, `spk lint openspec` — 0 findings, 0 warnings
+- `just examples-verify`, `just oracle-verify` — byte-identical to pin v0.69 @ ededa3d7
+
+**Tickets:** `gently-51d` CLOSED (`bd export` run; note `.beads/` is gitignored in this checkout — embedded-Dolt mode, no jsonl commit needed).
+
+**Deviations (one, mechanical):** the planned test→feat→spec commit split initially failed the pre-commit `spec-drift-gate` (worktree mirror vs index with the corpus change unstaged). Resolved by stashing the spec-side changes, landing test+feat commits, then restoring and committing spec+mirror+artifacts+docs together — same atomic-content outcome, order preserved.
