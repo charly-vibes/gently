@@ -110,6 +110,7 @@ pub(super) fn place(graph: &Graph) -> Option<Placement> {
         return None;
     }
     let mut placer = Placer::new(graph.edges.len(), n);
+    placer.ranks = rank_pass(graph);
     if graph.edges.is_empty() {
         // Edgeless graphs line up on band 0 in insertion order — the
         // tracer-era behavior pinned by the tb.ascii_render tests.
@@ -144,6 +145,9 @@ struct Placer {
     next_band: usize,
     route: Vec<Route>,
     pairs: HashMap<(usize, usize), usize>,
+    /// Longest-path rank of each node (gently-jrr): constrains the east
+    /// extension column so a shared-middle bypass stays inline.
+    ranks: Vec<usize>,
 }
 
 impl Placer {
@@ -154,6 +158,7 @@ impl Placer {
             next_band: 0,
             route: vec![Route::Grew; edge_count],
             pairs: HashMap::new(),
+            ranks: vec![0; node_count],
         }
     }
 
@@ -214,8 +219,24 @@ impl Placer {
 
     /// Extend east on the source's band when the slot is free, else attach
     /// below the source on its own band (oracle: the diamond's c under a).
+    ///
+    /// The east column honors the longest-path rank of `node` (gently-jrr:
+    /// the shared-middle bypass — Koblenz -> Trier -> Frankfurt forces
+    /// Frankfurt east of Trier even though the Koblenz -> Frankfurt edge
+    /// is processed first): a node whose rank demands a column beyond the
+    /// source's east slot takes that column, leaving room for the middle
+    /// node the later edge will place inline. Tests/repro/claims/
+    /// bg-minlen-bypass.observed pins the inline rank
+    /// (Bonn, Koblenz, Trier, Frankfurt, Dresden) with the skip-edge
+    /// bending over the band.
     fn extend_or_below(&mut self, node: usize, pu: (usize, usize)) {
-        let east = (pu.0 + 1, pu.1);
+        // Rank-aware column (gently-jrr): the shared-middle bypass — the
+        // node's longest-path rank sits exactly one column east of the
+        // source's immediate east slot, whose occupant must itself yield
+        // east (rank = source col + 2). A deeper rank demand has no
+        // recorded shape pinning it, so the placement stays insertion-order.
+        let col = if self.ranks[node] == pu.0 + 2 { pu.0 + 2 } else { pu.0 + 1 };
+        let east = (col, pu.1);
         if self.taken.contains(&east) {
             let band = self.fresh_band();
             self.claim(node, (pu.0, band));
