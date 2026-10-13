@@ -53,6 +53,14 @@ test-one name:
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
 
+# Format all Rust files
+fmt:
+    cargo fmt
+
+# Check formatting (no changes)
+fmt-check:
+    cargo fmt --all -- --check
+
 # Show dependency tree
 deps:
     cargo tree

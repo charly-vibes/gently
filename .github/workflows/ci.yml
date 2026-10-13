@@ -36,7 +36,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy, rustfmt
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -51,6 +51,9 @@ jobs:
         run: |
           specodelic --version >/dev/null
           ah --version >/dev/null
+
+      - name: Format check (ddl-standard gate, before clippy)
+        run: just fmt-check
 
       - name: Run CI pipeline
         run: just ci

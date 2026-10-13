@@ -14,6 +14,9 @@ pre-commit:
     ah-check:
       run: ah check
 # ah:managed:end
+    fmt-check:
+      glob: "*.rs"
+      run: just fmt-check
     # ddl:managed:start (pre-commit)
     ddl-ah-check:
       run: ah check
