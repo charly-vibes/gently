@@ -1,0 +1,21 @@
+Done — shipped early, well within budget.
+
+## Summary — gently-lkf
+
+**New `README.md` section order:**
+1. Title + wai badge + one-line project description (unchanged)
+2. **Status** — collapsed to 2 lines: "initial capability wave complete" + pinned-oracle fact (v0.69, `just oracle-verify`)
+3. **Quickstart** — build + render steps and the `--as ascii` output box byte-for-byte identical (verified: no diff lines touch the Bonn/Berlin/Hamburg block; also re-ran the CLI live to confirm)
+4. **Supported formats** — 3-row table: Parse (Graph::Easy text, Graphviz DOT) / Render via CLI `--as` (`ascii`) / Render via library (boxart, HTML, Graphviz DOT — CLI wiring pending), plus the runtime fact: other formats error with `gently: unknown output format`, `valid formats: ascii`
+5. **For contributors** — the five `just` gates block (`lint`/`gates`/`oracle-verify`/`perf-check`/`examples-verify`)
+
+Heading `## Quickstart` kept stable for gently-cof/gently-irk; no jargon links, no gallery added.
+
+**Gates:**
+- `just gates` — exit 0
+- `just examples-verify` — all examples byte-identical ✓
+- `ah check` — 0 findings ✓ (pre-commit hooks also all green)
+
+**Commit:** `a38a60b31700a4ae6851f9aee6dc2d2aae7737c9` — only `README.md` (1 file, +25/−18)
+**bd:** `gently-lkf` closed ✓
+**Push:** not done, per instructions — orchestrator pushes.

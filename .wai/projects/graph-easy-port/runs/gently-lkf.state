@@ -1,0 +1,7 @@
+ticket: gently-lkf
+branch: main
+brief_path: .wai/projects/graph-easy-port/briefs/gently-lkf.md
+steps:
+  - claim c92b1ce
+  - gates c92b1ce
+  - brief 0be6113
