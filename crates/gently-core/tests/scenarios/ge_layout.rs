@@ -18,6 +18,7 @@
 
 use gently_core::graph::{Graph, Scope};
 use gently_core::layout::{self, Layout};
+use gently_core::parse::text;
 
 /// The chain a -> b -> c, optionally carrying a graph-level `flow`.
 fn chain_with_flow(flow: Option<&str>) -> Graph {
@@ -316,6 +317,12 @@ fn p5() {
         assert!(!art.is_empty() || g.nodes.is_empty(), "consumer produced bytes");
     }
 }
+
+/// ge.layout.p4 additions (gently-pua): `shape: edge` node graphs — the
+/// chain-based placement order (box chains inline, side-entry leaves one
+/// band below). Side file; keeps the `p4` test-filter prefix.
+#[path = "ge_layout_edge_node_ranking.rs"]
+mod p4_edge_node;
 
 /// ge.layout.p6 (c6): for typical large inputs with dense crossing
 /// regions, ranking, ordering, and routing run as bounded deterministic
