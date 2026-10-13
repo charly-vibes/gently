@@ -3,7 +3,7 @@ source = "ge.dot_parser"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "A `graph` header sets the model graph's `type` attribute to `undirected` and a `digraph` header leaves the model graph at its directed default; neither header fixes the direction of individual edges."
+expr = "A `graph` header sets the model graph's `type` attribute to `undirected` and a `digraph` header leaves the model graph at its directed default; a named header sets the model graph's `title` to its name verbatim and an unnamed header sets it to `unnamed`; neither header fixes the direction of individual edges."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]
@@ -15,13 +15,13 @@ traces_to = "[[ge.dot_parser]]"
 [[constraints]]
 id = "c3"
 kind = "invariant"
-expr = "An attribute list `[key=val, key2=val2]` attached to a node or edge maps onto the model attributes of that object, with quoted values unescaped once."
+expr = "An attribute list `[key=val, key2=val2]` attached to a node or edge maps onto the model attributes of that object, with quoted values unescaped once; a graph-scope attribute statement `key=value` (quoted or bare value) applies to the model graph — or to the innermost enclosing named group — with `rankdir` remapped to `flow` per the oracle's direction map (LR→east, RL→west, TB→south, BT→north, unrecognized→east); every other key lands verbatim, the parser neither validates names nor remaps beyond `rankdir`."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "A subgraph block with a name maps to a model group whose name is the subgraph's name verbatim — except for the graphviz cluster convention (gently-j2i): an id `cluster_<name>` maps to group `<name>` and an id `cluster<N>` (bare digits after `cluster`) maps to an anonymous group — containing only the nodes declared directly inside it."
+expr = "The parser links edges through a node stack that survives scope boundaries: a node statement in a group scope (the graph body or a named subgraph) replaces the stack, a node statement in a bare `{ }` scope pushes onto it, and an edge operator links every node on the stack to its right endpoint — so a bare scope or an inline named subgraph used as an edge-chain endpoint links every node on the surviving stack (leaked earlier entries first) to the chain target, while a plain `}` resets the stack, a scope with no inner edge links nothing, and an operator over an empty stack fails as not recognized. A subgraph block with a name maps to a model group whose name is the subgraph's name verbatim — except for the graphviz cluster convention (gently-j2i): an id `cluster_<name>` maps to group `<name>` and an id `cluster<N>` (bare digits after `cluster`) maps to an anonymous group — containing only the nodes declared directly inside it."
 traces_to = "[[ge.dot_parser]]"
 
 [[constraints]]

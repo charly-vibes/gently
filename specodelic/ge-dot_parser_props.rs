@@ -22,6 +22,10 @@ macro_rules! todo_predicate {
 pub mod spec_gen {
     use super::*;
 
+    pub fn statements() -> impl Strategy<Value = String> {
+        Just("statements".into())
+    }
+
     pub fn constructs() -> impl Strategy<Value = String> {
         Just("constructs".into())
     }
@@ -29,11 +33,11 @@ pub mod spec_gen {
 }
 
 // id: p1
-// generator: DOT headers of both kinds
-// predicate: a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset
+// generator: DOT headers of both kinds, named and unnamed
+// predicate: a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`
 #[test]
 fn p1() {
-        todo_predicate!("a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset");
+        todo_predicate!("a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`");
 }
 
 // id: p2
@@ -44,20 +48,22 @@ fn p2() {
         todo_predicate!("one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header");
 }
 
-// id: p3
-// generator: attribute lists with quoted, escaped, and bare values
-// predicate: attribute values land unescaped exactly once on the right object
-#[test]
-fn p3() {
-        todo_predicate!("attribute values land unescaped exactly once on the right object");
+proptest! {
+    // id: p3
+    // generator: attribute lists with quoted, escaped, and bare values, and graph-scope attribute statements (quoted and bare values, all four rankdir directions, unrecognized values, bare-scope nesting, repeated statements)
+    // predicate: attribute values land unescaped exactly once on the right object; a graph-scope statement lands on the model graph with `rankdir` remapped to `flow` per the oracle's map, the last statement winning
+    #[test]
+    fn p3(v0 in spec_gen::statements()) {
+        todo_predicate!("attribute values land unescaped exactly once on the right object; a graph-scope statement lands on the model graph with `rankdir` remapped to `flow` per the oracle's map, the last statement winning");
+    }
 }
 
 // id: p4
-// generator: named, nested, bare-scope, and cluster-convention subgraphs
-// predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack
+// generator: named, nested, bare-scope, and cluster-convention subgraphs; bare scopes and named subgraphs as edge-chain endpoints; leaked stack entries, scopes with no inner edge, and empty-stack operators
+// predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error
 #[test]
 fn p4() {
-        todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped — though the node preceding the scope is still linked by the scope's inner edge chain, per the oracle's surviving left-edge stack");
+        todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error");
 }
 
 proptest! {

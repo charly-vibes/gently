@@ -30,13 +30,6 @@ when it is byte-identical to the oracle.
 | `gently-m4i` | comma-chained node lists (`[ A ], [ B ] --> [ C ]`) — oracle parses, gently is a parse error |
 | `gently-y7i` | `\l` `\r` `\c` label-alignment escapes — oracle aligns, gently renders them raw |
 
-### DOT parser
-
-| bead | behavior delta (oracle → gently) |
-|------|----------------------------------|
-| `gently-2n5` | bare scope `{a b}` as an edge-chain endpoint — oracle parses, gently is a parse error |
-| `gently-a0k` | graph-scope attribute statements (`rankdir=LR`) — oracle parses, gently is a parse error |
-
 ### Layout & edge attributes
 
 | bead | behavior delta (oracle → gently) |
