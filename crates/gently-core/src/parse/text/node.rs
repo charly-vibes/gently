@@ -18,7 +18,8 @@ use super::{ParseError, Parser};
 /// redeclare). Returns the node index.
 pub fn parse_node_element(p: &mut Parser) -> Result<usize, ParseError> {
     let start_line = p.line();
-    let raw = scan_name(p).ok_or_else(|| p.err(start_line, "unterminated node token: missing ']'"))?;
+    let raw =
+        scan_name(p).ok_or_else(|| p.err(start_line, "unterminated node token: missing ']'"))?;
     let name = collapse_ws(&unescape(raw.trim()));
     let idx = intern(p, &name);
     if let Some(&group) = p.group_stack.last() {

@@ -124,10 +124,22 @@ fn p1() {
     // from offset 1 across the interior (upstream h_run shift rule).
     for (style, want) in [
         ("solid", "┌────────────┐\n│ xxxxxxxxxx │\n└────────────┘\n"),
-        ("dot-dash", "┌-·-·-·-·-·-·┐\n! xxxxxxxxxx !\n└-·-·-·-·-·-·┘\n"),
-        ("dot-dot-dash", "┌·-··-··-··-·┐\n│ xxxxxxxxxx │\n└·-··-··-··-·┘\n"),
-        ("double-dash", "╔ ═ ═ ═ ═ ═ ═╗\n∥ xxxxxxxxxx ∥\n╚ ═ ═ ═ ═ ═ ═╝\n"),
-        ("bold-dash", "┏ ━ ━ ━ ━ ━ ━┓\n╻ xxxxxxxxxx ╻\n┗ ━ ━ ━ ━ ━ ━┛\n"),
+        (
+            "dot-dash",
+            "┌-·-·-·-·-·-·┐\n! xxxxxxxxxx !\n└-·-·-·-·-·-·┘\n",
+        ),
+        (
+            "dot-dot-dash",
+            "┌·-··-··-··-·┐\n│ xxxxxxxxxx │\n└·-··-··-··-·┘\n",
+        ),
+        (
+            "double-dash",
+            "╔ ═ ═ ═ ═ ═ ═╗\n∥ xxxxxxxxxx ∥\n╚ ═ ═ ═ ═ ═ ═╝\n",
+        ),
+        (
+            "bold-dash",
+            "┏ ━ ━ ━ ━ ━ ━┓\n╻ xxxxxxxxxx ╻\n┗ ━ ━ ━ ━ ━ ━┛\n",
+        ),
     ] {
         let mut g = bordered_node(style);
         let n = g.nodes.len() - 1;
@@ -255,33 +267,133 @@ fn assert_bidirectional_arrowheads() {
 #[test]
 fn p3() {
     for (style, arrowed, want) in [
-        ("solid", true, "┌───┐     ┌───┐\n│ a │ ──> │ b │\n└───┘     └───┘\n"),
-        ("solid", false, "┌───┐     ┌───┐\n│ a │ ─── │ b │\n└───┘     └───┘\n"),
-        ("double", true, "┌───┐     ┌───┐\n│ a │ ══> │ b │\n└───┘     └───┘\n"),
-        ("double", false, "┌───┐     ┌───┐\n│ a │ ═══ │ b │\n└───┘     └───┘\n"),
-        ("dotted", true, "┌───┐     ┌───┐\n│ a │ ··> │ b │\n└───┘     └───┘\n"),
-        ("dotted", false, "┌───┐     ┌───┐\n│ a │ ··· │ b │\n└───┘     └───┘\n"),
-        ("wave", true, "┌───┐     ┌───┐\n│ a │ ∼∼> │ b │\n└───┘     └───┘\n"),
-        ("wave", false, "┌───┐     ┌───┐\n│ a │ ∼∼∼ │ b │\n└───┘     └───┘\n"),
-        ("dashed", true, "┌───┐     ┌───┐\n│ a │ ╴╴> │ b │\n└───┘     └───┘\n"),
-        ("dashed", false, "┌───┐     ┌───┐\n│ a │ ╴╴╴ │ b │\n└───┘     └───┘\n"),
-        ("bold", true, "┌───┐     ┌───┐\n│ a │ ━━> │ b │\n└───┘     └───┘\n"),
-        ("bold", false, "┌───┐     ┌───┐\n│ a │ ━━━ │ b │\n└───┘     └───┘\n"),
-        ("wide", true, "┌───┐     ┌───┐\n│ a │ ██> │ b │\n└───┘     └───┘\n"),
-        ("wide", false, "┌───┐     ┌───┐\n│ a │ ███ │ b │\n└───┘     └───┘\n"),
-        ("broad", true, "┌───┐     ┌───┐\n│ a │ ▬▬> │ b │\n└───┘     └───┘\n"),
-        ("broad", false, "┌───┐     ┌───┐\n│ a │ ▬▬▬ │ b │\n└───┘     └───┘\n"),
-        ("dot-dash", true, "┌───┐     ┌───┐\n│ a │ ·-> │ b │\n└───┘     └───┘\n"),
-        ("dot-dash", false, "┌───┐     ┌───┐\n│ a │ -·- │ b │\n└───┘     └───┘\n"),
+        (
+            "solid",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ──> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "solid",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ─── │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "double",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ══> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "double",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ═══ │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "dotted",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ··> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "dotted",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ··· │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "wave",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ∼∼> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "wave",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ∼∼∼ │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "dashed",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ╴╴> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "dashed",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ╴╴╴ │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "bold",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ━━> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "bold",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ━━━ │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "wide",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ██> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "wide",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ███ │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "broad",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ▬▬> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "broad",
+            false,
+            "┌───┐     ┌───┐\n│ a │ ▬▬▬ │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "dot-dash",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ·-> │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "dot-dash",
+            false,
+            "┌───┐     ┌───┐\n│ a │ -·- │ b │\n└───┘     └───┘\n",
+        ),
         // dot-dot-dash: the gap column is one char wider (repeat unit).
-        ("dot-dot-dash", true, "┌───┐      ┌───┐\n│ a │ ··-> │ b │\n└───┘      └───┘\n"),
-        ("dot-dot-dash", false, "┌───┐      ┌───┐\n│ a │ -··- │ b │\n└───┘      └───┘\n"),
-        ("double-dash", true, "┌───┐     ┌───┐\n│ a │ ═ > │ b │\n└───┘     └───┘\n"),
-        ("double-dash", false, "┌───┐     ┌───┐\n│ a │  ═  │ b │\n└───┘     └───┘\n"),
-        ("bold-dash", true, "┌───┐     ┌───┐\n│ a │ ━ > │ b │\n└───┘     └───┘\n"),
-        ("bold-dash", false, "┌───┐     ┌───┐\n│ a │  ━  │ b │\n└───┘     └───┘\n"),
+        (
+            "dot-dot-dash",
+            true,
+            "┌───┐      ┌───┐\n│ a │ ··-> │ b │\n└───┘      └───┘\n",
+        ),
+        (
+            "dot-dot-dash",
+            false,
+            "┌───┐      ┌───┐\n│ a │ -··- │ b │\n└───┘      └───┘\n",
+        ),
+        (
+            "double-dash",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ═ > │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "double-dash",
+            false,
+            "┌───┐     ┌───┐\n│ a │  ═  │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "bold-dash",
+            true,
+            "┌───┐     ┌───┐\n│ a │ ━ > │ b │\n└───┘     └───┘\n",
+        ),
+        (
+            "bold-dash",
+            false,
+            "┌───┐     ┌───┐\n│ a │  ━  │ b │\n└───┘     └───┘\n",
+        ),
     ] {
-        assert_eq!(render(&styled_edge(style, arrowed)), want, "edge {style} arrowed={arrowed}");
+        assert_eq!(
+            render(&styled_edge(style, arrowed)),
+            want,
+            "edge {style} arrowed={arrowed}"
+        );
     }
     // labelled straight edges: the label hosts on the box-top row, the
     // run cycles the style's horizontal pattern plus the '>' head.

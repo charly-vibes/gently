@@ -316,7 +316,8 @@ impl Graph {
         let idx = match existing {
             Some(idx) => idx,
             None => {
-                self.class_attributes.push((kind, class, AttributeTable::default()));
+                self.class_attributes
+                    .push((kind, class, AttributeTable::default()));
                 self.class_attributes.len() - 1
             }
         };

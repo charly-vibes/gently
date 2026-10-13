@@ -78,8 +78,11 @@ fn p1() {
         ("none", "\n x\n\n"),
     ];
     for (style, want) in cases {
-        let art = ascii::render(&bordered_node(style), &layout::layout(&bordered_node(style)))
-            .expect("bordered node must render");
+        let art = ascii::render(
+            &bordered_node(style),
+            &layout::layout(&bordered_node(style)),
+        )
+        .expect("bordered node must render");
         assert_eq!(art, want, "border {style}");
     }
 }
@@ -89,38 +92,126 @@ fn p1() {
 #[test]
 fn p2() {
     let cases = [
-        ("solid", true, "+---+     +---+\n| a | --> | b |\n+---+     +---+\n"),
-        ("solid", false, "+---+     +---+\n| a | --- | b |\n+---+     +---+\n"),
-        ("double", true, "+---+     +---+\n| a | ==> | b |\n+---+     +---+\n"),
-        ("double", false, "+---+     +---+\n| a | === | b |\n+---+     +---+\n"),
-        ("dotted", true, "+---+     +---+\n| a | ..> | b |\n+---+     +---+\n"),
-        ("dotted", false, "+---+     +---+\n| a | ... | b |\n+---+     +---+\n"),
-        ("wave", true, "+---+     +---+\n| a | ~~> | b |\n+---+     +---+\n"),
-        ("wave", false, "+---+     +---+\n| a | ~~~ | b |\n+---+     +---+\n"),
-        ("dashed", true, "+---+     +---+\n| a | - > | b |\n+---+     +---+\n"),
-        ("dashed", false, "+---+     +---+\n| a |  -  | b |\n+---+     +---+\n"),
-        ("bold", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
-        ("bold", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
+        (
+            "solid",
+            true,
+            "+---+     +---+\n| a | --> | b |\n+---+     +---+\n",
+        ),
+        (
+            "solid",
+            false,
+            "+---+     +---+\n| a | --- | b |\n+---+     +---+\n",
+        ),
+        (
+            "double",
+            true,
+            "+---+     +---+\n| a | ==> | b |\n+---+     +---+\n",
+        ),
+        (
+            "double",
+            false,
+            "+---+     +---+\n| a | === | b |\n+---+     +---+\n",
+        ),
+        (
+            "dotted",
+            true,
+            "+---+     +---+\n| a | ..> | b |\n+---+     +---+\n",
+        ),
+        (
+            "dotted",
+            false,
+            "+---+     +---+\n| a | ... | b |\n+---+     +---+\n",
+        ),
+        (
+            "wave",
+            true,
+            "+---+     +---+\n| a | ~~> | b |\n+---+     +---+\n",
+        ),
+        (
+            "wave",
+            false,
+            "+---+     +---+\n| a | ~~~ | b |\n+---+     +---+\n",
+        ),
+        (
+            "dashed",
+            true,
+            "+---+     +---+\n| a | - > | b |\n+---+     +---+\n",
+        ),
+        (
+            "dashed",
+            false,
+            "+---+     +---+\n| a |  -  | b |\n+---+     +---+\n",
+        ),
+        (
+            "bold",
+            true,
+            "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n",
+        ),
+        (
+            "bold",
+            false,
+            "+---+     +---+\n| a | ### | b |\n+---+     +---+\n",
+        ),
         // gently-51d: wide/broad alias the bold row — upstream As_ascii
         // $edge_styles rows 'wide'/'broad' are byte-identical to bold
         // ('##') and _correct_size does not widen their gap (only
         // dot-dot-dash). Directed runs render '##>', arrow-less runs
         // render '###' (pod-style-family.observed,
         // edge-style-wide-undirected.observed).
-        ("wide", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
-        ("broad", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
-        ("wide", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
-        ("broad", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
+        (
+            "wide",
+            true,
+            "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n",
+        ),
+        (
+            "broad",
+            true,
+            "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n",
+        ),
+        (
+            "wide",
+            false,
+            "+---+     +---+\n| a | ### | b |\n+---+     +---+\n",
+        ),
+        (
+            "broad",
+            false,
+            "+---+     +---+\n| a | ### | b |\n+---+     +---+\n",
+        ),
         // gently-oy2: the repeated-pattern family — arrowed runs keep the
         // dot-dot-dash styling, undirected runs shift by the gap's
         // absolute x, and dot-dot-dash widens the gap to 6 (upstream
         // _draw_hor + _correct_size; edge-style-short-runs.observed).
-        ("dot-dash", true, "+---+     +---+\n| a | .-> | b |\n+---+     +---+\n"),
-        ("dot-dot-dash", true, "+---+      +---+\n| a | ..-> | b |\n+---+      +---+\n"),
-        ("double-dash", true, "+---+     +---+\n| a | = > | b |\n+---+     +---+\n"),
-        ("dot-dash", false, "+---+     +---+\n| a | -.- | b |\n+---+     +---+\n"),
-        ("dot-dot-dash", false, "+---+      +---+\n| a | -..- | b |\n+---+      +---+\n"),
-        ("double-dash", false, "+---+     +---+\n| a |  =  | b |\n+---+     +---+\n"),
+        (
+            "dot-dash",
+            true,
+            "+---+     +---+\n| a | .-> | b |\n+---+     +---+\n",
+        ),
+        (
+            "dot-dot-dash",
+            true,
+            "+---+      +---+\n| a | ..-> | b |\n+---+      +---+\n",
+        ),
+        (
+            "double-dash",
+            true,
+            "+---+     +---+\n| a | = > | b |\n+---+     +---+\n",
+        ),
+        (
+            "dot-dash",
+            false,
+            "+---+     +---+\n| a | -.- | b |\n+---+     +---+\n",
+        ),
+        (
+            "dot-dot-dash",
+            false,
+            "+---+      +---+\n| a | -..- | b |\n+---+      +---+\n",
+        ),
+        (
+            "double-dash",
+            false,
+            "+---+     +---+\n| a |  =  | b |\n+---+     +---+\n",
+        ),
     ];
     for (style, arrowed, want) in cases {
         let g = styled_edge(style, arrowed);
@@ -172,7 +263,8 @@ fn p2_bidirectional_straight_run() {
 #[test]
 fn p2_bidirectional_parallel_bend_start_arrow() {
     let g = text::parse("[ A ] <--> [ B ]\n[ A ] <--> [ B ]\n").expect("parallel edges must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("parallel bidirectional edges must render");
+    let art =
+        ascii::render(&g, &layout::layout(&g)).expect("parallel bidirectional edges must render");
     assert_eq!(
         art,
         "\n  +----------+\n  v          v\n+---+      +---+\n| A | <--> | B |\n+---+      +---+\n"
@@ -186,8 +278,10 @@ fn p2_bidirectional_parallel_bend_start_arrow() {
 /// (centered in [2, w-3), upstream _insert_label).
 #[test]
 fn p2_bidirectional_labelled_straight() {
-    let g = text::parse("[ A ] <-- label --> [ B ]\n").expect("labeled bidirectional edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("labeled bidirectional edge must render");
+    let g =
+        text::parse("[ A ] <-- label --> [ B ]\n").expect("labeled bidirectional edge must parse");
+    let art =
+        ascii::render(&g, &layout::layout(&g)).expect("labeled bidirectional edge must render");
     assert_eq!(
         art,
         "+---+  label    +---+\n| A | <-------> | B |\n+---+           +---+\n"
@@ -325,7 +419,10 @@ fn p6() {
     let n = g.add_node("x");
     g.set_attr(Scope::Node(n), "color", "red");
     let art = ascii::render(&g, &layout::layout(&g)).expect("colored node must render");
-    assert_eq!(art, "+---+\n| x |\n+---+\n", "color must not change ascii bytes");
+    assert_eq!(
+        art, "+---+\n| x |\n+---+\n",
+        "color must not change ascii bytes"
+    );
 }
 
 /// ge.ascii_render p2 additions (gently-klf, gently-yhg): the POD triangle's
@@ -365,10 +462,12 @@ mod p2_edge_node;
 /// .observed (seed 0, Parser.pm POD anonymous-nodes example).
 #[test]
 fn p7() {
-    let g = text::parse("[ ] --> [ Bonn ]\n[ Bonn ] --> [ ]\n")
-        .expect("anon chain must parse");
+    let g = text::parse("[ ] --> [ Bonn ]\n[ Bonn ] --> [ ]\n").expect("anon chain must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("anon chain must render");
-    assert_eq!(art, "        +------+\n    --> | Bonn | -->\n        +------+\n");
+    assert_eq!(
+        art,
+        "        +------+\n    --> | Bonn | -->\n        +------+\n"
+    );
 }
 
 /// ge.ascii_render.p8 (c8, gently-7rx bonus): a node group renders the

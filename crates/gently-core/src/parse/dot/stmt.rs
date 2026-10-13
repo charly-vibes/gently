@@ -12,9 +12,9 @@
 //! id. Rationale: split from mod.rs so files stay under the ratchets'
 //! limits; the stack model re-derives the oracle's handler machine
 //! (gently-a0k, gently-2n5 — see scope.rs for the scope-boundary rules).
+use super::lex::Tok;
 use super::{attrs, err, AttrList, Ep, ParseError, P};
 use crate::graph::Scope;
-use super::lex::Tok;
 
 /// One statement's running state.
 #[derive(Default)]
@@ -116,7 +116,12 @@ impl P<'_> {
     /// node-with-attributes handler); a bare-scope node statement pushes
     /// onto the stack, linking the pending left side if one is set (kept —
     /// later pushes link it too, per the oracle's `-> { b c }` form).
-    fn node_step(&mut self, run: &mut StmtRun, ep: Ep, ep_attrs: Option<AttrList>) -> Result<(), ParseError> {
+    fn node_step(
+        &mut self,
+        run: &mut StmtRun,
+        ep: Ep,
+        ep_attrs: Option<AttrList>,
+    ) -> Result<(), ParseError> {
         let idx = self.resolve(&ep)?;
         if let Some(list) = &ep_attrs {
             self.apply_node_attrs(idx, list)?;

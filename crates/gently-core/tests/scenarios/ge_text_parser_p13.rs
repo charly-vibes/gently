@@ -39,7 +39,10 @@ fn trailing_block_lands_and_txt_keeps_the_name() {
 /// without a label attribute falls back to its name.
 #[test]
 fn ascii_displays_the_label_value() {
-    assert_eq!(render_ascii("[ Big ] { label: \"Huge\"; }\n"), "+------+\n| Huge |\n+------+\n");
+    assert_eq!(
+        render_ascii("[ Big ] { label: \"Huge\"; }\n"),
+        "+------+\n| Huge |\n+------+\n"
+    );
     assert_eq!(render_ascii("[ Big ]\n"), "+-----+\n| Big |\n+-----+\n");
 }
 
@@ -47,7 +50,8 @@ fn ascii_displays_the_label_value() {
 /// (bg-trailing-node-attr.observed bytes).
 #[test]
 fn pinned_quoting_input_bytes() {
-    let art = render_ascii("[ \"Monitor Size\" ] --> { label: 21\"; } [ Big ] { label: \"Huge\"; }\n");
+    let art =
+        render_ascii("[ \"Monitor Size\" ] --> { label: 21\"; } [ Big ] { label: \"Huge\"; }\n");
     assert_eq!(
         art,
         "+----------------+  21\"   +------+\n| \"Monitor Size\" | -----> | Huge |\n+----------------+        +------+\n"

@@ -15,10 +15,10 @@
 //! attachment columns, column widths) — unifying them risks byte drift in
 //! pinned output for no behavioral gain.
 
-use super::canvas::{BAND_HEIGHT, Canvas};
+use super::canvas::{Canvas, BAND_HEIGHT};
 use super::styles;
-use crate::render::ascii::RenderError;
 use crate::layout::{Cell, Layout};
+use crate::render::ascii::RenderError;
 
 /// Direction of travel along an edge polyline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -193,7 +193,14 @@ fn waypoints(
             None => entry,
         };
         if next_dir != dir {
-            push_corner(canvas, ctx, &mut wps, dir, next_dir, ctx.path.get(i + 1).copied())?;
+            push_corner(
+                canvas,
+                ctx,
+                &mut wps,
+                dir,
+                next_dir,
+                ctx.path.get(i + 1).copied(),
+            )?;
         }
         dir = next_dir;
     }
@@ -254,7 +261,11 @@ fn draw_runs(canvas: &mut Canvas, wps: &[Pt], a0: Pt, a_end: Pt, style: &str, ar
 /// Travel direction from `p` to `q` (axis-aligned waypoints).
 fn dir_of(p: Pt, q: Pt) -> Dir {
     if p.1 == q.1 {
-        if q.0 > p.0 { Dir::East } else { Dir::West }
+        if q.0 > p.0 {
+            Dir::East
+        } else {
+            Dir::West
+        }
     } else if q.1 > p.1 {
         Dir::South
     } else {
@@ -320,7 +331,11 @@ fn draw_run(canvas: &mut Canvas, p: Pt, q: Pt, a0: Pt, a_end: Pt, style: &str) {
 
 /// `(min, max)` of two usize coordinates.
 fn ordered(a: usize, b: usize) -> (usize, usize) {
-    if a <= b { (a, b) } else { (b, a) }
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
 }
 
 /// Direction between two orthogonally adjacent path cells.
@@ -338,6 +353,9 @@ fn dir_between(p: Cell, q: Cell, ei: usize) -> Result<Dir, RenderError> {
 
 fn unsupported_side(ctx: &Ctx, verb: &str) -> RenderError {
     RenderError {
-        message: format!("edge {} {verb} its box through an unsupported side", ctx.edge_index),
+        message: format!(
+            "edge {} {verb} its box through an unsupported side",
+            ctx.edge_index
+        ),
     }
 }

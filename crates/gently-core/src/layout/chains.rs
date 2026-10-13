@@ -349,20 +349,18 @@ impl<'a> Emitter<'a> {
     /// already-claimed neighbor (model order, self-loops excluded), else
     /// the chain's own first link when it has one.
     fn start_edge(&self, m: usize, allow_opener: bool, nodes: &[usize]) -> Option<usize> {
-        let linked = self.chains.at[m]
-            .iter()
-            .copied()
-            .find(|&ei| {
-                let e = &self.graph.edges[ei];
-                e.from != e.to && self.claimed[self.other_end(ei, m)]
-            });
+        let linked = self.chains.at[m].iter().copied().find(|&ei| {
+            let e = &self.graph.edges[ei];
+            e.from != e.to && self.claimed[self.other_end(ei, m)]
+        });
         if linked.is_some() {
             return linked;
         }
         if allow_opener {
-            return self.pair_edges.get(&pair(nodes[0], nodes[1])).and_then(
-                |v| v.iter().find(|&&ei| !self.emitted[ei]).copied(),
-            );
+            return self
+                .pair_edges
+                .get(&pair(nodes[0], nodes[1]))
+                .and_then(|v| v.iter().find(|&&ei| !self.emitted[ei]).copied());
         }
         None
     }

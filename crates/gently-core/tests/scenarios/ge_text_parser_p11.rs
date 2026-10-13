@@ -21,7 +21,11 @@ fn fan_out_reuses_the_remembered_left_side() {
     let g = text::parse("[ A ] -> [ B ], [ C ], [ D ]\n").expect("must parse");
     assert_eq!(g.nodes.len(), 4);
     let (a, b, c, d) = (node(&g, "A"), node(&g, "B"), node(&g, "C"), node(&g, "D"));
-    assert_eq!(edge_pairs(&g), vec![(a, b), (a, c), (a, d)], "fan-out from A");
+    assert_eq!(
+        edge_pairs(&g),
+        vec![(a, b), (a, c), (a, d)],
+        "fan-out from A"
+    );
 }
 
 /// `[ A ], [ B ], [ C ] --> [ D ]` links every list element to D (fan-in).
@@ -37,10 +41,21 @@ fn fan_in_links_every_list_element() {
 /// to the whole stack (upstream _new_node's stack pass / stack-top attrs).
 #[test]
 fn attribute_blocks_share_across_the_list() {
-    for src in ["[ A ], [ B ] { color: red; }\n", "[ A ], [ B ]\n{ color: red; }\n"] {
+    for src in [
+        "[ A ], [ B ] { color: red; }\n",
+        "[ A ], [ B ]\n{ color: red; }\n",
+    ] {
         let g = text::parse(src).expect("must parse");
-        assert_eq!(g.get_attr(Scope::Node(node(&g, "A")), "color"), Some("red"), "{src:?}: A shares");
-        assert_eq!(g.get_attr(Scope::Node(node(&g, "B")), "color"), Some("red"), "{src:?}: B shares");
+        assert_eq!(
+            g.get_attr(Scope::Node(node(&g, "A")), "color"),
+            Some("red"),
+            "{src:?}: A shares"
+        );
+        assert_eq!(
+            g.get_attr(Scope::Node(node(&g, "B")), "color"),
+            Some("red"),
+            "{src:?}: B shares"
+        );
     }
 }
 
@@ -50,10 +65,18 @@ fn attribute_blocks_share_across_the_list() {
 fn lists_continue_across_lines_until_reset() {
     let g = text::parse("[ A ] --> [ B ]\n, [ C ]\n").expect("must parse");
     let (a, b, c) = (node(&g, "A"), node(&g, "B"), node(&g, "C"));
-    assert_eq!(edge_pairs(&g), vec![(a, b), (a, c)], "the comma continues the fan across lines");
+    assert_eq!(
+        edge_pairs(&g),
+        vec![(a, b), (a, c)],
+        "the comma continues the fan across lines"
+    );
     let g = text::parse("[ A ] --> [ B ]\n[ C ], [ D ]\n").expect("must parse");
     let (a, b) = (node(&g, "A"), node(&g, "B"));
-    assert_eq!(edge_pairs(&g), vec![(a, b)], "[ C ] resets; C, D stay unlinked");
+    assert_eq!(
+        edge_pairs(&g),
+        vec![(a, b)],
+        "[ C ] resets; C, D stay unlinked"
+    );
     assert_eq!(g.nodes.len(), 4);
 }
 

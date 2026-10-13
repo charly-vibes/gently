@@ -11,11 +11,11 @@
 //! rules come from upstream `Edge::Cell::_correct_size` and the probe
 //! round (tests/repro/claims/boxart-render-tables.observed — gently-css).
 
-use super::styles;
-use crate::render::ascii::display_width;
 use super::canvas::GAP_WIDTH;
+use super::styles;
 use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::Layout;
+use crate::render::ascii::display_width;
 
 /// How a node shape renders (ge.boxart_render.c4 — the probed oracle
 /// collapses every non-special shape to the plain box; `rounded` overlays
@@ -67,7 +67,10 @@ pub(super) fn node_styles(graph: &Graph) -> Vec<(String, Shape)> {
             let style = object_attr(graph, scope.clone(), ObjectKind::Node, "border_style")
                 .unwrap_or("solid")
                 .to_string();
-            (style, shape(object_attr(graph, scope, ObjectKind::Node, "shape")))
+            (
+                style,
+                shape(object_attr(graph, scope, ObjectKind::Node, "shape")),
+            )
         })
         .collect()
 }
@@ -99,7 +102,11 @@ fn box_width(name: &str, style: &str, selfloop: bool) -> usize {
 
 /// The natural node-column width per the char-grid mapping: the widest
 /// box placed in the column.
-fn node_widths(graph: &Graph, layout: &Layout, node_style: &[(String, Shape)]) -> Vec<Option<usize>> {
+fn node_widths(
+    graph: &Graph,
+    layout: &Layout,
+    node_style: &[(String, Shape)],
+) -> Vec<Option<usize>> {
     let mut node_width = vec![0usize; layout.width];
     let mut node_col = vec![false; layout.width];
     for (idx, &(cx, _)) in layout.node_cells.iter().enumerate() {
@@ -110,7 +117,13 @@ fn node_widths(graph: &Graph, layout: &Layout, node_style: &[(String, Shape)]) -
         node_col[cx] = true;
     }
     (0..layout.width)
-        .map(|c| if node_col[c] { Some(node_width[c]) } else { None })
+        .map(|c| {
+            if node_col[c] {
+                Some(node_width[c])
+            } else {
+                None
+            }
+        })
         .collect()
 }
 
@@ -158,10 +171,7 @@ pub(super) fn column_geometry(
 ) -> (Vec<usize>, Vec<usize>) {
     let mut widths = node_widths(graph, layout, node_style);
     edge_cell_widths(graph, layout, &mut widths);
-    let col_width: Vec<usize> = widths
-        .into_iter()
-        .map(|w| w.unwrap_or(GAP_WIDTH))
-        .collect();
+    let col_width: Vec<usize> = widths.into_iter().map(|w| w.unwrap_or(GAP_WIDTH)).collect();
     let mut offsets = vec![0usize; layout.width + 1];
     for c in 0..layout.width {
         offsets[c + 1] = offsets[c] + col_width[c];

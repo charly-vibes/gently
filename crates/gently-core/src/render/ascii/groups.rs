@@ -120,7 +120,11 @@ pub(super) fn frame_margins(
 /// The canvas margins (left, top, right, bottom) the frames demand over
 /// the unshifted grid of `width` chars by `height` lines — never
 /// negative (the margins only grow the canvas).
-pub(super) fn margins(frames: &[Frame], width: usize, height: usize) -> (usize, usize, usize, usize) {
+pub(super) fn margins(
+    frames: &[Frame],
+    width: usize,
+    height: usize,
+) -> (usize, usize, usize, usize) {
     let mut ml = 0isize;
     let mut mt = 0isize;
     let mut mr = 0isize;

@@ -13,8 +13,7 @@ fn p5_node_label_newline_splits_interior_rows() {
     let g = text::parse("[ a\\nb ]\n").expect("the \\n label must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("the \\n label must render");
     assert_eq!(
-        art,
-        "+---+\n| a |\n| b |\n+---+\n",
+        art, "+---+\n| a |\n| b |\n+---+\n",
         "the \\n escape splits the node label over two interior rows"
     );
 }
@@ -28,8 +27,10 @@ fn p5_node_label_newline_splits_interior_rows() {
 /// bytes: tests/repro/claims/bg-multiline-align.observed.
 #[test]
 fn p5_alignment_escapes_align_label_rows() {
-    let g = text::parse("[ Long Node Label\\l left\\r right\\c center ] -- A\\r long\\n edge label --> [ B ]\n")
-        .expect("the aligned labels must parse");
+    let g = text::parse(
+        "[ Long Node Label\\l left\\r right\\c center ] -- A\\r long\\n edge label --> [ B ]\n",
+    )
+    .expect("the aligned labels must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("the aligned labels must render");
     assert_eq!(
         art,
@@ -56,8 +57,7 @@ fn p5_label_width_counts_utf8_bytes() {
     let g = text::parse("[ A ] --> [ Köln ]\n").expect("the umlaut label must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("the umlaut label must render");
     assert_eq!(
-        art,
-        "+---+     +-------+\n| A | --> | Köln |\n+---+     +-------+\n",
+        art, "+---+     +-------+\n| A | --> | Köln |\n+---+     +-------+\n",
         "Köln's box is 7 dashes wide (5 label bytes + 2 per side)"
     );
 }

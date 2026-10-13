@@ -98,7 +98,10 @@ fn dense_grid_graph(n: usize) -> Graph {
 fn assert_disjoint_cells(l: &Layout) {
     for i in 0..l.node_cells.len() {
         for j in i + 1..l.node_cells.len() {
-            assert_ne!(l.node_cells[i], l.node_cells[j], "nodes {i} and {j} overlap");
+            assert_ne!(
+                l.node_cells[i], l.node_cells[j],
+                "nodes {i} and {j} overlap"
+            );
         }
     }
 }
@@ -106,7 +109,10 @@ fn assert_disjoint_cells(l: &Layout) {
 /// Every cell in `cells` lies inside the `width x height` grid.
 fn assert_inside(cells: &[(usize, usize)], width: usize, height: usize) {
     for &(x, y) in cells {
-        assert!(x < width && y < height, "cell ({x},{y}) outside {width}x{height}");
+        assert!(
+            x < width && y < height,
+            "cell ({x},{y}) outside {width}x{height}"
+        );
     }
 }
 
@@ -115,10 +121,12 @@ fn assert_orthogonal(l: &Layout, ei: usize) {
     for w in l.edge_paths[ei].windows(2) {
         assert!(
             w[0].0 == w[1].0 || w[0].1 == w[1].1,
-            "segment {:?}->{:?} not orthogonal", w[0], w[1]
+            "segment {:?}->{:?} not orthogonal",
+            w[0],
+            w[1]
         );
-        let dist = (w[0].0 as isize - w[1].0 as isize).abs()
-            + (w[0].1 as isize - w[1].1 as isize).abs();
+        let dist =
+            (w[0].0 as isize - w[1].0 as isize).abs() + (w[0].1 as isize - w[1].1 as isize).abs();
         assert_eq!(dist, 1, "cells {:?}->{:?} not grid-adjacent", w[0], w[1]);
     }
 }
@@ -194,7 +202,11 @@ fn p1() {
     cyclic.add_edge(b, a, true).expect("live endpoints");
     cases.push(cyclic);
     for g in &cases {
-        assert_eq!(layout::layout(g), layout::layout(g), "layout must be deterministic");
+        assert_eq!(
+            layout::layout(g),
+            layout::layout(g),
+            "layout must be deterministic"
+        );
     }
 }
 
@@ -244,8 +256,14 @@ fn p3() {
     assert!(l.node_cells[1].1 > l.node_cells[2].1, "up: b south of c");
     // fan-out honours the flow axis too (down: both targets strictly below).
     let l = layout::layout(&fanout_with_flow("down"));
-    assert!(l.node_cells[0].1 < l.node_cells[1].1, "down fan-out: b below a");
-    assert!(l.node_cells[0].1 < l.node_cells[2].1, "down fan-out: c below a");
+    assert!(
+        l.node_cells[0].1 < l.node_cells[1].1,
+        "down fan-out: b below a"
+    );
+    assert!(
+        l.node_cells[0].1 < l.node_cells[2].1,
+        "down fan-out: c below a"
+    );
     // self-loops are exempt: the looped node has no earlier/later constraint.
     let l = layout::layout(&selfloop_graph());
     assert_eq!(l.node_cells.len(), 1, "selfloop node placed once");
@@ -314,7 +332,10 @@ fn p5() {
         assert_published_contract(g, &l);
         // the renderer-style consumer read
         let art = gently_core::render::ascii::render(g, &l).expect("consumer must render");
-        assert!(!art.is_empty() || g.nodes.is_empty(), "consumer produced bytes");
+        assert!(
+            !art.is_empty() || g.nodes.is_empty(),
+            "consumer produced bytes"
+        );
     }
 }
 
@@ -338,5 +359,9 @@ fn p6() {
         elapsed.as_secs() < 5,
         "layout of a 120-node dense graph took {elapsed:?} — unbounded"
     );
-    assert_eq!(layout::layout(&g), first, "bounded stages stay deterministic");
+    assert_eq!(
+        layout::layout(&g),
+        first,
+        "bounded stages stay deterministic"
+    );
 }

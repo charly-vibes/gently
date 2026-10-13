@@ -13,7 +13,9 @@ use proptest::prelude::*;
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 /// Generated strategies — one per generator named in the spec rows.
@@ -25,7 +27,6 @@ pub mod spec_gen {
     pub fn only() -> impl Strategy<Value = String> {
         Just("only".into())
     }
-
 }
 
 proptest! {
@@ -43,7 +44,7 @@ proptest! {
 // predicate: the produced grid contains no node cell overlap
 #[test]
 fn p2() {
-        todo_predicate!("the produced grid contains no node cell overlap");
+    todo_predicate!("the produced grid contains no node cell overlap");
 }
 
 // id: p3
@@ -51,7 +52,7 @@ fn p2() {
 // predicate: every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted
 #[test]
 fn p3() {
-        todo_predicate!("every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted");
+    todo_predicate!("every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted");
 }
 
 // id: p4
@@ -59,7 +60,7 @@ fn p3() {
 // predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path
 #[test]
 fn p4() {
-        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path");
+    todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path");
 }
 
 // id: p5
@@ -67,7 +68,9 @@ fn p4() {
 // predicate: every consumer read matches the layout's own inspection of grid, extents, and paths
 #[test]
 fn p5() {
-        todo_predicate!("every consumer read matches the layout's own inspection of grid, extents, and paths");
+    todo_predicate!(
+        "every consumer read matches the layout's own inspection of grid, extents, and paths"
+    );
 }
 
 // id: p6
@@ -75,6 +78,5 @@ fn p5() {
 // predicate: each stage's running time stays within its polynomial bound
 #[test]
 fn p6() {
-        todo_predicate!("each stage's running time stays within its polynomial bound");
+    todo_predicate!("each stage's running time stays within its polynomial bound");
 }
-

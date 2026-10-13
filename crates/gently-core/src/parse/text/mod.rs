@@ -95,7 +95,10 @@ impl Parser {
     }
 
     fn err(&self, line: usize, message: impl Into<String>) -> ParseError {
-        ParseError { line, message: message.into() }
+        ParseError {
+            line,
+            message: message.into(),
+        }
     }
 
     fn line(&self) -> usize {
@@ -213,7 +216,13 @@ impl Parser {
     /// Link one stack item to a node (c3/c11): node-to-node creates the
     /// edge per `op`; a group endpoint records no edge (bounded divergence:
     /// even the pinned oracle's own layouter drops group-endpoint edges).
-    fn link(&mut self, from: StackItem, to: StackItem, op: &edge::EdgeOp, attrs: &[(String, String)]) {
+    fn link(
+        &mut self,
+        from: StackItem,
+        to: StackItem,
+        op: &edge::EdgeOp,
+        attrs: &[(String, String)],
+    ) {
         let (f, t) = match (from, to) {
             (StackItem::Node(f), StackItem::Node(t)) => (f, t),
             _ => return,
@@ -227,7 +236,10 @@ impl Parser {
     /// Add the edge for `op`: direction/arrows/style/label per c2/c4 (solid
     /// carries no style attribute — the class default).
     fn new_edge(&mut self, left: usize, right: usize, op: &edge::EdgeOp) -> usize {
-        let eidx = self.graph.add_edge(left, right, op.directed).expect("live endpoints");
+        let eidx = self
+            .graph
+            .add_edge(left, right, op.directed)
+            .expect("live endpoints");
         if op.bidirectional {
             self.graph.edges[eidx].arrows.start = true;
         }

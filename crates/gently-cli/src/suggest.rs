@@ -49,7 +49,10 @@ pub fn extract_subcommand(argv: &mut Vec<String>) -> Option<String> {
         if arg.contains('/') || arg.contains('.') {
             return None;
         }
-        let found = SUBCOMMANDS.iter().find(|s| **s == arg).map(|s| s.to_string());
+        let found = SUBCOMMANDS
+            .iter()
+            .find(|s| **s == arg)
+            .map(|s| s.to_string());
         if found.is_some() {
             argv.remove(i);
         }
@@ -64,9 +67,7 @@ pub fn extract_subcommand(argv: &mut Vec<String>) -> Option<String> {
 /// caller exits 2. Returns the exit code when a suggestion was emitted.
 pub fn precheck_known_names(argv: &[String]) -> Option<i32> {
     let engine = SuggestionEngine::new();
-    let is_known = |name: &str| {
-        KNOWN_FLAG_NAMES.contains(&name) || KNOWN_SHORTS.contains(&name)
-    };
+    let is_known = |name: &str| KNOWN_FLAG_NAMES.contains(&name) || KNOWN_SHORTS.contains(&name);
 
     // Flags: every `--name[=value]` or `-x` token must be known; unknown
     // ones get a DidYouMean when a close name exists, a Fix otherwise.
@@ -162,13 +163,19 @@ fn is_flag(arg: &str) -> bool {
 
 fn subcommand_registry() -> CommandRegistry {
     let mut registry = CommandRegistry::new();
-    registry.register("gently", SUBCOMMANDS.iter().map(|s| s.to_string()).collect());
+    registry.register(
+        "gently",
+        SUBCOMMANDS.iter().map(|s| s.to_string()).collect(),
+    );
     registry
 }
 
 fn flag_names_registry() -> CommandRegistry {
     let mut registry = subcommand_registry();
-    registry.register("gently", KNOWN_FLAG_NAMES.iter().map(|s| s.to_string()).collect());
+    registry.register(
+        "gently",
+        KNOWN_FLAG_NAMES.iter().map(|s| s.to_string()).collect(),
+    );
     registry
 }
 

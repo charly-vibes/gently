@@ -50,13 +50,18 @@ fn p1() {
     let mut g = Graph::default();
     g.add_node("a");
     g.set_attr(Scope::Graph, "title", "T");
-    g.set_attr(Scope::Class(ObjectKind::Node, String::new()), "color", "blue");
+    g.set_attr(
+        Scope::Class(ObjectKind::Node, String::new()),
+        "color",
+        "blue",
+    );
     g.set_attr(Scope::Class(ObjectKind::Edge, String::new()), "label", "E");
     g.set_attr(Scope::Class(ObjectKind::Group, String::new()), "label", "G");
     let out = txt::render(&g);
     // sections first: sorted classes (edge < graph < group < node), each
     // with its attributes sorted by key (oracle: Graph::Easy 0.69 as_txt)
-    let head = "edge { label: E; }\ngraph { title: T; }\ngroup { label: G; }\nnode { color: blue; }\n";
+    let head =
+        "edge { label: E; }\ngraph { title: T; }\ngroup { label: G; }\nnode { color: blue; }\n";
     assert!(
         out.starts_with(head),
         "class sections must come first, sorted: {out:?}"
@@ -72,7 +77,11 @@ fn p1() {
 fn multi_attribute_class_section_is_multi_line_and_sorted() {
     let mut g = Graph::default();
     g.set_attr(Scope::Class(ObjectKind::Node, String::new()), "label", "N");
-    g.set_attr(Scope::Class(ObjectKind::Node, String::new()), "color", "blue");
+    g.set_attr(
+        Scope::Class(ObjectKind::Node, String::new()),
+        "color",
+        "blue",
+    );
     let out = txt::render(&g);
     assert!(
         out.starts_with("node {\n  color: blue;\n  label: N;\n}\n\n"),
@@ -115,16 +124,15 @@ fn model_equivalent(a: &Graph, b: &Graph) -> bool {
         v.sort();
         v
     };
-    let node_attrs =
-        |g: &Graph| -> Vec<(String, gently_core::graph::AttributeTable)> {
-            let mut v: Vec<_> = g
-                .nodes
-                .iter()
-                .map(|n| (n.name.clone(), n.attributes.clone()))
-                .collect();
-            v.sort_by(|x, y| x.0.cmp(&y.0));
-            v
-        };
+    let node_attrs = |g: &Graph| -> Vec<(String, gently_core::graph::AttributeTable)> {
+        let mut v: Vec<_> = g
+            .nodes
+            .iter()
+            .map(|n| (n.name.clone(), n.attributes.clone()))
+            .collect();
+        v.sort_by(|x, y| x.0.cmp(&y.0));
+        v
+    };
     let edge_keys = |g: &Graph| -> Vec<(String, String, bool, bool, bool)> {
         let mut v: Vec<_> = g
             .edges
@@ -142,25 +150,24 @@ fn model_equivalent(a: &Graph, b: &Graph) -> bool {
         v.sort();
         v
     };
-    let group_keys =
-        |g: &Graph| -> Vec<(String, Vec<String>, gently_core::graph::AttributeTable)> {
-            let mut v: Vec<_> = g
-                .groups
-                .iter()
-                .map(|grp| {
-                    (
-                        grp.name.clone(),
-                        grp.members
-                            .iter()
-                            .map(|&m| g.nodes[m].name.clone())
-                            .collect(),
-                        grp.attributes.clone(),
-                    )
-                })
-                .collect();
-            v.sort_by(|x, y| x.0.cmp(&y.0));
-            v
-        };
+    let group_keys = |g: &Graph| -> Vec<(String, Vec<String>, gently_core::graph::AttributeTable)> {
+        let mut v: Vec<_> = g
+            .groups
+            .iter()
+            .map(|grp| {
+                (
+                    grp.name.clone(),
+                    grp.members
+                        .iter()
+                        .map(|&m| g.nodes[m].name.clone())
+                        .collect(),
+                    grp.attributes.clone(),
+                )
+            })
+            .collect();
+        v.sort_by(|x, y| x.0.cmp(&y.0));
+        v
+    };
     node_names(a) == node_names(b)
         && node_attrs(a) == node_attrs(b)
         && edge_keys(a) == edge_keys(b)
@@ -263,8 +270,8 @@ fn diamond_shape() -> Graph {
 fn p3() {
     for g in &round_trip_sources() {
         let txt = txt::render(g);
-        let reparsed = text::parse(&txt)
-            .unwrap_or_else(|e| panic!("emitted txt must re-parse: {e}\n{txt}"));
+        let reparsed =
+            text::parse(&txt).unwrap_or_else(|e| panic!("emitted txt must re-parse: {e}\n{txt}"));
         assert!(
             model_equivalent(g, &reparsed),
             "round-trip lost the model\nsource: {g:?}\ntxt: {txt:?}\nre-parsed: {reparsed:?}"
@@ -282,8 +289,8 @@ fn labels_do_not_survive_the_supported_subset() {
     g.set_attr(Scope::Edge(e), "label", "go");
     let txt = txt::render(&g);
     assert_eq!(txt, "[ a ] -- go --> [ b ]\n");
-    let reparsed = text::parse(&txt)
-        .unwrap_or_else(|err| panic!("labeled edges must re-parse: {err}\n{txt}"));
+    let reparsed =
+        text::parse(&txt).unwrap_or_else(|err| panic!("labeled edges must re-parse: {err}\n{txt}"));
     assert!(model_equivalent(&g, &reparsed), "the model must round-trip");
     assert_eq!(
         reparsed.get_attr(Scope::Edge(0), "label"),
@@ -327,7 +334,12 @@ fn p4() {
 
     let mut names: Vec<String> = std::fs::read_dir(fixture_dir())
         .expect("fixture dir")
-        .map(|e| e.expect("dir entry").file_name().to_string_lossy().into_owned())
+        .map(|e| {
+            e.expect("dir entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
         .filter(|n| n.ends_with(".txt"))
         .collect();
     names.sort();

@@ -11,7 +11,9 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 // id: p1
@@ -19,7 +21,7 @@ macro_rules! todo_predicate {
 // predicate: stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored
 #[test]
 fn p1() {
-        todo_predicate!("stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored");
+    todo_predicate!("stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored");
 }
 
 // id: p2
@@ -27,7 +29,7 @@ fn p1() {
 // predicate: each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent
 #[test]
 fn p2() {
-        todo_predicate!("each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent");
+    todo_predicate!("each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent");
 }
 
 // id: p3
@@ -35,7 +37,7 @@ fn p2() {
 // predicate: streams and exit codes match the constraint exactly
 #[test]
 fn p3() {
-        todo_predicate!("streams and exit codes match the constraint exactly");
+    todo_predicate!("streams and exit codes match the constraint exactly");
 }
 
 // id: p4
@@ -43,7 +45,9 @@ fn p3() {
 // predicate: the diagnostic names both the requested and the valid formats and exit code is 255
 #[test]
 fn p4() {
-        todo_predicate!("the diagnostic names both the requested and the valid formats and exit code is 255");
+    todo_predicate!(
+        "the diagnostic names both the requested and the valid formats and exit code is 255"
+    );
 }
 
 // id: p5
@@ -51,7 +55,7 @@ fn p4() {
 // predicate: dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry
 #[test]
 fn p5() {
-        todo_predicate!("dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry");
+    todo_predicate!("dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry");
 }
 
 // id: p6
@@ -59,7 +63,7 @@ fn p5() {
 // predicate: json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output
 #[test]
 fn p6() {
-        todo_predicate!("json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output");
+    todo_predicate!("json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output");
 }
 
 // id: p7
@@ -67,7 +71,9 @@ fn p6() {
 // predicate: every misspelling yields a DidYouMean/Fix suggestion naming the closest known name
 #[test]
 fn p7() {
-        todo_predicate!("every misspelling yields a DidYouMean/Fix suggestion naming the closest known name");
+    todo_predicate!(
+        "every misspelling yields a DidYouMean/Fix suggestion naming the closest known name"
+    );
 }
 
 // id: p8
@@ -75,6 +81,5 @@ fn p7() {
 // predicate: the DoctorReport names each check's status and applies available auto-fixes
 #[test]
 fn p8() {
-        todo_predicate!("the DoctorReport names each check's status and applies available auto-fixes");
+    todo_predicate!("the DoctorReport names each check's status and applies available auto-fixes");
 }
-

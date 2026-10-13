@@ -13,10 +13,9 @@ use super::{ascii, layout, text};
 /// 4 seeds per tests/repro/admission.tsv).
 #[test]
 fn p2_back_edge_attachments_sit_left_plus_two() {
-    let g = text::parse(
-        "[ Bonn ] -> [ Berlin ]\n[ Berlin ] -> [ Hamburg ]\n[ Bonn ] -> [ Hamburg ]\n",
-    )
-    .expect("triangle must parse");
+    let g =
+        text::parse("[ Bonn ] -> [ Berlin ]\n[ Berlin ] -> [ Hamburg ]\n[ Bonn ] -> [ Hamburg ]\n")
+            .expect("triangle must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("triangle must render");
     assert_eq!(
         art,
@@ -43,8 +42,8 @@ fn p2_back_edge_attachments_sit_left_plus_two() {
 /// bypass ranking divergence, not minlen.
 #[test]
 fn p2_minlen_stretches_the_straight_gap_one_column() {
-    let g = text::parse("[ Bonn ] --> { minlen: 3; } [ Berlin ]\n")
-        .expect("minlen edge must parse");
+    let g =
+        text::parse("[ Bonn ] --> { minlen: 3; } [ Berlin ]\n").expect("minlen edge must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("minlen edge must render");
     assert_eq!(
         art,

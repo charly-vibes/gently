@@ -54,12 +54,16 @@ clippy:
     cargo clippy --workspace --all-targets -- -D warnings
 
 # Format all Rust files
+# (rustfmt directly over tracked files with skip_children: cargo fmt's
+# mod-walker mis-resolves tests/scenarios.rs's #[path = "corpus.rs"] and
+# aborts the whole run — rustc resolves it fine. skip_children formats
+# each tracked file independently; same formatting, no rustfmt.toml.)
 fmt:
-    cargo fmt
+    rustfmt --edition 2021 --config skip_children=true -- $(git ls-files '*.rs')
 
 # Check formatting (no changes)
 fmt-check:
-    cargo fmt --all -- --check
+    rustfmt --edition 2021 --check --config skip_children=true -- $(git ls-files '*.rs')
 
 # Show dependency tree
 deps:

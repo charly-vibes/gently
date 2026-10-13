@@ -23,7 +23,6 @@ mod scenarios {
         use crate::common::{run_gently, run_gently_in, TempDir, ORACLE};
         use std::process::{Command, Stdio};
 
-
         /// cli.p1 (c1): stdin and the first file argument reach the parser
         /// with the same bytes; the second positional names the output file;
         /// further positionals are ignored.
@@ -46,8 +45,15 @@ mod scenarios {
             std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture file");
             let r = run_gently(&[input.to_str().unwrap()], b"");
             assert_eq!(Some(0), r.code, "exit 0 on success via file argument");
-            assert_eq!(ORACLE, &r.stdout[..], "file input must render the same bytes");
-            assert!(r.stderr.is_empty(), "stderr must be empty via file argument");
+            assert_eq!(
+                ORACLE,
+                &r.stdout[..],
+                "file input must render the same bytes"
+            );
+            assert!(
+                r.stderr.is_empty(),
+                "stderr must be empty via file argument"
+            );
 
             // second positional names the output file; extra positionals
             // are silently ignored (bug-for-bug with upstream).
@@ -55,12 +61,19 @@ mod scenarios {
             let extra = dir.join("extra.txt");
             std::fs::write(&extra, b"garbage that must be ignored\n").expect("write extra");
             let r = run_gently(
-                &[input.to_str().unwrap(), out.to_str().unwrap(), extra.to_str().unwrap()],
+                &[
+                    input.to_str().unwrap(),
+                    out.to_str().unwrap(),
+                    extra.to_str().unwrap(),
+                ],
                 b"",
             );
             assert_eq!(Some(0), r.code, "extra positionals are ignored, not parsed");
             assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
-            assert_eq!(ORACLE, std::fs::read(&out).expect("read output file").as_slice());
+            assert_eq!(
+                ORACLE,
+                std::fs::read(&out).expect("read output file").as_slice()
+            );
             let _ = std::fs::remove_dir_all(&dir);
         }
 
@@ -85,15 +98,20 @@ mod scenarios {
             std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture");
             let r = run_gently(
                 &[
-                    "--as", "ascii",
-                    "--output", out.to_str().unwrap(),
+                    "--as",
+                    "ascii",
+                    "--output",
+                    out.to_str().unwrap(),
                     input.to_str().unwrap(),
                 ],
                 b"",
             );
             assert_eq!(Some(0), r.code, "file output must exit 0");
             assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
-            assert_eq!(ORACLE, std::fs::read(&out).expect("read output file").as_slice());
+            assert_eq!(
+                ORACLE,
+                std::fs::read(&out).expect("read output file").as_slice()
+            );
             let _ = std::fs::remove_dir_all(&dir);
         }
 
@@ -128,24 +146,45 @@ mod scenarios {
             // init: registers the tool entry in the tempdir's manifest.
             let dir = TempDir::new("p5-init");
             let r = run_gently_in(&dir.0, &["init"], b"");
-            assert_eq!(Some(0), r.code, "init must exit 0: {}", String::from_utf8_lossy(&r.stderr));
+            assert_eq!(
+                Some(0),
+                r.code,
+                "init must exit 0: {}",
+                String::from_utf8_lossy(&r.stderr)
+            );
             let manifest = dir.0.join(".genesis/tools.toml");
             let body = std::fs::read_to_string(&manifest)
                 .expect("init must write .genesis/tools.toml in the working directory");
-            assert!(body.contains("[tools.gently]"), "manifest must name gently: {body}");
+            assert!(
+                body.contains("[tools.gently]"),
+                "manifest must name gently: {body}"
+            );
             assert!(r.stderr.is_empty(), "init keeps stderr clean on success");
 
             // -v: verbose diagnostics appear on stderr; stdout unchanged.
             let r = run_gently(&["-v"], b"[ a ] --> [ b ]\n");
             assert_eq!(Some(0), r.code, "-v must not fail");
-            assert_eq!(ORACLE, &r.stdout[..], "-v keeps the rendered bytes on stdout");
-            assert!(!r.stderr.is_empty(), "-v must add a verbose diagnostic on stderr");
+            assert_eq!(
+                ORACLE,
+                &r.stdout[..],
+                "-v keeps the rendered bytes on stdout"
+            );
+            assert!(
+                !r.stderr.is_empty(),
+                "-v must add a verbose diagnostic on stderr"
+            );
 
             // --quiet: non-error output is suppressed; exit stays 0.
             let r = run_gently(&["--quiet"], b"[ a ] --> [ b ]\n");
             assert_eq!(Some(0), r.code, "--quiet must not fail");
-            assert!(r.stdout.is_empty(), "--quiet suppresses the rendered payload");
-            assert!(r.stderr.is_empty(), "--quiet suppresses verbose diagnostics");
+            assert!(
+                r.stdout.is_empty(),
+                "--quiet suppresses the rendered payload"
+            );
+            assert!(
+                r.stderr.is_empty(),
+                "--quiet suppresses verbose diagnostics"
+            );
         }
 
         /// cli.p6 (c6): `--json` wraps results in the genesis Envelope
@@ -158,19 +197,42 @@ mod scenarios {
             let r = run_gently(&["--json"], b"[ a ] --> [ b ]\n");
             assert_eq!(Some(0), r.code, "--json success exits 0");
             let out = String::from_utf8_lossy(&r.stdout);
-            for field in ["\"ok\":true", "\"envelope_version\":", "\"envelope_kind\":\"ok\"", "\"warnings\":", "\"hints\":", "\"meta\":"] {
+            for field in [
+                "\"ok\":true",
+                "\"envelope_version\":",
+                "\"envelope_kind\":\"ok\"",
+                "\"warnings\":",
+                "\"hints\":",
+                "\"meta\":",
+            ] {
                 assert!(out.contains(field), "envelope must carry {field}: {out}");
             }
-            assert!(out.contains("| a | --> | b |"), "envelope data must carry the rendered bytes: {out}");
-            assert!(r.stderr.is_empty(), "json success keeps stderr clean: {}", String::from_utf8_lossy(&r.stderr));
+            assert!(
+                out.contains("| a | --> | b |"),
+                "envelope data must carry the rendered bytes: {out}"
+            );
+            assert!(
+                r.stderr.is_empty(),
+                "json success keeps stderr clean: {}",
+                String::from_utf8_lossy(&r.stderr)
+            );
 
             // failure envelope: typed error kind, ok:false, nonzero exit.
             let r = run_gently(&["--json"], b"this is not graph text\n");
             assert_eq!(Some(1), r.code, "--json failure exits 1");
             let out = String::from_utf8_lossy(&r.stdout);
-            assert!(out.contains("\"ok\":false"), "failure envelope ok:false: {out}");
-            assert!(out.contains("\"envelope_kind\":\"error\""), "failure envelope kind error: {out}");
-            assert!(out.contains("parse error"), "failure envelope names the failure: {out}");
+            assert!(
+                out.contains("\"ok\":false"),
+                "failure envelope ok:false: {out}"
+            );
+            assert!(
+                out.contains("\"envelope_kind\":\"error\""),
+                "failure envelope kind error: {out}"
+            );
+            assert!(
+                out.contains("parse error"),
+                "failure envelope names the failure: {out}"
+            );
 
             // human mode: raw oracle bytes, not a wrapped envelope.
             let r = run_gently(&["--human"], b"[ a ] --> [ b ]\n");
@@ -185,24 +247,45 @@ mod scenarios {
             // subcommand near-miss: DidYouMean names the closest known command.
             let dir = TempDir::new("p7-sub");
             let r = run_gently_in(&dir.0, &["initt"], b"");
-            assert!(!r.code.is_some_and(|c| c == 0), "unknown subcommand must exit nonzero");
+            assert!(
+                !r.code.is_some_and(|c| c == 0),
+                "unknown subcommand must exit nonzero"
+            );
             let err = String::from_utf8_lossy(&r.stderr);
             assert!(err.contains("Did you mean"), "suggestion expected: {err}");
-            assert!(err.contains("init"), "suggestion must name the closest known command: {err}");
+            assert!(
+                err.contains("init"),
+                "suggestion must name the closest known command: {err}"
+            );
 
             // flag near-miss: DidYouMean names the closest known flag.
             let r = run_gently(&["--outpt"], b"");
-            assert!(!r.code.is_some_and(|c| c == 0), "unknown flag must exit nonzero");
+            assert!(
+                !r.code.is_some_and(|c| c == 0),
+                "unknown flag must exit nonzero"
+            );
             let err = String::from_utf8_lossy(&r.stderr);
-            assert!(err.contains("Did you mean"), "flag suggestion expected: {err}");
-            assert!(err.contains("output"), "flag suggestion must name the closest known flag: {err}");
+            assert!(
+                err.contains("Did you mean"),
+                "flag suggestion expected: {err}"
+            );
+            assert!(
+                err.contains("output"),
+                "flag suggestion must name the closest known flag: {err}"
+            );
 
             // far miss: a Fix suggestion still precedes the nonzero exit.
             let r = run_gently(&["--zzzz"], b"");
-            assert!(!r.code.is_some_and(|c| c == 0), "unknown flag must exit nonzero");
+            assert!(
+                !r.code.is_some_and(|c| c == 0),
+                "unknown flag must exit nonzero"
+            );
             let err = String::from_utf8_lossy(&r.stderr);
             assert!(!err.is_empty(), "a Fix suggestion must be printed: {err}");
-            assert!(err.contains("--zzzz"), "Fix must name the unknown flag: {err}");
+            assert!(
+                err.contains("--zzzz"),
+                "Fix must name the unknown flag: {err}"
+            );
         }
 
         /// cli.p8 (c8): `gently doctor` runs suite health checks through
@@ -226,16 +309,31 @@ mod scenarios {
             assert_eq!(Some(1), out.status.code(), "unhealthy doctor exits 1");
             let report = String::from_utf8_lossy(&out.stdout);
             for check in ["oracle", "format", "pin", "genesis"] {
-                assert!(report.contains(check), "report must name the {check} check: {report}");
+                assert!(
+                    report.contains(check),
+                    "report must name the {check} check: {report}"
+                );
             }
-            assert!(report.contains("fail"), "oracle check must be named failing: {report}");
-            assert!(!dir.0.join(".genesis/tools.toml").exists(), "no auto-fix without --fix");
+            assert!(
+                report.contains("fail"),
+                "oracle check must be named failing: {report}"
+            );
+            assert!(
+                !dir.0.join(".genesis/tools.toml").exists(),
+                "no auto-fix without --fix"
+            );
 
             // --fix: the available auto-fix (genesis registration) applies.
             let r = run_gently_in(&dir.0, &["doctor", "--fix"], b"");
             let report = String::from_utf8_lossy(&r.stdout);
-            assert!(dir.0.join(".genesis/tools.toml").exists(), "--fix must register the genesis entry: {report}");
-            assert!(report.contains("pass"), "fixed registration must pass: {report}");
+            assert!(
+                dir.0.join(".genesis/tools.toml").exists(),
+                "--fix must register the genesis entry: {report}"
+            );
+            assert!(
+                report.contains("pass"),
+                "fixed registration must pass: {report}"
+            );
         }
     }
 }

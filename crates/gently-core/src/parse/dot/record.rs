@@ -30,7 +30,10 @@ pub(super) fn html_parts(inner: &str) -> Result<Vec<String>, ()> {
             open_td = td_tag(&chars, i);
             continue;
         }
-        let end = chars[i..].iter().position(|&c| c == '<').unwrap_or(chars.len());
+        let end = chars[i..]
+            .iter()
+            .position(|&c| c == '<')
+            .unwrap_or(chars.len());
         let text: String = chars[i..i + end].iter().collect();
         i += end;
         open_td = push_text(&mut parts, &text, open_td)?;
@@ -76,7 +79,8 @@ mod tests {
 
     #[test]
     fn html_parts_of_table() {
-        let parts = html_parts("<TABLE><TR><TD>one</TD><TD>two</TD></TR></TABLE>").expect("well-formed");
+        let parts =
+            html_parts("<TABLE><TR><TD>one</TD><TD>two</TD></TR></TABLE>").expect("well-formed");
         assert_eq!(parts, vec!["one", "two"]);
     }
 

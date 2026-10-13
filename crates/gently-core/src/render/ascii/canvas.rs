@@ -81,14 +81,25 @@ fn centered_point_row(inner: usize) -> String {
 /// The style's border with all four corners blanked (the `rounded`
 /// shape's ASCII rendering: ` --- ` top and bottom rows).
 fn blank_corners(b: styles::Border) -> styles::Border {
-    styles::Border { tl: ' ', tr: ' ', br: ' ', bl: ' ', ..b }
+    styles::Border {
+        tl: ' ',
+        tr: ' ',
+        br: ' ',
+        bl: ' ',
+        ..b
+    }
 }
 
 /// `text` centered in a span of `width` byte cells.
 pub(super) fn centered(text: &str, width: usize) -> String {
     let len = super::styles::byte_width(text);
     let left = (width - len) / 2;
-    format!("{}{}{}", " ".repeat(left), text, " ".repeat(width - len - left))
+    format!(
+        "{}{}{}",
+        " ".repeat(left),
+        text,
+        " ".repeat(width - len - left)
+    )
 }
 
 /// The last band's box-bottom line: trailing blank lines beyond it never
@@ -151,8 +162,7 @@ fn frame_grid(
         groups::frame_margins(graph, layout, col_width, offsets, band_tops, row_height);
     let (ml, mt, mr, mb) = margins;
     let total_lines = band_tops[layout.height];
-    let (grid, offsets) =
-        shifted_grid(offsets.to_vec(), layout.width, ml, mr, mt, mb, total_lines);
+    let (grid, offsets) = shifted_grid(offsets.to_vec(), layout.width, ml, mr, mt, mb, total_lines);
     let draws: Vec<bool> = (0..graph.nodes.len())
         .map(|i| !is_anon(&graph.nodes[i].name))
         .collect();
@@ -165,7 +175,11 @@ fn frame_grid(
 fn edge_arrow_flags(graph: &Graph) -> (Vec<bool>, Vec<bool>, Vec<bool>) {
     let end = graph.edges.iter().map(|e| e.arrows.end).collect();
     let start = graph.edges.iter().map(|e| e.arrows.start).collect();
-    let bidir = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
+    let bidir = graph
+        .edges
+        .iter()
+        .map(|e| e.arrows.start && e.arrows.end)
+        .collect();
     (end, start, bidir)
 }
 
@@ -182,8 +196,14 @@ impl Canvas {
         // label lines resolve FIRST (gently-emd: the wrapped lines drive
         // the box widths), then the column geometry consumes them
         let (node_lines, edge_lines) = label_lines(graph, layout);
-        let col_width =
-            column_geometry(graph, layout, &node_style, &selfloop_node, &edge_style, &node_lines);
+        let col_width = column_geometry(
+            graph,
+            layout,
+            &node_style,
+            &selfloop_node,
+            &edge_style,
+            &node_lines,
+        );
         let offsets = column_offsets(&col_width);
         // Row band heights + their unshifted start lines: every cell is
         // grown to the tallest cell of its row (upstream
@@ -241,7 +261,14 @@ impl Canvas {
     /// `none` borders widen the field to `w-2` at `x0 = 1`); widths
     /// count UTF-8 bytes (gently-bvb). `none` is a `border: none` box:
     /// its field widens to `w-2` at `x0 = 1` (upstream `_draw_label`).
-    fn draw_box(&mut self, cy: usize, cx: usize, lines: &[LabelLine], b: styles::Border, none: bool) {
+    fn draw_box(
+        &mut self,
+        cy: usize,
+        cx: usize,
+        lines: &[LabelLine],
+        b: styles::Border,
+        none: bool,
+    ) {
         let w = self.col_width[cx];
         let inner = w - 2;
         let run = h_run(&b, inner);

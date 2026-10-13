@@ -87,7 +87,10 @@ fn assert_dips_below(l: &Layout, ei: usize, src: usize, dst: usize) {
 fn p1_start_right_dips_below() {
     let g = start_port_graph("right");
     let l = layout::layout(&g);
-    assert_eq!(l.node_cells[0].1, l.node_cells[1].1, "nodes stay on one band");
+    assert_eq!(
+        l.node_cells[0].1, l.node_cells[1].1,
+        "nodes stay on one band"
+    );
     assert_eq!(l.node_cells[1].0 - l.node_cells[0].0, 2, "one rank apart");
     assert_dips_below(&l, 0, 0, 1);
 }
@@ -114,7 +117,11 @@ fn p3_start_left_bends_above() {
     assert!(row < su.1, "edge must bend above the source band");
     assert!(path.iter().all(|&c| c.1 == row), "one row above the band");
     assert_eq!(path[0].0, su.0, "exits the source's north side");
-    assert_eq!(path[path.len() - 1].0, l.node_cells[1].0, "enters the target's north side");
+    assert_eq!(
+        path[path.len() - 1].0,
+        l.node_cells[1].0,
+        "enters the target's north side"
+    );
 }
 
 /// p4 — the skip shape a->b->c with `start: right` on a->c: the port
@@ -194,7 +201,8 @@ macro_rules! fixture_pin {
                 rendered_ascii($base).into_bytes(),
                 oracle_body($base, "ascii"),
                 "fixture {}/{} must render byte-identically to the recorded oracle",
-                $base, "ascii"
+                $base,
+                "ascii"
             );
         }
     };

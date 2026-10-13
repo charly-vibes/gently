@@ -86,7 +86,10 @@ mod tb {
             assert!(!path.is_empty(), "edge must be routed");
             for w in path.windows(2) {
                 let (p, q) = (w[0], w[1]);
-                assert!(p.0 == q.0 || p.1 == q.1, "segment {p:?}->{q:?} not orthogonal");
+                assert!(
+                    p.0 == q.0 || p.1 == q.1,
+                    "segment {p:?}->{q:?} not orthogonal"
+                );
                 let dx = (p.0 as isize - q.0 as isize).abs();
                 let dy = (p.1 as isize - q.1 as isize).abs();
                 assert!(dx + dy == 1, "cells {p:?}->{q:?} not grid-adjacent");
@@ -96,7 +99,11 @@ mod tb {
                 assert_ne!(c, b, "path enters b's cell");
             }
             assert_eq!(path[0], (a.0 + 1, a.1), "path must start at a's east side");
-            assert_eq!(*path.last().unwrap(), (b.0 - 1, b.1), "path must end at b's west side");
+            assert_eq!(
+                *path.last().unwrap(),
+                (b.0 - 1, b.1),
+                "path must end at b's west side"
+            );
         }
     }
 
@@ -152,14 +159,23 @@ mod tb {
             assert!(text::parse("[ a ] junk [ b ]\n").is_err());
             assert!(text::parse("]]][[[\n").is_err(), "no panic on bracket soup");
             // empty input is a valid (empty) graph
-            assert_eq!(text::parse("").unwrap(), gently_core::graph::Graph::default());
+            assert_eq!(
+                text::parse("").unwrap(),
+                gently_core::graph::Graph::default()
+            );
         }
 
         /// Line numbers in errors are 1-based and point at the offender.
         #[test]
         fn error_line_numbers_are_one_based() {
             let err = text::parse("[ a ] --> [ b ]\nnope\n").expect_err("second line is junk");
-            assert_eq!(err, ParseError { line: 2, message: err.message.clone() });
+            assert_eq!(
+                err,
+                ParseError {
+                    line: 2,
+                    message: err.message.clone()
+                }
+            );
         }
     }
 
@@ -270,10 +286,8 @@ mod tb {
             let common = got.iter().zip(want).take_while(|(a, b)| a == b).count();
             let n = got[..common].iter().filter(|&&b| b == b'\n').count() + 1;
             let line = |b: &[u8]| {
-                String::from_utf8_lossy(
-                    b.split(|&c| c == b'\n').nth(n - 1).unwrap_or_default(),
-                )
-                .into_owned()
+                String::from_utf8_lossy(b.split(|&c| c == b'\n').nth(n - 1).unwrap_or_default())
+                    .into_owned()
             };
             Some(format!(
                 "oracle mismatch: input={input} format={format} \
@@ -289,8 +303,8 @@ mod tb {
         #[test]
         fn tracer_fixture_matches_recorded_oracle_txt() {
             let input = std::fs::read(fixture_dir().join("tracer.txt")).expect("fixture input");
-            let expected =
-                std::fs::read(fixture_dir().join("tracer.txt.expected")).expect("recorded companion");
+            let expected = std::fs::read(fixture_dir().join("tracer.txt.expected"))
+                .expect("recorded companion");
             let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
                 .expect("fixture input must parse");
             let m = mismatch(
@@ -333,13 +347,23 @@ mod tb {
                 let bytes = std::fs::read(fixture_dir().join(name)).expect("recorded companion");
                 assert!(!pin_is_stale(&bytes), "{name} must carry the pinned header");
             }
-            let foreign_version =
-                format!("# oracle: Graph::Easy v0.76 @ {}\n", PIN.1);
-            let foreign_commit =
-                format!("# oracle: Graph::Easy v{} @ 0123456789abcdef0123456789abcdef01234567\n", PIN.0);
-            assert!(pin_is_stale(foreign_version.as_bytes()), "foreign version is stale");
-            assert!(pin_is_stale(foreign_commit.as_bytes()), "foreign commit is stale");
-            assert!(pin_is_stale(b"[ a ] --> [ b ]\n"), "missing header is stale");
+            let foreign_version = format!("# oracle: Graph::Easy v0.76 @ {}\n", PIN.1);
+            let foreign_commit = format!(
+                "# oracle: Graph::Easy v{} @ 0123456789abcdef0123456789abcdef01234567\n",
+                PIN.0
+            );
+            assert!(
+                pin_is_stale(foreign_version.as_bytes()),
+                "foreign version is stale"
+            );
+            assert!(
+                pin_is_stale(foreign_commit.as_bytes()),
+                "foreign commit is stale"
+            );
+            assert!(
+                pin_is_stale(b"[ a ] --> [ b ]\n"),
+                "missing header is stale"
+            );
         }
     }
 }
@@ -367,7 +391,8 @@ mod ge_ascii_render;
 /// ge.layout (gently-4nx): the deterministic grid layout capability (specs/ge-layout.md p1–p5).
 #[path = "scenarios/ge_layout.rs"]
 mod ge_layout;
-#[path = "scenarios/ge_layout_ports.rs"] mod ge_layout_ports; // gently-89r
+#[path = "scenarios/ge_layout_ports.rs"]
+mod ge_layout_ports; // gently-89r
 
 /// ge.oracle (gently-mwo): tier-1 admission enforcement — the repro-probe
 /// harness (`tests/repro/probes.pl admit`) classifies every corpus fixture

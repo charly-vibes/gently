@@ -24,7 +24,8 @@ use super::ParseError;
 pub fn parse_block(p: &mut super::Parser) -> Result<Vec<(String, String)>, ParseError> {
     let start_line = p.line();
     p.bump(); // the '{' the caller peeked
-    let content = scan_to_close(p).ok_or_else(|| p.err(start_line, "unterminated attribute block: missing '}'"))?;
+    let content = scan_to_close(p)
+        .ok_or_else(|| p.err(start_line, "unterminated attribute block: missing '}'"))?;
     parse_declarations(&content, start_line)
 }
 
@@ -162,9 +163,11 @@ fn unquoted_branch_end(chars: &[char], from: usize) -> usize {
 /// One `name : value` declaration; the first `:` separates.
 fn parse_single(decl: &str, line: usize) -> Result<(String, String), ParseError> {
     let err = |m: String| ParseError { line, message: m };
-    let (name, value) = decl
-        .split_once(':')
-        .ok_or_else(|| err(format!("attribute '{decl}' doesn't look valid: missing ':'")))?;
+    let (name, value) = decl.split_once(':').ok_or_else(|| {
+        err(format!(
+            "attribute '{decl}' doesn't look valid: missing ':'"
+        ))
+    })?;
     let name = name.trim();
     if name.is_empty() {
         return Err(err("empty attribute name".to_string()));

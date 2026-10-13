@@ -52,25 +52,37 @@ fn p7() {
     // Tier-1 = stable and within the envelope (render-error fixtures are
     // outside byte-compat scope by construction).
     let tier1 = derive_tier1(&rows);
-    assert!(!tier1.is_empty(), "at least the tracer fixture class must be tier-1 admissible");
+    assert!(
+        !tier1.is_empty(),
+        "at least the tracer fixture class must be tier-1 admissible"
+    );
 }
 
 /// Manifest shape: `# admission: <pin>` header, then `name<TAB>verdict<TAB>seconds` rows.
 fn parse_manifest(manifest: &str) -> Vec<Row> {
     let mut lines = manifest.lines();
-    let header = lines.next().expect("admission manifest must have a pin header");
+    let header = lines
+        .next()
+        .expect("admission manifest must have a pin header");
     assert_header_names_pinned_oracle(header);
     lines.filter(|l| !l.is_empty()).map(parse_row).collect()
 }
 
 fn assert_header_names_pinned_oracle(header: &str) {
     let expected = format!("# admission: Graph::Easy v{PIN_VERSION} @ ");
-    assert!(header.starts_with(&expected) && header.contains(PIN_COMMIT), "admission manifest header must name the pinned oracle, got: {header}");
+    assert!(
+        header.starts_with(&expected) && header.contains(PIN_COMMIT),
+        "admission manifest header must name the pinned oracle, got: {header}"
+    );
 }
 
 fn parse_row(line: &str) -> Row {
     let cols: Vec<&str> = line.split('\t').collect();
-    assert_eq!(cols.len(), 3, "admission row must have 3 TSV columns: {line:?}");
+    assert_eq!(
+        cols.len(),
+        3,
+        "admission row must have 3 TSV columns: {line:?}"
+    );
     assert_valid_verdict(cols[1]);
     let seconds = parse_seconds(line, cols[2]);
     (cols[0].to_string(), cols[1].to_string(), seconds)
@@ -78,12 +90,20 @@ fn parse_row(line: &str) -> Row {
 
 /// The verdict set is closed: stable, hash-dependent, or render-error.
 fn assert_valid_verdict(verdict: &str) {
-    assert!(matches!(verdict, "stable" | "hash-dependent" | "render-error"), "admission verdict must be a closed set, got: {verdict:?}");
+    assert!(
+        matches!(verdict, "stable" | "hash-dependent" | "render-error"),
+        "admission verdict must be a closed set, got: {verdict:?}"
+    );
 }
 
 fn parse_seconds(line: &str, raw: &str) -> f64 {
-    let seconds: f64 = raw.parse().unwrap_or_else(|e| panic!("admission seconds must be a number, got {e}: {line:?}"));
-    assert!(seconds.is_finite() && seconds >= 0.0, "admission seconds must be finite and non-negative: {line:?}");
+    let seconds: f64 = raw
+        .parse()
+        .unwrap_or_else(|e| panic!("admission seconds must be a number, got {e}: {line:?}"));
+    assert!(
+        seconds.is_finite() && seconds >= 0.0,
+        "admission seconds must be finite and non-negative: {line:?}"
+    );
     seconds
 }
 
@@ -91,18 +111,27 @@ fn parse_seconds(line: &str, raw: &str) -> f64 {
 fn assert_every_input_classified(rows: &[Row], inputs: &[String]) {
     for name in inputs {
         let n = rows.iter().filter(|(r, _, _)| r == name).count();
-        assert_eq!(n, 1, "fixture {name} must appear exactly once in the manifest");
+        assert_eq!(
+            n, 1,
+            "fixture {name} must appear exactly once in the manifest"
+        );
     }
 }
 
 fn assert_no_orphan_rows(rows: &[Row], inputs: &[String]) {
     for (name, _, _) in rows {
-        assert!(inputs.iter().any(|i| i == name), "manifest row {name} is not a corpus input");
+        assert!(
+            inputs.iter().any(|i| i == name),
+            "manifest row {name} is not a corpus input"
+        );
     }
 }
 
 fn derive_tier1(rows: &[Row]) -> Vec<&String> {
-    rows.iter().filter(|(_, v, s)| *v == "stable" && *s <= ENVELOPE_SECONDS).map(|(n, _, _)| n).collect()
+    rows.iter()
+        .filter(|(_, v, s)| *v == "stable" && *s <= ENVELOPE_SECONDS)
+        .map(|(n, _, _)| n)
+        .collect()
 }
 
 // p1–p6 (gently-q1x): corpus pin headers, companion accounting, oracle
@@ -112,7 +141,11 @@ use std::path::Path;
 use std::process::Command;
 
 /// One companion: stem, format ("txt" | "ascii"), raw file bytes.
-struct Companion { stem: String, format: String, raw: String }
+struct Companion {
+    stem: String,
+    format: String,
+    raw: String,
+}
 
 fn fixture_dir() -> PathBuf {
     repo_root().join("tests/fixtures/graph-easy")
@@ -126,9 +159,17 @@ fn companions() -> Vec<Companion> {
         .map(|e| e.file_name().to_string_lossy().into_owned())
         .filter(|n| n.ends_with(".expected"))
         .map(|name| {
-            let (stem, format) = name.strip_suffix(".expected").unwrap().rsplit_once('.').expect("companion naming <base>.<fmt>.expected (ge.oracle.c2)");
+            let (stem, format) = name
+                .strip_suffix(".expected")
+                .unwrap()
+                .rsplit_once('.')
+                .expect("companion naming <base>.<fmt>.expected (ge.oracle.c2)");
             let raw = std::fs::read_to_string(fixture_dir().join(&name)).expect("read companion");
-            Companion { stem: stem.to_string(), format: format.to_string(), raw }
+            Companion {
+                stem: stem.to_string(),
+                format: format.to_string(),
+                raw,
+            }
         })
         .collect();
     out.sort_by(|a, b| (&a.stem, &a.format).cmp(&(&b.stem, &b.format)));
@@ -142,7 +183,11 @@ fn pin_header() -> String {
 
 /// True when this machine has the pinned oracle toolchain (ge.oracle.c1).
 fn toolchain() -> bool {
-    let perl = Command::new("perl").arg("-e").arg("exit 0").status().is_ok_and(|s| s.success());
+    let perl = Command::new("perl")
+        .arg("-e")
+        .arg("exit 0")
+        .status()
+        .is_ok_and(|s| s.success());
     let checkout = format!("/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib/Graph/Easy.pm");
     perl && Path::new(&checkout).is_file()
 }
@@ -154,14 +199,21 @@ fn skip(reason: &str) {
 /// Run a command, return (success, combined stdout+stderr).
 fn run(cmd: &mut Command) -> (bool, String) {
     let out = cmd.output().expect("spawn command");
-    let combined = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
     (out.status.success(), combined)
 }
 
 /// A drifted-environment run must fail typed, naming the piece + remediation
 /// (ge.oracle.c4).
 fn typed_failure(ok: bool, out: &str, needle: &str, case: &str) {
-    assert!(!ok && out.contains(needle) && out.contains("remediation"), "{case} must be a typed error + remediation (ge.oracle.c4), got: {out}");
+    assert!(
+        !ok && out.contains(needle) && out.contains("remediation"),
+        "{case} must be a typed error + remediation (ge.oracle.c4), got: {out}"
+    );
 }
 
 /// ge.oracle.p1 (c1): every pin header names version + commit, every
@@ -173,24 +225,47 @@ fn p1() {
     for c in &cs {
         let mut lines = c.raw.lines();
         let header = lines.next().unwrap_or("");
-        assert_eq!(format!("{header}\n"), pin_header(), "{}:{}: pin header must name the pinned oracle (c1)", c.stem, c.format);
+        assert_eq!(
+            format!("{header}\n"),
+            pin_header(),
+            "{}:{}: pin header must name the pinned oracle (c1)",
+            c.stem,
+            c.format
+        );
         let meta = lines.next().unwrap_or("");
-        assert!(meta.starts_with("# oracle: perl ") && meta.contains("PERL_HASH_SEED="), "{}:{}: metadata must name perl version + seed (c1), got {meta:?}", c.stem, c.format);
+        assert!(
+            meta.starts_with("# oracle: perl ") && meta.contains("PERL_HASH_SEED="),
+            "{}:{}: metadata must name perl version + seed (c1), got {meta:?}",
+            c.stem,
+            c.format
+        );
         for stray in lines {
-            assert!(!stray.starts_with("# oracle:"), "{}:{}: foreign pin {stray:?} (c1)", c.stem, c.format);
+            assert!(
+                !stray.starts_with("# oracle:"),
+                "{}:{}: foreign pin {stray:?} (c1)",
+                c.stem,
+                c.format
+            );
         }
     }
 }
 
 /// Companion count for one input/format pair.
 fn companion_count(cs: &[Companion], input: &str, format: &str) -> usize {
-    cs.iter().filter(|c| c.stem == input && c.format == format).count()
+    cs.iter()
+        .filter(|c| c.stem == input && c.format == format)
+        .count()
 }
 
 /// No companion without a matching corpus input (ge.oracle.c2).
 fn assert_no_orphans(cs: &[Companion], inputs: &[String]) {
     for c in cs {
-        assert!(inputs.iter().any(|i| i == &c.stem), "orphan companion for unknown input {}.{} (ge.oracle.c2)", c.stem, c.format);
+        assert!(
+            inputs.iter().any(|i| i == &c.stem),
+            "orphan companion for unknown input {}.{} (ge.oracle.c2)",
+            c.stem,
+            c.format
+        );
     }
 }
 
@@ -214,8 +289,13 @@ fn p2() {
 /// the diff report, this arm asserts its exit status.
 #[test]
 fn p3() {
-    if !toolchain() { skip("p3 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)"); return; }
-    let (ok, out) = run(Command::new("just").arg("oracle-verify").current_dir(repo_root()));
+    if !toolchain() {
+        skip("p3 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)");
+        return;
+    }
+    let (ok, out) = run(Command::new("just")
+        .arg("oracle-verify")
+        .current_dir(repo_root()));
     assert!(ok, "just oracle-verify failed — see its input/format/first-differing-line report (ge.oracle.c3): {out}");
 }
 
@@ -232,7 +312,10 @@ fn tempdir(tag: &str) -> PathBuf {
 /// The `oracle.pl record <dir>` command with an environment applied.
 fn record_cmd(dir: &Path, envs: &[(&str, &Path)]) -> Command {
     let mut cmd = Command::new("perl");
-    cmd.arg(repo_root().join("tools/oracle.pl")).arg("record").arg(dir).env("PERL_HASH_SEED", "0");
+    cmd.arg(repo_root().join("tools/oracle.pl"))
+        .arg("record")
+        .arg(dir)
+        .env("PERL_HASH_SEED", "0");
     for (key, value) in envs {
         cmd.env(key, value);
     }
@@ -242,7 +325,11 @@ fn record_cmd(dir: &Path, envs: &[(&str, &Path)]) -> Command {
 /// A fake Graph::Easy checkout at `lib` exposing the given version.
 fn fake_checkout(lib: &Path, version: &str) {
     std::fs::create_dir_all(lib.join("Graph")).expect("fake lib");
-    std::fs::write(lib.join("Graph/Easy.pm"), format!("package Graph::Easy; our $VERSION = '{version}'; 1;\n")).expect("write fake Graph::Easy");
+    std::fs::write(
+        lib.join("Graph/Easy.pm"),
+        format!("package Graph::Easy; our $VERSION = '{version}'; 1;\n"),
+    )
+    .expect("write fake Graph::Easy");
 }
 
 /// Case 1: perl missing (fake PATH without perl) — the justfile recipe types this first.
@@ -251,7 +338,10 @@ fn p4_missing_perl(tmp: &Path) {
     std::fs::create_dir_all(&bin).expect("temp bin dir");
     #[cfg(unix)]
     std::os::unix::fs::symlink("/bin/bash", bin.join("bash")).expect("symlink bash");
-    let (ok, out) = run(Command::new("/usr/bin/just").arg("oracle-record").current_dir(repo_root()).env("PATH", &bin));
+    let (ok, out) = run(Command::new("/usr/bin/just")
+        .arg("oracle-record")
+        .current_dir(repo_root())
+        .env("PATH", &bin));
     typed_failure(ok, &out, "perl not found", "missing perl");
 }
 
@@ -270,12 +360,19 @@ fn p4_off_checkout(tmp: &Path) {
     let off = tmp.join("off-path-lib");
     fake_checkout(&off, PIN_VERSION);
     let (ok, out) = run(&mut record_cmd(tmp, &[("PERL5LIB", off.as_path())]));
-    typed_failure(ok, &out, "pin requires the source checkout", "off-checkout load path");
+    typed_failure(
+        ok,
+        &out,
+        "pin requires the source checkout",
+        "off-checkout load path",
+    );
 }
 
 /// Case 4: record run without an explicit PERL_HASH_SEED.
 fn p4_missing_seed(tmp: &Path) {
-    let pin = PathBuf::from(format!("/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib"));
+    let pin = PathBuf::from(format!(
+        "/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib"
+    ));
     let mut cmd = record_cmd(tmp, &[("PERL5LIB", pin.as_path())]);
     cmd.env_remove("PERL_HASH_SEED");
     let (ok, out) = run(&mut cmd);
@@ -285,15 +382,30 @@ fn p4_missing_seed(tmp: &Path) {
 /// A minimal git repo at `root` with one empty commit; returns its HEAD sha.
 fn git_repo_at_wrong_commit(root: &Path) -> String {
     let git = |args: &[&str]| {
-        let out = Command::new("git").args(args).current_dir(root)
-            .env("GIT_AUTHOR_NAME", "probe").env("GIT_AUTHOR_EMAIL", "probe@example.invalid")
-            .env("GIT_COMMITTER_NAME", "probe").env("GIT_COMMITTER_EMAIL", "probe@example.invalid")
-            .output().expect("spawn git");
-        assert!(out.status.success(), "git {args:?} failed: {}", String::from_utf8_lossy(&out.stderr));
+        let out = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .env("GIT_AUTHOR_NAME", "probe")
+            .env("GIT_AUTHOR_EMAIL", "probe@example.invalid")
+            .env("GIT_COMMITTER_NAME", "probe")
+            .env("GIT_COMMITTER_EMAIL", "probe@example.invalid")
+            .output()
+            .expect("spawn git");
+        assert!(
+            out.status.success(),
+            "git {args:?} failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
         String::from_utf8_lossy(&out.stdout).trim().to_string()
     };
     git(&["init", "-q"]);
-    git(&["commit", "-q", "--allow-empty", "-m", "drifted checkout probe"]);
+    git(&[
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "drifted checkout probe",
+    ]);
     git(&["rev-parse", "HEAD"])
 }
 
@@ -306,9 +418,15 @@ fn p4_commit_drift(tmp: &Path) {
     fake_checkout(&root.join("lib"), PIN_VERSION);
     let head = git_repo_at_wrong_commit(&root);
     let lib = root.join("lib");
-    let (ok, out) = run(&mut record_cmd(tmp, &[("PERL5LIB", lib.as_path()), ("GE_PIN_LIB", lib.as_path())]));
+    let (ok, out) = run(&mut record_cmd(
+        tmp,
+        &[("PERL5LIB", lib.as_path()), ("GE_PIN_LIB", lib.as_path())],
+    ));
     typed_failure(ok, &out, "pin commit is", "commit drift");
-    assert!(out.contains(PIN_COMMIT) && out.contains(&head), "commit drift must name both shas (ge.oracle.c4), got: {out}");
+    assert!(
+        out.contains(PIN_COMMIT) && out.contains(&head),
+        "commit drift must name both shas (ge.oracle.c4), got: {out}"
+    );
 }
 
 /// Case 5: stale pin header — just oracle-verify types it with the
@@ -317,14 +435,24 @@ fn p4_stale_pin(tmp: &Path) {
     let stale = tmp.join("stale-corpus");
     std::fs::create_dir_all(&stale).expect("stale corpus dir");
     std::fs::write(stale.join("x.txt"), "[ a ] --> [ b ]\n").expect("input");
-    std::fs::write(stale.join("x.txt.expected"), "# oracle: Graph::Easy v0.68 @ 0000000000000000000000000000000000000000\nstale\n").expect("stale companion");
-    let (ok, out) = run(Command::new("/usr/bin/just").arg("oracle-verify").env("FIX", &stale).current_dir(repo_root()));
+    std::fs::write(
+        stale.join("x.txt.expected"),
+        "# oracle: Graph::Easy v0.68 @ 0000000000000000000000000000000000000000\nstale\n",
+    )
+    .expect("stale companion");
+    let (ok, out) = run(Command::new("/usr/bin/just")
+        .arg("oracle-verify")
+        .env("FIX", &stale)
+        .current_dir(repo_root()));
     typed_failure(ok, &out, "stale pin header", "stale pin header");
 }
 
 #[test]
 fn p4() {
-    if !toolchain() { skip("p4 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)"); return; }
+    if !toolchain() {
+        skip("p4 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)");
+        return;
+    }
     let tmp = tempdir("p4");
     p4_missing_perl(&tmp);
     p4_version_drift(&tmp);
@@ -332,14 +460,26 @@ fn p4() {
     p4_missing_seed(&tmp);
     p4_commit_drift(&tmp);
     p4_stale_pin(&tmp);
-    assert!(std::fs::remove_dir_all(&tmp).is_ok(), "p4 tempdir must clean up");
+    assert!(
+        std::fs::remove_dir_all(&tmp).is_ok(),
+        "p4 tempdir must clean up"
+    );
 }
 
 /// After a record run, tiny.txt companions carry pin header + metadata (c1/c5).
 fn assert_recorded(dir: &Path, companion: &str) {
     let text = std::fs::read_to_string(dir.join(companion)).expect("recorded companion");
-    assert!(text.starts_with(&pin_header()), "{companion}: pin header required (ge.oracle.c1/c5)");
-    assert!(text.lines().nth(1).unwrap_or("").starts_with("# oracle: perl "), "{companion}: metadata line required (ge.oracle.c1)");
+    assert!(
+        text.starts_with(&pin_header()),
+        "{companion}: pin header required (ge.oracle.c1/c5)"
+    );
+    assert!(
+        text.lines()
+            .nth(1)
+            .unwrap_or("")
+            .starts_with("# oracle: perl "),
+        "{companion}: metadata line required (ge.oracle.c1)"
+    );
 }
 
 /// Re-record without a pin change → refused, bytes untouched (c5).
@@ -347,22 +487,36 @@ fn assert_rejected(dir: &Path, pin: &Path) {
     let before = std::fs::read(dir.join("tiny.txt.expected")).expect("companion bytes");
     let (ok, out) = run(&mut record_cmd(dir, &[("PERL5LIB", pin)]));
     assert!(ok, "refusal is a clean no-op, not a crash");
-    assert!(out.contains("refusing to overwrite"), "re-recording without a pin change must be rejected (ge.oracle.c5), got: {out}");
+    assert!(
+        out.contains("refusing to overwrite"),
+        "re-recording without a pin change must be rejected (ge.oracle.c5), got: {out}"
+    );
     let after = std::fs::read(dir.join("tiny.txt.expected")).expect("companion bytes");
-    assert_eq!(before, after, "refused re-record must not touch companion bytes (ge.oracle.c5)");
+    assert_eq!(
+        before, after,
+        "refused re-record must not touch companion bytes (ge.oracle.c5)"
+    );
 }
 
 /// ge.oracle.p5 (c5): a new input records pinned companions in one pass;
 /// re-record without a pin change is rejected; a stale pin regenerates.
 #[test]
 fn p5() {
-    if !toolchain() { skip("p5 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)"); return; }
+    if !toolchain() {
+        skip("p5 needs perl + the pinned Graph::Easy checkout (ge.oracle.c4)");
+        return;
+    }
     let tmp = tempdir("p5");
     std::fs::write(tmp.join("tiny.txt"), "[ x ] --> [ y ]\n").expect("new input");
-    let pin = PathBuf::from(format!("/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib"));
+    let pin = PathBuf::from(format!(
+        "/var/tmp/ge{PIN_VERSION}/Graph-Easy-{PIN_VERSION}/lib"
+    ));
     // New input → recorded in one pass with pin header + metadata.
     let (ok, out) = run(&mut record_cmd(&tmp, &[("PERL5LIB", pin.as_path())]));
-    assert!(ok, "recording a new input must succeed (ge.oracle.c5): {out}");
+    assert!(
+        ok,
+        "recording a new input must succeed (ge.oracle.c5): {out}"
+    );
     assert_recorded(&tmp, "tiny.txt.expected");
     assert_recorded(&tmp, "tiny.ascii.expected");
     assert_rejected(&tmp, pin.as_path());
@@ -371,7 +525,10 @@ fn p5() {
     let (ok, _) = run(&mut record_cmd(&tmp, &[("PERL5LIB", pin.as_path())]));
     assert!(ok, "stale-pin regeneration must succeed");
     let text = std::fs::read_to_string(tmp.join("tiny.txt.expected")).expect("regenerated");
-    assert!(text.starts_with(&pin_header()), "stale pin must be regenerated with the current pin (ge.oracle.c5)");
+    assert!(
+        text.starts_with(&pin_header()),
+        "stale pin must be regenerated with the current pin (ge.oracle.c5)"
+    );
     let _ = std::fs::remove_dir_all(&tmp);
 }
 
@@ -381,20 +538,48 @@ fn p5() {
 fn p6() {
     let inputs = corpus_inputs();
     assert!(!inputs.is_empty(), "corpus must not be empty");
-    let bodies: Vec<(String, String)> = inputs.iter().map(|stem| {
-        let raw = std::fs::read_to_string(fixture_dir().join(format!("{stem}.txt"))).expect("fixture input");
-        (stem.clone(), raw)
-    }).collect();
+    let bodies: Vec<(String, String)> = inputs
+        .iter()
+        .map(|stem| {
+            let raw = std::fs::read_to_string(fixture_dir().join(format!("{stem}.txt")))
+                .expect("fixture input");
+            (stem.clone(), raw)
+        })
+        .collect();
     // Edge style: forward arrow `-->`.
-    assert!(bodies.iter().any(|(_, b)| b.contains("-->")), "forward-arrow edge style missing (ge.oracle.c6)");
+    assert!(
+        bodies.iter().any(|(_, b)| b.contains("-->")),
+        "forward-arrow edge style missing (ge.oracle.c6)"
+    );
     // Border style: the default (attribute-less) plain border.
-    assert!(bodies.iter().any(|(_, b)| b.contains("[ ") && !b.contains("{")), "default node border style missing (ge.oracle.c6)");
+    assert!(
+        bodies
+            .iter()
+            .any(|(_, b)| b.contains("[ ") && !b.contains("{")),
+        "default node border style missing (ge.oracle.c6)"
+    );
     // Node shape: the square/rect bracket form `[ x ]`.
-    assert!(bodies.iter().any(|(_, b)| b.contains("[ ")), "square bracket node shape missing (ge.oracle.c6)");
+    assert!(
+        bodies.iter().any(|(_, b)| b.contains("[ ")),
+        "square bracket node shape missing (ge.oracle.c6)"
+    );
     // Group form: flat (ungrouped) graphs.
-    assert!(bodies.iter().any(|(_, b)| !b.contains("( ")), "flat ungrouped graph form missing (ge.oracle.c6)");
+    assert!(
+        bodies.iter().any(|(_, b)| !b.contains("( ")),
+        "flat ungrouped graph form missing (ge.oracle.c6)"
+    );
     // Flow direction: left-to-right source→target in the as_txt companions.
-    assert!(companions().iter().any(|c| c.format == "txt" && c.raw.contains("] --> [")), "left-to-right flow missing from recorded companions (ge.oracle.c6)");
+    assert!(
+        companions()
+            .iter()
+            .any(|c| c.format == "txt" && c.raw.contains("] --> [")),
+        "left-to-right flow missing from recorded companions (ge.oracle.c6)"
+    );
     // Label placement: default inline label inside the node brackets.
-    assert!(bodies.iter().any(|(_, b)| b.lines().any(|l| l.contains("[ ") && l.contains(" ]"))), "default inline label placement missing (ge.oracle.c6)");
+    assert!(
+        bodies
+            .iter()
+            .any(|(_, b)| b.lines().any(|l| l.contains("[ ") && l.contains(" ]"))),
+        "default inline label placement missing (ge.oracle.c6)"
+    );
 }

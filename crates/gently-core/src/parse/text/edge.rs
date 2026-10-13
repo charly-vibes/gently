@@ -72,7 +72,9 @@ fn all_char(s: &str, c: char) -> bool {
 fn is_reps_of(s: &str, u: &str) -> bool {
     !s.is_empty()
         && s.len().is_multiple_of(u.len())
-        && (0..s.len()).step_by(u.len()).all(|i| &s[i..i + u.len()] == u)
+        && (0..s.len())
+            .step_by(u.len())
+            .all(|i| &s[i..i + u.len()] == u)
 }
 
 /// Upstream's unescaped `(..-)+\z`: length a multiple of 3 with every
@@ -108,7 +110,12 @@ pub fn match_branch(chars: &[char], pos: usize, branch: Branch) -> Option<(usize
 fn try_directed(chars: &[char], pos: usize) -> Option<(usize, EdgeOp)> {
     let (p, bidi) = skip_lt(chars, pos);
     let (gt, last) = dfs_to_gt(chars, p, None)?;
-    let op = EdgeOp { style: edge_style(&last), label: None, bidirectional: bidi, directed: true };
+    let op = EdgeOp {
+        style: edge_style(&last),
+        label: None,
+        bidirectional: bidi,
+        directed: true,
+    };
     Some((gt + 1, op))
 }
 
@@ -120,7 +127,12 @@ fn try_labeled(chars: &[char], pos: usize) -> Option<(usize, EdgeOp)> {
         if let Some((end, raw)) = labeled_tail(chars, fend, &flank) {
             let label = collapse_ws(unescape(&raw).trim());
             let label = (!label.is_empty()).then_some(label);
-            let op = EdgeOp { style: edge_style(&flank), label, bidirectional: bidi, directed: true };
+            let op = EdgeOp {
+                style: edge_style(&flank),
+                label,
+                bidirectional: bidi,
+                directed: true,
+            };
             return Some((end, op));
         }
     }
@@ -129,13 +141,23 @@ fn try_labeled(chars: &[char], pos: usize) -> Option<(usize, EdgeOp)> {
 
 /// The arrow-less branches: branch 3 consumes only `..-`/`.-` units (at
 /// least one); branch 4 only plain units (at least two, c9).
-fn try_arrowless(chars: &[char], pos: usize, units: &[&str], min_units: usize) -> Option<(usize, EdgeOp)> {
+fn try_arrowless(
+    chars: &[char],
+    pos: usize,
+    units: &[&str],
+    min_units: usize,
+) -> Option<(usize, EdgeOp)> {
     let (end, count) = greedy_units(chars, pos, units);
     if count < min_units {
         return None;
     }
     let pattern: String = chars[pos..end].iter().collect();
-    let op = EdgeOp { style: edge_style(&pattern), label: None, bidirectional: false, directed: false };
+    let op = EdgeOp {
+        style: edge_style(&pattern),
+        label: None,
+        bidirectional: false,
+        directed: false,
+    };
     Some((end, op))
 }
 
@@ -166,7 +188,9 @@ fn skip_lt(chars: &[char], pos: usize) -> (usize, bool) {
 }
 
 fn unit_at(chars: &[char], pos: usize, u: &str) -> bool {
-    u.chars().enumerate().all(|(i, uc)| chars.get(pos + i) == Some(&uc))
+    u.chars()
+        .enumerate()
+        .all(|(i, uc)| chars.get(pos + i) == Some(&uc))
 }
 
 /// Depth-first search for a unit sequence ending at `>`, alternatives in

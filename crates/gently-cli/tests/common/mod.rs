@@ -3,6 +3,9 @@
 //! pinned oracle bytes. Extracted from tests/cli.rs to hold the
 //! pretender file limit (gently-4ig).
 
+// Each test binary uses a different subset of the shared helpers.
+#![allow(dead_code)]
+
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -19,12 +22,7 @@ pub fn run_gently_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
         .stderr(Stdio::piped())
         .spawn()
         .expect("spawn gently");
-    if let Err(e) = child
-        .stdin
-        .as_mut()
-        .expect("stdin piped")
-        .write_all(stdin)
-    {
+    if let Err(e) = child.stdin.as_mut().expect("stdin piped").write_all(stdin) {
         assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "write stdin");
     }
     let out = child.wait_with_output().expect("wait for gently");
@@ -77,12 +75,7 @@ pub fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
     // exit's observable signature, not a test failure. Any other IO error
     // still panics; correctness of p1-p3 is guarded by their assertions on
     // stdout/stderr/exit code.
-    if let Err(e) = child
-        .stdin
-        .as_mut()
-        .expect("stdin piped")
-        .write_all(stdin)
-    {
+    if let Err(e) = child.stdin.as_mut().expect("stdin piped").write_all(stdin) {
         assert_eq!(
             e.kind(),
             std::io::ErrorKind::BrokenPipe,

@@ -13,7 +13,9 @@ use proptest::prelude::*;
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 /// Generated strategies — one per generator named in the spec rows.
@@ -29,7 +31,6 @@ pub mod spec_gen {
     pub fn classes() -> impl Strategy<Value = String> {
         Just("classes".into())
     }
-
 }
 
 // id: p1
@@ -37,7 +38,7 @@ pub mod spec_gen {
 // predicate: median wall time stays under 50 ms with no run above 3x the median budget
 #[test]
 fn p1() {
-        todo_predicate!("median wall time stays under 50 ms with no run above 3x the median budget");
+    todo_predicate!("median wall time stays under 50 ms with no run above 3x the median budget");
 }
 
 proptest! {
@@ -55,7 +56,9 @@ proptest! {
 // predicate: peak allocation matches the O(nodes + edges + cells) profile; no cross-stage cache growth
 #[test]
 fn p3() {
-        todo_predicate!("peak allocation matches the O(nodes + edges + cells) profile; no cross-stage cache growth");
+    todo_predicate!(
+        "peak allocation matches the O(nodes + edges + cells) profile; no cross-stage cache growth"
+    );
 }
 
 // id: p4
@@ -63,7 +66,9 @@ fn p3() {
 // predicate: the diagnostic names stage, budget, and measured value, and the exit code is non-zero
 #[test]
 fn p4() {
-        todo_predicate!("the diagnostic names stage, budget, and measured value, and the exit code is non-zero");
+    todo_predicate!(
+        "the diagnostic names stage, budget, and measured value, and the exit code is non-zero"
+    );
 }
 
 proptest! {
@@ -75,4 +80,3 @@ proptest! {
         todo_predicate!("measured gently scaling stays near-linear; deviations beyond the bound are reported");
     }
 }
-

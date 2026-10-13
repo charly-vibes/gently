@@ -14,8 +14,8 @@ use super::polyline;
 use super::styles::{self, border, h_run, rounded, shifted_run};
 use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::Layout;
-use crate::render::ascii::RenderError;
 use crate::render::ascii::display_width;
+use crate::render::ascii::RenderError;
 
 /// Width in chars of a gap (edge-routing) grid column.
 pub(super) const GAP_WIDTH: usize = 5;
@@ -111,7 +111,11 @@ impl Canvas {
             b.side_r
         );
         let top_line = cy * BAND_HEIGHT;
-        self.stamp(top_line, cx, &format!("{}{}{}", b.tl, h_run(&b, inner), b.tr));
+        self.stamp(
+            top_line,
+            cx,
+            &format!("{}{}{}", b.tl, h_run(&b, inner), b.tr),
+        );
         self.stamp(top_line + 1, cx, &mid);
         self.stamp(
             top_line + 2,
@@ -205,8 +209,11 @@ impl Canvas {
         self.grid[y_mid][xl] = e.corners[0];
         self.grid[y_mid][xr] = e.corners[1];
         self.grid[y_attach][xr] = e.ver;
-        self.grid[y_attach][xl] =
-            if arrowed { styles::arrow(polyline::Dir::South) } else { e.ver };
+        self.grid[y_attach][xl] = if arrowed {
+            styles::arrow(polyline::Dir::South)
+        } else {
+            e.ver
+        };
     }
 
     /// Write `text` starting at grid column `cx`'s char offset on `line`.

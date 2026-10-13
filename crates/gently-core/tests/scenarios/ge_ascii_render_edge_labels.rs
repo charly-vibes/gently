@@ -14,8 +14,8 @@ use super::{ascii, layout, text};
 /// fixture's `{ size: 5,10; }` attrs and 2x2 layout (out of scope).
 #[test]
 fn p4_newline_edge_label_splits_into_left_aligned_rows() {
-    let g = text::parse("[ A ] -- put msg\\n via http --> [ B ]\n")
-        .expect("the \\n label must parse");
+    let g =
+        text::parse("[ A ] -- put msg\\n via http --> [ B ]\n").expect("the \\n label must parse");
     let art = ascii::render(&g, &layout::layout(&g)).expect("the \\n label must render");
     assert_eq!(
         art,

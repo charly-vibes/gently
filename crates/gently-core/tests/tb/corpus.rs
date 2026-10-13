@@ -51,7 +51,10 @@ fn rendered_ascii(base: &str) -> String {
 /// ge.oracle.c3: chain (a->b->c) renders as a three-box row.
 #[test]
 fn chain_renders_oracle_ascii() {
-    assert_eq!(rendered_ascii("chain").into_bytes(), oracle_body("chain", "ascii"));
+    assert_eq!(
+        rendered_ascii("chain").into_bytes(),
+        oracle_body("chain", "ascii")
+    );
 }
 
 /// ge.oracle.c3: mixed_isolated (chain + isolated d) — chain row,

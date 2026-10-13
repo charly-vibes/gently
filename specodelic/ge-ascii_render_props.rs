@@ -13,7 +13,9 @@ use proptest::prelude::*;
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 /// Generated strategies — one per generator named in the spec rows.
@@ -45,7 +47,6 @@ pub mod spec_gen {
     pub fn chain() -> impl Strategy<Value = String> {
         Just("chain".into())
     }
-
 }
 
 // id: p1
@@ -53,7 +54,7 @@ pub mod spec_gen {
 // predicate: each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed
 #[test]
 fn p1() {
-        todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed");
+    todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed");
 }
 
 proptest! {
@@ -71,7 +72,7 @@ proptest! {
 // predicate: outputs are byte-identical
 #[test]
 fn p3() {
-        todo_predicate!("outputs are byte-identical");
+    todo_predicate!("outputs are byte-identical");
 }
 
 proptest! {
@@ -96,7 +97,7 @@ proptest! {
 // predicate: each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other non-edge valid shape renders the plain box; `box` is upstream-rejected; `edge` renders the edge cell — full-width dash line, label left-aligned above at offset 1) and color attributes leave the output byte-identical
 #[test]
 fn p6() {
-        todo_predicate!("each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other non-edge valid shape renders the plain box; `box` is upstream-rejected; `edge` renders the edge cell — full-width dash line, label left-aligned above at offset 1) and color attributes leave the output byte-identical");
+    todo_predicate!("each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other non-edge valid shape renders the plain box; `box` is upstream-rejected; `edge` renders the edge cell — full-width dash line, label left-aligned above at offset 1) and color attributes leave the output byte-identical");
 }
 
 proptest! {
@@ -114,6 +115,5 @@ proptest! {
 // predicate: each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes
 #[test]
 fn p8() {
-        todo_predicate!("each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes");
+    todo_predicate!("each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes");
 }
-

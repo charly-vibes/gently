@@ -47,11 +47,7 @@ pub(super) fn layered(graph: &Graph) -> Placement {
         cell[node] = Some((rank, band));
     }
     let route = classify(graph, &cell);
-    Placement {
-        cell,
-        route,
-        bands,
-    }
+    Placement { cell, route, bands }
 }
 
 /// Longest-path ranks over the non-selfloop edges: relax in model edge
@@ -211,7 +207,13 @@ impl Placer {
 
     /// Both endpoints placed: a parallel bend when the pair already has an
     /// edge on one band, otherwise a route around.
-    fn place_both_placed(&mut self, ei: usize, prior: usize, pu: (usize, usize), pv: (usize, usize)) {
+    fn place_both_placed(
+        &mut self,
+        ei: usize,
+        prior: usize,
+        pu: (usize, usize),
+        pv: (usize, usize),
+    ) {
         self.route[ei] = if prior >= 1 && pu.1 == pv.1 {
             Route::Parallel(prior)
         } else {
@@ -237,7 +239,11 @@ impl Placer {
         // source's immediate east slot, whose occupant must itself yield
         // east (rank = source col + 2). A deeper rank demand has no
         // recorded shape pinning it, so the placement stays insertion-order.
-        let col = if self.ranks[node] == pu.0 + 2 { pu.0 + 2 } else { pu.0 + 1 };
+        let col = if self.ranks[node] == pu.0 + 2 {
+            pu.0 + 2
+        } else {
+            pu.0 + 1
+        };
         let east = (col, pu.1);
         if self.taken.contains(&east) {
             let band = self.fresh_band();

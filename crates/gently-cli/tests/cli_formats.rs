@@ -79,7 +79,6 @@ mod scenarios {
                 &r.stdout[..],
                 "--as txt must route to the txt renderer"
             );
-
         }
 
         /// cli.p2 (c2, gently-4ig): extension inference (upstream map) —

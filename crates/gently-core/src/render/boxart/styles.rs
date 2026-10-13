@@ -35,25 +35,136 @@ pub(super) struct Border {
 /// the ascii renderer does).
 pub(super) fn border(style: &str) -> Border {
     match style {
-        "dotted" => Border { tl: '┌', tr: '┐', br: '┘', bl: '└', h_top: "⋯", h_bottom: "⋯", side_l: '⋮', side_r: '⋮' },
-        "dashed" => Border { tl: '┌', tr: '┐', br: '┘', bl: '└', h_top: "−", h_bottom: "−", side_l: '╎', side_r: '╎' },
-        "double" => Border { tl: '╔', tr: '╗', br: '╝', bl: '╚', h_top: "═", h_bottom: "═", side_l: '║', side_r: '║' },
-        "dot-dash" => Border { tl: '┌', tr: '┐', br: '┘', bl: '└', h_top: "·-", h_bottom: "·-", side_l: '!', side_r: '!' },
-        "dot-dot-dash" => Border {
-            tl: '┌', tr: '┐', br: '┘', bl: '└', h_top: "··-", h_bottom: "··-", side_l: '│', side_r: '│',
+        "dotted" => Border {
+            tl: '┌',
+            tr: '┐',
+            br: '┘',
+            bl: '└',
+            h_top: "⋯",
+            h_bottom: "⋯",
+            side_l: '⋮',
+            side_r: '⋮',
         },
-        "bold" => Border { tl: '┏', tr: '┓', br: '┛', bl: '┗', h_top: "━", h_bottom: "━", side_l: '┃', side_r: '┃' },
+        "dashed" => Border {
+            tl: '┌',
+            tr: '┐',
+            br: '┘',
+            bl: '└',
+            h_top: "−",
+            h_bottom: "−",
+            side_l: '╎',
+            side_r: '╎',
+        },
+        "double" => Border {
+            tl: '╔',
+            tr: '╗',
+            br: '╝',
+            bl: '╚',
+            h_top: "═",
+            h_bottom: "═",
+            side_l: '║',
+            side_r: '║',
+        },
+        "dot-dash" => Border {
+            tl: '┌',
+            tr: '┐',
+            br: '┘',
+            bl: '└',
+            h_top: "·-",
+            h_bottom: "·-",
+            side_l: '!',
+            side_r: '!',
+        },
+        "dot-dot-dash" => Border {
+            tl: '┌',
+            tr: '┐',
+            br: '┘',
+            bl: '└',
+            h_top: "··-",
+            h_bottom: "··-",
+            side_l: '│',
+            side_r: '│',
+        },
+        "bold" => Border {
+            tl: '┏',
+            tr: '┓',
+            br: '┛',
+            bl: '┗',
+            h_top: "━",
+            h_bottom: "━",
+            side_l: '┃',
+            side_r: '┃',
+        },
         "bold-dash" => Border {
-            tl: '┏', tr: '┓', br: '┛', bl: '┗', h_top: "━ ", h_bottom: "━ ", side_l: '╻', side_r: '╻',
+            tl: '┏',
+            tr: '┓',
+            br: '┛',
+            bl: '┗',
+            h_top: "━ ",
+            h_bottom: "━ ",
+            side_l: '╻',
+            side_r: '╻',
         },
         "double-dash" => Border {
-            tl: '╔', tr: '╗', br: '╝', bl: '╚', h_top: "═ ", h_bottom: "═ ", side_l: '∥', side_r: '∥',
+            tl: '╔',
+            tr: '╗',
+            br: '╝',
+            bl: '╚',
+            h_top: "═ ",
+            h_bottom: "═ ",
+            side_l: '∥',
+            side_r: '∥',
         },
-        "wave" => Border { tl: '┌', tr: '┐', br: '┘', bl: '└', h_top: "∼", h_bottom: "∼", side_l: '≀', side_r: '≀' },
-        "broad" => Border { tl: '▛', tr: '▜', br: '▟', bl: '▙', h_top: "▀", h_bottom: "▄", side_l: '▌', side_r: '▐' },
-        "wide" => Border { tl: '█', tr: '█', br: '█', bl: '█', h_top: "█", h_bottom: "█", side_l: '█', side_r: '█' },
-        "none" => Border { tl: ' ', tr: ' ', br: ' ', bl: ' ', h_top: " ", h_bottom: " ", side_l: ' ', side_r: ' ' },
-        _ => Border { tl: '┌', tr: '┐', br: '┘', bl: '└', h_top: "─", h_bottom: "─", side_l: '│', side_r: '│' },
+        "wave" => Border {
+            tl: '┌',
+            tr: '┐',
+            br: '┘',
+            bl: '└',
+            h_top: "∼",
+            h_bottom: "∼",
+            side_l: '≀',
+            side_r: '≀',
+        },
+        "broad" => Border {
+            tl: '▛',
+            tr: '▜',
+            br: '▟',
+            bl: '▙',
+            h_top: "▀",
+            h_bottom: "▄",
+            side_l: '▌',
+            side_r: '▐',
+        },
+        "wide" => Border {
+            tl: '█',
+            tr: '█',
+            br: '█',
+            bl: '█',
+            h_top: "█",
+            h_bottom: "█",
+            side_l: '█',
+            side_r: '█',
+        },
+        "none" => Border {
+            tl: ' ',
+            tr: ' ',
+            br: ' ',
+            bl: ' ',
+            h_top: " ",
+            h_bottom: " ",
+            side_l: ' ',
+            side_r: ' ',
+        },
+        _ => Border {
+            tl: '┌',
+            tr: '┐',
+            br: '┘',
+            bl: '└',
+            h_top: "─",
+            h_bottom: "─",
+            side_l: '│',
+            side_r: '│',
+        },
     }
 }
 
@@ -79,7 +190,10 @@ pub(super) fn shifted_run(pattern: &str, inner: usize) -> String {
 /// neither upstream branch — KEEPS its corners (observed quirk).
 pub(super) fn rounded(style: &str) -> Border {
     let mut b = border(style);
-    if matches!(style, "solid" | "dotted" | "dashed" | "dot-dash" | "dot-dot-dash") {
+    if matches!(
+        style,
+        "solid" | "dotted" | "dashed" | "dot-dash" | "dot-dot-dash"
+    ) {
         b.tl = '╭';
         b.tr = '╮';
         b.br = '╯';
@@ -111,18 +225,66 @@ pub(super) struct Edge {
 /// The Unicode edge-style table. Unknown styles render solid.
 pub(super) fn edge(style: &str) -> Edge {
     match style {
-        "double" => Edge { hor: "═", ver: '║', corners: ['╔', '╗', '╚', '╝'] },
-        "double-dash" => Edge { hor: "═ ", ver: '∥', corners: ['╔', '╗', '╚', '╝'] },
-        "dotted" => Edge { hor: "·", ver: ':', corners: ['┌', '┐', '└', '┘'] },
-        "dashed" => Edge { hor: "╴", ver: '╵', corners: ['┌', '┐', '╵', '┘'] },
-        "dot-dash" => Edge { hor: "·-", ver: '!', corners: ['┌', '┐', '└', '┘'] },
-        "dot-dot-dash" => Edge { hor: "··-", ver: '!', corners: ['┌', '┐', '└', '┘'] },
-        "wave" => Edge { hor: "∼", ver: '≀', corners: ['┌', '┐', '└', '┘'] },
-        "bold" => Edge { hor: "━", ver: '┃', corners: ['┏', '┓', '┗', '┛'] },
-        "bold-dash" => Edge { hor: "━ ", ver: '╻', corners: ['┏', '┓', '┗', '┛'] },
-        "broad" => Edge { hor: "▬", ver: '▮', corners: ['█', '█', '█', '█'] },
-        "wide" => Edge { hor: "█", ver: '█', corners: ['█', '█', '█', '█'] },
-        _ => Edge { hor: "─", ver: '│', corners: ['┌', '┐', '└', '┘'] },
+        "double" => Edge {
+            hor: "═",
+            ver: '║',
+            corners: ['╔', '╗', '╚', '╝'],
+        },
+        "double-dash" => Edge {
+            hor: "═ ",
+            ver: '∥',
+            corners: ['╔', '╗', '╚', '╝'],
+        },
+        "dotted" => Edge {
+            hor: "·",
+            ver: ':',
+            corners: ['┌', '┐', '└', '┘'],
+        },
+        "dashed" => Edge {
+            hor: "╴",
+            ver: '╵',
+            corners: ['┌', '┐', '╵', '┘'],
+        },
+        "dot-dash" => Edge {
+            hor: "·-",
+            ver: '!',
+            corners: ['┌', '┐', '└', '┘'],
+        },
+        "dot-dot-dash" => Edge {
+            hor: "··-",
+            ver: '!',
+            corners: ['┌', '┐', '└', '┘'],
+        },
+        "wave" => Edge {
+            hor: "∼",
+            ver: '≀',
+            corners: ['┌', '┐', '└', '┘'],
+        },
+        "bold" => Edge {
+            hor: "━",
+            ver: '┃',
+            corners: ['┏', '┓', '┗', '┛'],
+        },
+        "bold-dash" => Edge {
+            hor: "━ ",
+            ver: '╻',
+            corners: ['┏', '┓', '┗', '┛'],
+        },
+        "broad" => Edge {
+            hor: "▬",
+            ver: '▮',
+            corners: ['█', '█', '█', '█'],
+        },
+        "wide" => Edge {
+            hor: "█",
+            ver: '█',
+            corners: ['█', '█', '█', '█'],
+        },
+        _ => Edge {
+            hor: "─",
+            ver: '│',
+            corners: ['┌', '┐', '└', '┘'],
+        },
     }
 }
 
@@ -183,7 +345,10 @@ mod tests {
     #[test]
     fn broad_border_has_distinct_edges() {
         let b = border("broad");
-        assert_eq!((b.h_top, b.h_bottom, b.side_l, b.side_r), ("▀", "▄", '▌', '▐'));
+        assert_eq!(
+            (b.h_top, b.h_bottom, b.side_l, b.side_r),
+            ("▀", "▄", '▌', '▐')
+        );
     }
 
     #[test]
@@ -201,7 +366,14 @@ mod tests {
     #[test]
     fn edge_glyph_sets_match_probe() {
         let e = edge("double");
-        assert_eq!(e, Edge { hor: "═", ver: '║', corners: ['╔', '╗', '╚', '╝'] });
+        assert_eq!(
+            e,
+            Edge {
+                hor: "═",
+                ver: '║',
+                corners: ['╔', '╗', '╚', '╝']
+            }
+        );
         assert_eq!(edge("dashed").ver, '╵');
         assert_eq!(edge("dotted").ver, ':');
         assert_eq!(edge("bold").corners, ['┏', '┓', '┗', '┛']);

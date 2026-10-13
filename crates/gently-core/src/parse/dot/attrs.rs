@@ -51,7 +51,11 @@ mod tests {
     fn unquotes_exactly_once() {
         assert_eq!(unquote("x \\\"y\\\\"), "x \"y\\");
         assert_eq!(unquote("plain"), "plain");
-        assert_eq!(unquote("a\\nb"), "a\\nb", "unknown escapes keep the backslash");
+        assert_eq!(
+            unquote("a\\nb"),
+            "a\\nb",
+            "unknown escapes keep the backslash"
+        );
         assert_eq!(unquote("trailing\\"), "trailing\\");
     }
 }

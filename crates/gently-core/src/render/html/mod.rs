@@ -74,7 +74,11 @@ pub fn render(graph: &Graph, layout: &Layout) -> Result<String, RenderError> {
 /// CSS rules every emitted class uses (upstream `css()`) embedded in a
 /// `<style>` block ahead of the table (ge.html_render.c4).
 pub fn document(graph: &Graph, layout: &Layout) -> Result<String, RenderError> {
-    let rules = css(graph.edges.iter().any(|_| true), !graph.groups.is_empty(), has_rounded(graph));
+    let rules = css(
+        graph.edges.iter().any(|_| true),
+        !graph.groups.is_empty(),
+        has_rounded(graph),
+    );
     let mut out = format!("<style type=\"text/css\">\n<!--\n{rules}-->\n</style>\n");
     out.push_str(&render(graph, layout)?);
     Ok(out)
@@ -153,7 +157,8 @@ fn node_td(graph: &Graph, i: usize) -> String {
             " <td style=\"border: none; background: inherit;\"></td>".to_string()
         }
         (Some("point"), _) => {
-            " <td class='node' style=\"background: inherit; border: none\">\u{2605}</td>".to_string()
+            " <td class='node' style=\"background: inherit; border: none\">\u{2605}</td>"
+                .to_string()
         }
         (_, Some(div_class)) => rounded_node_td(graph, node, div_class),
         _ => plain_node_td(graph, node),
@@ -198,11 +203,10 @@ fn rounded_node_td(graph: &Graph, node: &crate::graph::Node, div_class: &str) ->
     } else {
         format!(" style=\"top: {top}em\"")
     };
-    let inner_label = node
-        .attributes
-        .get("link")
-        .map(escape_href)
-        .map_or_else(|| label.clone(), |href| format!("<a href='{href}'>{label}</a>"));
+    let inner_label = node.attributes.get("link").map(escape_href).map_or_else(
+        || label.clone(),
+        |href| format!("<a href='{href}'>{label}</a>"),
+    );
     format!(
         " <td class='node' style=\"border: none;background: inherit\"><div class='{div_class}' style='background:{fill};border:{border};width: {}em; height: {}em'><span class='c'{span_top}>{inner_label}</span></div></td>",
         w + 2,
@@ -229,7 +233,11 @@ fn plain_node_td(graph: &Graph, node: &crate::graph::Node) -> String {
     }
     parts.sort();
     let style = parts.join("; ");
-    let style = if style.is_empty() { String::new() } else { format!(" style=\"{style}\"") };
+    let style = if style.is_empty() {
+        String::new()
+    } else {
+        format!(" style=\"{style}\"")
+    };
     let content = match node.attributes.get("link") {
         Some(href) if !label.is_empty() => format!("<a href='{}'>{label}</a>", escape_href(href)),
         _ => label,
@@ -249,7 +257,11 @@ fn border_components(graph: &Graph, node: &crate::graph::Node) -> (String, Strin
             .unwrap_or(default)
             .to_string()
     };
-    (val("border_style", "solid"), val("border_width", "1"), val("border_color", "#000000"))
+    (
+        val("border_style", "solid"),
+        val("border_width", "1"),
+        val("border_color", "#000000"),
+    )
 }
 
 /// The inner div class of a rounded shape: `r` for rounded, `c` for
@@ -278,7 +290,9 @@ fn edge_td(graph: &Graph, layout: &Layout, edge: usize, at: usize) -> String {
         .get_attr(Scope::Edge(edge), "color")
         .or_else(|| graph.get_attr(Scope::Class(ObjectKind::Edge, String::new()), "color"))
         .filter(|v| !v.is_empty());
-    let hex = color.map(color_as_hex).unwrap_or_else(|| "#000000".to_string());
+    let hex = color
+        .map(color_as_hex)
+        .unwrap_or_else(|| "#000000".to_string());
     let border = border_attribute_as_html(&edge_style(graph, edge), "2", &hex);
     let spans = arrow_spans(graph, layout, edge, at, c);
     let labelled = layout.label_cells[edge] == Some(c);
@@ -309,7 +323,14 @@ fn edge_style_attr(sides: &str, border: &str, hex: &str, colorize: bool) -> Stri
 /// borders).
 fn edge_content(graph: &Graph, edge: usize, labelled: bool, spans: &str) -> String {
     if !spans.is_empty() {
-        format!("{}{spans}", if labelled { cell_label(graph, edge) } else { String::new() })
+        format!(
+            "{}{spans}",
+            if labelled {
+                cell_label(graph, edge)
+            } else {
+                String::new()
+            }
+        )
     } else if labelled {
         cell_label(graph, edge)
     } else {
@@ -365,7 +386,13 @@ fn arrow_span(layout: &Layout, c: Cell, node: usize) -> String {
 
 /// How path cell `at` connects: horizontal, vertical, or corner (both) —
 /// from its path neighbours and, at the ends, the adjacent node.
-fn orientation_of(path: &[Cell], at: usize, graph: &Graph, layout: &Layout, edge: usize) -> Orientation {
+fn orientation_of(
+    path: &[Cell],
+    at: usize,
+    graph: &Graph,
+    layout: &Layout,
+    edge: usize,
+) -> Orientation {
     let c = path[at];
     let mut horizontal = false;
     let mut vertical = false;
@@ -376,10 +403,20 @@ fn orientation_of(path: &[Cell], at: usize, graph: &Graph, layout: &Layout, edge
         note_axis(path[at + 1], c, &mut horizontal, &mut vertical);
     }
     if at == 0 {
-        note_axis(layout.node_cells[graph.edges[edge].from], c, &mut horizontal, &mut vertical);
+        note_axis(
+            layout.node_cells[graph.edges[edge].from],
+            c,
+            &mut horizontal,
+            &mut vertical,
+        );
     }
     if at + 1 == path.len() {
-        note_axis(layout.node_cells[graph.edges[edge].to], c, &mut horizontal, &mut vertical);
+        note_axis(
+            layout.node_cells[graph.edges[edge].to],
+            c,
+            &mut horizontal,
+            &mut vertical,
+        );
     }
     match (horizontal, vertical) {
         (true, true) => Orientation::Corner,

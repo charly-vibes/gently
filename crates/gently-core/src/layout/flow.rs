@@ -78,7 +78,14 @@ where
 fn mirrored_west(grid: Layout) -> Layout {
     let w = grid.width;
     let mut g = remap(grid, |(x, y)| (w - 1 - x, y));
-    g.edge_paths = g.edge_paths.into_iter().map(|mut p| { p.reverse(); p }).collect();
+    g.edge_paths = g
+        .edge_paths
+        .into_iter()
+        .map(|mut p| {
+            p.reverse();
+            p
+        })
+        .collect();
     g
 }
 
@@ -89,7 +96,8 @@ fn transposed(grid: Layout) -> Layout {
     let mut g = remap(grid, |(x, y)| (y, x));
     g.width = h;
     g.height = w;
-    g}
+    g
+}
 
 /// The north layout: the south layout with rows flipped, so sources sit
 /// strictly south of their targets (earlier along the northward axis).
@@ -98,11 +106,12 @@ fn flipped_rows(grid: Layout) -> Layout {
     let mut g = remap(grid, |(x, y)| (x, h - 1 - y));
     g.width = w;
     g.height = h;
-    g}
+    g
+}
 
 #[cfg(test)]
 mod tests {
-    use super::{Flow, realize};
+    use super::{realize, Flow};
     use crate::layout::Layout;
 
     /// A 2x1 grid (one node at (0,0), width 3, height 1) under each flow.
@@ -125,7 +134,11 @@ mod tests {
     fn west_mirrors_columns_and_reverses_paths() {
         let g = realize(sample(), Flow::West);
         assert_eq!(g.node_cells, vec![(2, 0)]);
-        assert_eq!(g.edge_paths, vec![vec![(1, 0)]], "path starts at the source port");
+        assert_eq!(
+            g.edge_paths,
+            vec![vec![(1, 0)]],
+            "path starts at the source port"
+        );
     }
 
     #[test]
@@ -139,7 +152,11 @@ mod tests {
     #[test]
     fn north_flips_rows() {
         let g = realize(sample(), Flow::North);
-        assert_eq!(g.node_cells, vec![(0, 2)], "the node row flips with the grid");
+        assert_eq!(
+            g.node_cells,
+            vec![(0, 2)],
+            "the node row flips with the grid"
+        );
         assert_eq!((g.width, g.height), (1, 3));
     }
 }

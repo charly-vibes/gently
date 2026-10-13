@@ -104,7 +104,9 @@ fn style_visible_in_operator(table: &AttributeTable) -> bool {
 /// digits-only width gets `px`, default style for the class with no
 /// width/color left is dropped entirely; `none` passes through.
 pub fn border_attribute(table: &AttributeTable, kind: ObjectKind) -> String {
-    let style = table.get("border_style").unwrap_or(default_border_style(kind));
+    let style = table
+        .get("border_style")
+        .unwrap_or(default_border_style(kind));
     if style == "none" {
         return "none".to_string();
     }
@@ -188,7 +190,11 @@ mod tests {
         let a = g.add_node("a");
         let b = g.add_node("b");
         g.add_edge(a, b, true);
-        g.set_attr(Scope::Class(ObjectKind::Node, String::new()), "border", "solid");
+        g.set_attr(
+            Scope::Class(ObjectKind::Node, String::new()),
+            "border",
+            "solid",
+        );
         assert_eq!(super::super::render(&g), "[ a ] --> [ b ]\n");
     }
 

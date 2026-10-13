@@ -154,10 +154,13 @@ fn group_pass(graph: &Graph, declared: &mut std::collections::HashSet<usize>) ->
     out
 }
 
-
 /// Pass 4: edges as operator chains + isolated nodes, in upstream
 /// `(abs rank, name)` order of their from-node.
-fn edge_pass(graph: &Graph, ranks: &[isize], declared: &std::collections::HashSet<usize>) -> String {
+fn edge_pass(
+    graph: &Graph,
+    ranks: &[isize],
+    declared: &std::collections::HashSet<usize>,
+) -> String {
     // successor lists computed once, shared by ordering and emission
     let succs: Vec<Vec<usize>> = (0..graph.nodes.len())
         .map(|i| successors(graph, i))
@@ -240,18 +243,28 @@ fn edge_chain(edge: &crate::graph::Edge) -> String {
     // upstream: `$a = attributes_as_txt . ' '; $a =~ s/^\s//` — the
     // leading brace-space becomes a trailing space
     let attrs = instance_attributes(&edge.attributes, ObjectKind::Edge);
-    let tail = if attrs.is_empty() { String::new() } else { format!("{} ", attrs.trim_start()) };
+    let tail = if attrs.is_empty() {
+        String::new()
+    } else {
+        format!("{} ", attrs.trim_start())
+    };
     format!("{left}{mid}{operator}{right}{tail}")
 }
 
 /// `[ name ]` with the upstream name escaping (`[\]\|\{\}\#]`).
 fn node_line(name: &str) -> String {
-    format!("[ {} ]", escape_chars(name, &['[', ']', '|', '{', '}', '#']))
+    format!(
+        "[ {} ]",
+        escape_chars(name, &['[', ']', '|', '{', '}', '#'])
+    )
 }
 
 /// Group names escape the group specials (`[`, `]`, `(`, `)`, `{`, `}`, `#`).
 fn group_line(name: &str) -> String {
-    format!("( {} )", escape_chars(name, &['[', ']', '(', ')', '{', '}', '#']))
+    format!(
+        "( {} )",
+        escape_chars(name, &['[', ']', '(', ')', '{', '}', '#'])
+    )
 }
 
 fn escape_chars(name: &str, specials: &[char]) -> String {
@@ -373,4 +386,3 @@ fn ordered_nodes(graph: &Graph, ranks: &[isize]) -> Vec<usize> {
     });
     order
 }
-

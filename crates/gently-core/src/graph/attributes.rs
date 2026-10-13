@@ -93,7 +93,10 @@ fn split_border_attributes(border: &str) -> (String, String, String) {
     let ranges = width_ranges(&rest);
     let mut width = String::new();
     if let Some(&(start, end)) = ranges.last() {
-        width = rest[start..end].chars().filter(|c| c.is_ascii_digit()).collect();
+        width = rest[start..end]
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect();
     }
     for &(start, end) in ranges.iter().rev() {
         rest.replace_range(start..end, "");
@@ -105,8 +108,19 @@ fn split_border_attributes(border: &str) -> (String, String, String) {
 /// The upstream style words in alternation order — leftmost position wins,
 /// then this order decides.
 const STYLES: [&str; 13] = [
-    "solid", "dotted", "dot-dot-dash", "dot-dash", "dashed", "double-dash", "double",
-    "bold-dash", "bold", "broad", "wide", "wave", "none",
+    "solid",
+    "dotted",
+    "dot-dot-dash",
+    "dot-dash",
+    "dashed",
+    "double-dash",
+    "double",
+    "bold-dash",
+    "bold",
+    "broad",
+    "wide",
+    "wave",
+    "none",
 ];
 
 /// Remove the first style word from `s` (leftmost position, upstream
@@ -132,7 +146,11 @@ fn width_ranges(s: &str) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < b.len() {
-        let end = if b[i].is_ascii_digit() { digit_token_end(s, i) } else { i };
+        let end = if b[i].is_ascii_digit() {
+            digit_token_end(s, i)
+        } else {
+            i
+        };
         if end > i {
             out.push((i, end));
         }

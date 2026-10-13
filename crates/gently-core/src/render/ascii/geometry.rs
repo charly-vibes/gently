@@ -8,9 +8,7 @@
 //! Rationale: split from canvas.rs past the tidy file limit (gently-b0z).
 
 use super::canvas::GAP_WIDTH;
-use super::labels::{
-    default_align, max_line_width, object_label_lines, Align, LabelLine,
-};
+use super::labels::{default_align, max_line_width, object_label_lines, Align, LabelLine};
 use super::styles::{edge_gap_width, shape, Shape};
 use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::{Cell, Layout};
@@ -159,7 +157,12 @@ fn box_width(lines: &[LabelLine], style: &str, selfloop: bool) -> usize {
 
 /// The value of `key` on the object at `scope`, falling back to the base
 /// class of `kind` (per-object attributes win over class attributes).
-pub(super) fn object_attr<'a>(graph: &'a Graph, scope: Scope, kind: ObjectKind, key: &str) -> Option<&'a str> {
+pub(super) fn object_attr<'a>(
+    graph: &'a Graph,
+    scope: Scope,
+    kind: ObjectKind,
+    key: &str,
+) -> Option<&'a str> {
     graph
         .get_attr(scope, key)
         .or_else(|| graph.get_attr(Scope::Class(kind, String::new()), key))
@@ -184,7 +187,10 @@ pub(super) fn node_styles(graph: &Graph) -> Vec<(String, Shape)> {
                 None if is_anon(&graph.nodes[i].name) => "none".to_string(),
                 None => "solid".to_string(),
             };
-            (style, shape(object_attr(graph, scope, ObjectKind::Node, "shape")))
+            (
+                style,
+                shape(object_attr(graph, scope, ObjectKind::Node, "shape")),
+            )
         })
         .collect()
 }
@@ -273,9 +279,8 @@ fn widen_edge_column(
 ) {
     let c = path[0].0;
     let e = &graph.edges[ei];
-    let bd_hor = e.arrows.start
-        && e.arrows.end
-        && layout.node_cells[e.from].1 == layout.node_cells[e.to].1;
+    let bd_hor =
+        e.arrows.start && e.arrows.end && layout.node_cells[e.from].1 == layout.node_cells[e.to].1;
     let extra = if bd_hor { 1 } else { 0 };
     // A `minlen >= 2` straight edge stretches one extra empty column
     // wide (gently-yhg, probed oracle: minlen 2..5 all widen the straight
@@ -300,13 +305,6 @@ fn widen_edge_column(
 /// the aligned label's lines, gently-emd: the WRAPPED ones when
 /// textwrap is set) plus the 5-char label padding.
 fn label_cell_width(graph: &Graph, ei: usize, label: &str) -> usize {
-    let lines = object_label_lines(
-        graph,
-        Scope::Edge(ei),
-        ObjectKind::Edge,
-        label,
-        Align::Left,
-    );
+    let lines = object_label_lines(graph, Scope::Edge(ei), ObjectKind::Edge, label, Align::Left);
     max_line_width(&lines) + 5
 }
-

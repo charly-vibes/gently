@@ -165,7 +165,11 @@ impl DoctorCheck for OracleCheck {
 
 /// Probe the `perl` interpreter itself; `None` means perl is fine.
 fn probe_perl() -> Option<LintResult> {
-    let out = Command::new("perl").arg("-e").arg("print 42").output().ok()?;
+    let out = Command::new("perl")
+        .arg("-e")
+        .arg("print 42")
+        .output()
+        .ok()?;
     if out.status.success() {
         return None;
     }
@@ -195,7 +199,11 @@ fn probe_pinned_module() -> Option<LintResult> {
     if version == "0.69" {
         return None;
     }
-    let found = if version.is_empty() { "nothing" } else { version.as_str() };
+    let found = if version.is_empty() {
+        "nothing"
+    } else {
+        version.as_str()
+    };
     Some(LintResult::with_fix(
         format!("pinned Graph::Easy not loadable at v0.69 (found: {found})"),
         Severity::Warning,
@@ -257,7 +265,10 @@ impl DoctorCheck for PinFreshnessCheck {
 
 /// Check every `*.expected` companion's pin header against
 /// [`ORACLE_PIN`]; advisory when the corpus holds no companions.
-fn check_companion_pins(fix_dir: &Path, repo_root: &Path) -> Result<Vec<LintResult>, std::io::Error> {
+fn check_companion_pins(
+    fix_dir: &Path,
+    repo_root: &Path,
+) -> Result<Vec<LintResult>, std::io::Error> {
     let mut results = Vec::new();
     let mut checked = 0usize;
     for entry in std::fs::read_dir(fix_dir)? {

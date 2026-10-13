@@ -13,17 +13,16 @@
 mod canvas;
 mod edges;
 mod geometry;
-mod labels;
 mod groups;
+mod labels;
 mod polyline;
 mod styles;
 
 pub(in crate::render) use styles::display_width;
 
-use canvas::Canvas;
 use crate::graph::Graph;
 use crate::layout::Layout;
-
+use canvas::Canvas;
 
 /// A typed render failure: a human description of the unsupported geometry.
 #[derive(Debug, Clone, PartialEq, Eq)]

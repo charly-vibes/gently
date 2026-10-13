@@ -53,7 +53,11 @@ fn attr_list(table: &AttributeTable) -> String {
 /// `#<index>`) plus the mapped attribute list.
 fn node_statement(graph: &Graph, index: usize) -> String {
     let node = &graph.nodes[index];
-    let name = if node.name.is_empty() { format!("#{index}") } else { node.name.clone() };
+    let name = if node.name.is_empty() {
+        format!("#{index}")
+    } else {
+        node.name.clone()
+    };
     let attrs = attr_list(&node.attributes);
     if attrs.is_empty() {
         quote(&name)
@@ -123,10 +127,12 @@ fn cluster(graph: &Graph, index: usize) -> String {
 /// would ingest them as spurious `edge`/`graph`/`node` NODE statements —
 /// and there are no `//` comments (the lexer rejects them).
 pub fn render(graph: &Graph) -> String {
-    let grouped: Vec<usize> = graph.groups.iter().flat_map(|grp| grp.members.iter().copied()).collect();
-    let mut out = String::from(
-        "digraph GRAPH_0 {\n\n",
-    );
+    let grouped: Vec<usize> = graph
+        .groups
+        .iter()
+        .flat_map(|grp| grp.members.iter().copied())
+        .collect();
+    let mut out = String::from("digraph GRAPH_0 {\n\n");
     for i in 0..graph.nodes.len() {
         if grouped.contains(&i) {
             continue;

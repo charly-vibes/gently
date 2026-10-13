@@ -18,7 +18,11 @@ fn pod_anon_group_parses() {
         .expect("the POD anonymous-group example must parse");
     assert_eq!(g.groups.len(), 1);
     assert_eq!(g.groups[0].name, "Group #0", "anonymous group");
-    assert_eq!(members(&g, 0), vec![node(&g, "Bonn")], "Bonn is the group's member");
+    assert_eq!(
+        members(&g, 0),
+        vec![node(&g, "Bonn")],
+        "Bonn is the group's member"
+    );
     assert!(g.edges.is_empty(), "group endpoints record no edge");
     assert_eq!(g.nodes.len(), 2, "Bonn and Berlin both exist");
 }

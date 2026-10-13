@@ -13,9 +13,7 @@
 pub fn quote(value: &str) -> String {
     let bare = !value.is_empty()
         && value.chars().enumerate().all(|(i, c)| {
-            c.is_ascii_alphanumeric() && (i > 0 || !c.is_ascii_digit())
-                || c == '_'
-                || c == '.'
+            c.is_ascii_alphanumeric() && (i > 0 || !c.is_ascii_digit()) || c == '_' || c == '.'
         });
     if bare {
         return value.to_string();

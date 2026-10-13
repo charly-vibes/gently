@@ -52,7 +52,11 @@ fn p2_edge_node_ranks_inline_with_the_buy_leaf_below() {
         .map(|(i, n)| (n.name.clone(), l.node_cells[i]))
         .collect();
     // the ge_layout oracle pin asserts in name order
-    let by_name = { let mut v = by_name; v.sort(); v };
+    let by_name = {
+        let mut v = by_name;
+        v.sort();
+        v
+    };
     assert_eq!(
         by_name,
         vec![

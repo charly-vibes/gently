@@ -10,14 +10,18 @@
 //! with the nameless keyword form and any attribute list before `{` as
 //! tokenizing errors. Rationale: split from mod.rs so files stay under the
 //! ratchets' limits.
-use super::{attrs, err, ParseError, P, ScopeSt};
-use crate::graph::Scope;
 use super::lex::Tok;
+use super::{attrs, err, ParseError, ScopeSt, P};
+use crate::graph::Scope;
 
 impl P<'_> {
     /// Parse statements until the closing `}` (not consumed — the caller
     /// applies the scope-boundary rules via `scope_end`).
-    pub(super) fn scope_body(&mut self, is_group: bool, group: Option<usize>) -> Result<(), ParseError> {
+    pub(super) fn scope_body(
+        &mut self,
+        is_group: bool,
+        group: Option<usize>,
+    ) -> Result<(), ParseError> {
         self.scopes.push(ScopeSt { is_group, group });
         loop {
             self.skip_semis();
@@ -85,7 +89,8 @@ impl P<'_> {
         match self.scopes.iter().rev().find_map(|s| s.group) {
             Some(gidx) => self.g.set_attr(Scope::Group(gidx), &key, &value),
             None if key == "rankdir" => {
-                self.g.set_attr(Scope::Graph, "flow", attrs::rankdir_flow(&value));
+                self.g
+                    .set_attr(Scope::Graph, "flow", attrs::rankdir_flow(&value));
             }
             None => self.g.set_attr(Scope::Graph, &key, &value),
         }
@@ -104,7 +109,10 @@ impl P<'_> {
             Some(Tok::Ident(s)) => s.clone(),
             _ => return Err(self.not_recognized(start)),
         };
-        if matches!(self.toks.get(self.pos + 1).map(|t| &t.tok), Some(Tok::LBracket)) {
+        if matches!(
+            self.toks.get(self.pos + 1).map(|t| &t.tok),
+            Some(Tok::LBracket)
+        ) {
             return Err(self.not_recognized(start));
         }
         self.pos += 1;

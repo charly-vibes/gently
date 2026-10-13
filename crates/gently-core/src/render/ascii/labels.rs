@@ -79,7 +79,10 @@ pub(super) fn aligned_label(label: &str, default: Align) -> Vec<LabelLine> {
             // the escape ends this segment and aligns the next one;
             // \n means "the object's default" (upstream: `$a = $al if $a eq 'n'`)
             Some(esc @ ('n' | 'r' | 'l' | 'c')) => {
-                lines.push(LabelLine { text: finish(part), align: last_align });
+                lines.push(LabelLine {
+                    text: finish(part),
+                    align: last_align,
+                });
                 part = String::new();
                 last_align = match esc {
                     'l' => Align::Left,
@@ -100,7 +103,10 @@ pub(super) fn aligned_label(label: &str, default: Align) -> Vec<LabelLine> {
     // remainder (upstream: `push @lines, $label if $label ne ''`), and
     // an escape-free empty label yields NO lines at all
     if !part.is_empty() {
-        lines.push(LabelLine { text: finish(part), align: last_align });
+        lines.push(LabelLine {
+            text: finish(part),
+            align: last_align,
+        });
     }
     lines
 }
@@ -170,7 +176,10 @@ pub(super) fn wrapped_label(label: &str, default: Align, wrap: TextWrap) -> Vec<
     let lines = wrap_lines(&collapsed, wrap_width(collapsed.len(), wrap));
     lines
         .into_iter()
-        .map(|text| LabelLine { text, align: default })
+        .map(|text| LabelLine {
+            text,
+            align: default,
+        })
         .collect()
 }
 
@@ -288,8 +297,14 @@ mod tests {
         assert_eq!(
             lines,
             vec![
-                LabelLine { text: "put msg".into(), align: Align::Left },
-                LabelLine { text: "via http".into(), align: Align::Left },
+                LabelLine {
+                    text: "put msg".into(),
+                    align: Align::Left
+                },
+                LabelLine {
+                    text: "via http".into(),
+                    align: Align::Left
+                },
             ]
         );
     }
@@ -299,7 +314,10 @@ mod tests {
         // \l terminates "Long Node Label" and left-aligns "left"
         let lines = aligned_label("Long Node Label\\l left\\r right\\c center", Align::Center);
         let aligns: Vec<Align> = lines.iter().map(|l| l.align).collect();
-        assert_eq!(aligns, vec![Align::Center, Align::Left, Align::Right, Align::Center]);
+        assert_eq!(
+            aligns,
+            vec![Align::Center, Align::Left, Align::Right, Align::Center]
+        );
         let texts: Vec<&str> = lines.iter().map(|l| l.text.as_str()).collect();
         assert_eq!(texts, vec!["Long Node Label", "left", "right", "center"]);
     }

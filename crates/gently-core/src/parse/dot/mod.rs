@@ -143,19 +143,17 @@ impl<'a> P<'a> {
     pub(super) fn not_recognized(&self, start: usize) -> ParseError {
         err(
             self.line(),
-            format!("'{}' not recognized by Graph::Easy::Parser::Graphviz", self.src[start..].trim()),
+            format!(
+                "'{}' not recognized by Graph::Easy::Parser::Graphviz",
+                self.src[start..].trim()
+            ),
         )
     }
 
     fn header(&mut self) -> Result<(), ParseError> {
         let kind = match self.peek_tok() {
             Some(Tok::Ident(s)) if s == "digraph" || s == "graph" => s.clone(),
-            _ => {
-                return Err(err(
-                    self.line(),
-                    "expected a `digraph' or `graph' header",
-                ))
-            }
+            _ => return Err(err(self.line(), "expected a `digraph' or `graph' header")),
         };
         self.pos += 1;
         if kind == "graph" {
@@ -222,7 +220,9 @@ impl<'a> P<'a> {
                 port,
                 compass,
             } => self.resolve_port(base, port, compass.as_deref()),
-            Ep::Scope => unreachable!("scope endpoints never resolve — linkage flows through the stack"),
+            Ep::Scope => {
+                unreachable!("scope endpoints never resolve — linkage flows through the stack")
+            }
         }
     }
 
@@ -255,7 +255,10 @@ impl<'a> P<'a> {
         let port_err = |p: &P| {
             err(
                 p.line(),
-                format!("Cannot find autosplit node for {base}:{port} on edge {}", p.g.edges.len() + 1),
+                format!(
+                    "Cannot find autosplit node for {base}:{port} on edge {}",
+                    p.g.edges.len() + 1
+                ),
             )
         };
         let parts = match self.split.get(base) {
@@ -265,8 +268,11 @@ impl<'a> P<'a> {
         if let Ok(i) = port.parse::<usize>() {
             return parts.get(i).copied().ok_or_else(|| port_err(self));
         }
-        let is_compass =
-            compass.is_some() || matches!(port, "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw" | "c");
+        let is_compass = compass.is_some()
+            || matches!(
+                port,
+                "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw" | "c"
+            );
         if is_compass {
             Ok(parts[0])
         } else {
@@ -291,7 +297,11 @@ impl<'a> P<'a> {
     /// a vertical bar splits flat into parts; an HTML-like table label
     /// splits into one part per `<TD>` cell. Unsplit labels are kept.
     fn maybe_autosplit(&mut self, idx: usize) -> Result<(), ParseError> {
-        let shape = self.g.get_attr(Scope::Node(idx), "shape").unwrap_or("").to_string();
+        let shape = self
+            .g
+            .get_attr(Scope::Node(idx), "shape")
+            .unwrap_or("")
+            .to_string();
         let label = match self.g.get_attr(Scope::Node(idx), "label") {
             Some(label) => label.to_string(),
             None => return Ok(()),
@@ -335,7 +345,10 @@ impl<'a> P<'a> {
             _ => {
                 return Err(err(
                     self.line(),
-                    format!("'{}' not recognized by Graph::Easy::Parser::Graphviz", label),
+                    format!(
+                        "'{}' not recognized by Graph::Easy::Parser::Graphviz",
+                        label
+                    ),
                 ))
             }
         };

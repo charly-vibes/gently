@@ -10,8 +10,8 @@
 //! Rationale: shaped by the recorded v0.69 @ ededa3d7 companions —
 //! ge.layout.c1 (pure function) and c4 (orthogonal routes).
 
+use super::{Cell, Placement, Route, Rows};
 use crate::graph::Graph;
-use super::{Cell, Placement, Rows, Route};
 
 /// How many gap rows each boundary needs (boundary `k` is the gap above
 /// band `k`; `k == bands` trails the last band). Only edges that route
@@ -143,7 +143,11 @@ fn edge_path(route: Route, su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) 
         // The port dips run one gap row, all the way between the two node
         // columns — straight through under (or over) everything between.
         Route::PortBelow | Route::PortAbove => {
-            let boundary = if route == Route::PortBelow { su.1 + 1 } else { su.1 };
+            let boundary = if route == Route::PortBelow {
+                su.1 + 1
+            } else {
+                su.1
+            };
             let g = rows
                 .gap_rows
                 .get(boundary)

@@ -24,16 +24,86 @@ pub(super) struct Border {
 /// falls back the same way for unrecognized style strings).
 pub(super) fn border(style: &str) -> Border {
     match style {
-        "dotted" => Border { tl: '.', tr: '.', br: ':', bl: ':', h: ".", side: ':' },
-        "dashed" => Border { tl: '+', tr: '+', br: '+', bl: '+', h: "- ", side: '\'' },
-        "dot-dash" => Border { tl: '+', tr: '+', br: '+', bl: '+', h: ".-", side: '!' },
-        "dot-dot-dash" => Border { tl: '+', tr: '+', br: '+', bl: '+', h: "..-", side: '|' },
-        "double" => Border { tl: '#', tr: '#', br: '#', bl: '#', h: "=", side: 'H' },
-        "double-dash" => Border { tl: '#', tr: '#', br: '#', bl: '#', h: "= ", side: '"' },
-        "wave" => Border { tl: '+', tr: '+', br: '+', bl: '+', h: "~", side: '{' },
-        "bold" | "broad" | "wide" => Border { tl: '#', tr: '#', br: '#', bl: '#', h: "#", side: '#' },
-        "none" => Border { tl: ' ', tr: ' ', br: ' ', bl: ' ', h: " ", side: ' ' },
-        _ => Border { tl: '+', tr: '+', br: '+', bl: '+', h: "-", side: '|' },
+        "dotted" => Border {
+            tl: '.',
+            tr: '.',
+            br: ':',
+            bl: ':',
+            h: ".",
+            side: ':',
+        },
+        "dashed" => Border {
+            tl: '+',
+            tr: '+',
+            br: '+',
+            bl: '+',
+            h: "- ",
+            side: '\'',
+        },
+        "dot-dash" => Border {
+            tl: '+',
+            tr: '+',
+            br: '+',
+            bl: '+',
+            h: ".-",
+            side: '!',
+        },
+        "dot-dot-dash" => Border {
+            tl: '+',
+            tr: '+',
+            br: '+',
+            bl: '+',
+            h: "..-",
+            side: '|',
+        },
+        "double" => Border {
+            tl: '#',
+            tr: '#',
+            br: '#',
+            bl: '#',
+            h: "=",
+            side: 'H',
+        },
+        "double-dash" => Border {
+            tl: '#',
+            tr: '#',
+            br: '#',
+            bl: '#',
+            h: "= ",
+            side: '"',
+        },
+        "wave" => Border {
+            tl: '+',
+            tr: '+',
+            br: '+',
+            bl: '+',
+            h: "~",
+            side: '{',
+        },
+        "bold" | "broad" | "wide" => Border {
+            tl: '#',
+            tr: '#',
+            br: '#',
+            bl: '#',
+            h: "#",
+            side: '#',
+        },
+        "none" => Border {
+            tl: ' ',
+            tr: ' ',
+            br: ' ',
+            bl: ' ',
+            h: " ",
+            side: ' ',
+        },
+        _ => Border {
+            tl: '+',
+            tr: '+',
+            br: '+',
+            bl: '+',
+            h: "-",
+            side: '|',
+        },
     }
 }
 
@@ -43,9 +113,7 @@ pub(super) fn border(style: &str) -> Border {
 pub(super) fn h_run(b: &Border, inner: usize) -> String {
     let pat = b.h.as_bytes();
     let pat_len = pat.len();
-    (0..inner)
-        .map(|i| pat[(i + 1) % pat_len] as char)
-        .collect()
+    (0..inner).map(|i| pat[(i + 1) % pat_len] as char).collect()
 }
 
 /// How a node shape renders (ge.ascii_render.c6): the probed oracle

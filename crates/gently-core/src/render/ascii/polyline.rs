@@ -102,7 +102,10 @@ fn final_waypoints(
     ends: EdgeNodeEnds,
 ) -> Result<(Vec<Pt>, Option<char>), RenderError> {
     if !ends.dst {
-        return Ok((waypoints(canvas, ctx, exit, entry, a0, a_end)?, Some(arrow_of(ctx)?)));
+        return Ok((
+            waypoints(canvas, ctx, exit, entry, a0, a_end)?,
+            Some(arrow_of(ctx)?),
+        ));
     }
     let last = *ctx.path.last().expect("path has a first cell");
     // The direction of the final run: the last path hop's direction (a
@@ -111,8 +114,8 @@ fn final_waypoints(
         0..=1 => exit,
         n => dir_between(ctx.path[n - 2], ctx.path[n - 1], ctx.edge_index)?,
     };
-    let sliding_past = matches!(entry, Dir::North | Dir::South)
-        && matches!(last_dir, Dir::East | Dir::West);
+    let sliding_past =
+        matches!(entry, Dir::North | Dir::South) && matches!(last_dir, Dir::East | Dir::West);
     if !sliding_past {
         return Ok((waypoints(canvas, ctx, exit, entry, a0, a_end)?, None));
     }
@@ -135,7 +138,12 @@ fn arrow_of(ctx: &Ctx) -> Result<char, RenderError> {
 /// The waypoints up to (excluding) the final run's tail: the source
 /// attachment plus a corner wherever the run direction turns, walking all
 /// but the last path cell.
-fn waypoints_before_tail(canvas: &Canvas, ctx: &Ctx, exit: Dir, a0: Pt) -> Result<Vec<Pt>, RenderError> {
+fn waypoints_before_tail(
+    canvas: &Canvas,
+    ctx: &Ctx,
+    exit: Dir,
+    a0: Pt,
+) -> Result<Vec<Pt>, RenderError> {
     let mut wps = vec![a0];
     let mut dir = exit;
     for i in 0..ctx.path.len() - 1 {
@@ -278,7 +286,14 @@ fn waypoints(
             None => entry,
         };
         if next_dir != dir {
-            push_corner(canvas, ctx, &mut wps, dir, next_dir, ctx.path.get(i + 1).copied())?;
+            push_corner(
+                canvas,
+                ctx,
+                &mut wps,
+                dir,
+                next_dir,
+                ctx.path.get(i + 1).copied(),
+            )?;
         }
         dir = next_dir;
     }
@@ -370,7 +385,11 @@ fn draw_run(canvas: &mut Canvas, p: Pt, q: Pt, a0: Pt, a_end: Pt) {
 
 /// `(min, max)` of two usize coordinates.
 fn ordered(a: usize, b: usize) -> (usize, usize) {
-    if a <= b { (a, b) } else { (b, a) }
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
 }
 
 /// Direction between two orthogonally adjacent path cells.

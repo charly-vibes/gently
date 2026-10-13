@@ -83,7 +83,12 @@ fn p1() {
     );
 
     // td count equals grid size (w=5 h=1)
-    assert_eq!(render(&parse("[ a ] --> [ b ] --> [ c ]\n")).matches("<td").count(), 5);
+    assert_eq!(
+        render(&parse("[ a ] --> [ b ] --> [ c ]\n"))
+            .matches("<td")
+            .count(),
+        5
+    );
 
     // the bend cycle: w=3 h=2 — corners (eb), horizontals (lh)
     let table = render(&parse("[ a ] --> [ b ] --> [ a ]\n"));
@@ -107,24 +112,39 @@ fn p1() {
 fn p2() {
     // label text escapes &, <, > (upstream _label_as_html order)
     let table = render(&parse("[ a&b<c> ]\n"));
-    assert!(table.contains("<td class='node'>a&amp;b&lt;c&gt;</td>"), "{table}");
+    assert!(
+        table.contains("<td class='node'>a&amp;b&lt;c&gt;</td>"),
+        "{table}"
+    );
 
     // the observed href-escaping bytes: raw & in the href (built
     // through the model API — href-escaping.observed)
     let table = render(&node_attrs("A", &[("link", "http://x/?a=1&b=2")]));
-    assert!(table.contains("<td class='node'><a href='http://x/?a=1&b=2'>A</a></td>"), "{table}");
+    assert!(
+        table.contains("<td class='node'><a href='http://x/?a=1&b=2'>A</a></td>"),
+        "{table}"
+    );
 
     // href encoding: space → +, ' → %27; multiline labels join with
     // <br> (observed td-colspan bytes); escaped labels; empty labels are
     // not linkable (upstream)
     let table = render(&node_attrs("A", &[("link", "http://x/a b'c")]));
-    assert!(table.contains("<a href='http://x/a+b%27c'>A</a>"), "{table}");
+    assert!(
+        table.contains("<a href='http://x/a+b%27c'>A</a>"),
+        "{table}"
+    );
     let table = render(&node_attrs("x", &[("label", "A\nB")]));
     assert!(table.contains("<td class='node'>A<br>B</td>"), "{table}");
     let table = render(&node_attrs("x", &[("link", "u"), ("label", "x&y")]));
-    assert!(table.contains("<td class='node'><a href='u'>x&amp;y</a></td>"), "{table}");
+    assert!(
+        table.contains("<td class='node'><a href='u'>x&amp;y</a></td>"),
+        "{table}"
+    );
     let table = render(&node_attrs("", &[("link", "u")]));
-    assert!(table.contains("<td class='node'></td>") && !table.contains("<a href"), "{table}");
+    assert!(
+        table.contains("<td class='node'></td>") && !table.contains("<a href"),
+        "{table}"
+    );
 }
 
 /// p3 (c3): edge styles map to the documented border-image CSS values
@@ -133,7 +153,10 @@ fn p2() {
 fn p3() {
     assert_edge_style_remap();
     assert_edge_cells();
-    assert!(!all_tds(&render(&parse("[ a ] --> [ b ]\n"))).is_empty(), "tracer renders");
+    assert!(
+        !all_tds(&render(&parse("[ a ] --> [ b ]\n"))).is_empty(),
+        "tracer renders"
+    );
 }
 
 /// The observed border remap per edge style on the bend-over cells.
@@ -179,7 +202,9 @@ fn assert_edge_style_remap() {
 /// vertical border cell of a multi-cell vertical run.
 fn assert_edge_cells() {
     let arrow = |flow: &str, class: &str, side: &str, span: &str| {
-        let tds = all_tds(&render(&parse(&format!("graph {{ flow: {flow}; }}\n[ a ] --> [ b ]\n"))));
+        let tds = all_tds(&render(&parse(&format!(
+            "graph {{ flow: {flow}; }}\n[ a ] --> [ b ]\n"
+        ))));
         assert!(tds.iter().any(|t| *t == format!(
             "<td class=\"edge {class}\" style=\"border-{side}: solid 2px #000000;color: #000000;\">{span}</td>"
         )), "flow {flow}");
@@ -214,12 +239,17 @@ fn assert_edge_cells() {
 
     // arrowless edges emit no span (a lone `--` edge) and keep the
     // border cells (the parallel bend of directed+undirected)
-    assert!(!render(&parse("[ a ] -- [ b ]\n")).contains("<span"), "arrowless: no arrow spans");
+    assert!(
+        !render(&parse("[ a ] -- [ b ]\n")).contains("<span"),
+        "arrowless: no arrow spans"
+    );
     let table = render(&parse("[ a ] --> [ b ]\n[ a ] -- [ b ]\n"));
     let tds = all_tds(&table);
-    assert!(tds.iter().any(|t| *t ==
-        "<td class=\"edge lh\" style=\"border-bottom: solid 2px #000000;\">&nbsp;</td>"
-    ), "arrowless horizontal cell");
+    assert!(
+        tds.iter().any(|t| *t
+            == "<td class=\"edge lh\" style=\"border-bottom: solid 2px #000000;\">&nbsp;</td>"),
+        "arrowless horizontal cell"
+    );
     assert!(tds.iter().any(|t| *t ==
         "<td class=\"edge eb\" style=\"border-bottom: solid 2px #000000; border-left: solid 2px #000000;\">&nbsp;</td>"
     ), "arrowless corner cell");
@@ -228,9 +258,12 @@ fn assert_edge_cells() {
     let tds = all_tds(&render(&parse(
         "[ a ] --> [ b ]\n[ b ] --> [ f ]\n[ a ] --> [ c ]\n[ b ] --> [ d ]\n[ c ] --> [ e ]\n[ a ] --> [ e ]\n",
     )));
-    assert!(tds.iter().any(|t| *t ==
-        "<td class=\"edge lv\" style=\"border-left: solid 2px #000000;\">&nbsp;</td>"
-    ), "plain vertical cell");
+    assert!(
+        tds.iter()
+            .any(|t| *t
+                == "<td class=\"edge lv\" style=\"border-left: solid 2px #000000;\">&nbsp;</td>"),
+        "plain vertical cell"
+    );
     assert!(tds.iter().any(|t| *t ==
         "<td class=\"edge lv\" style=\"border-left: solid 2px #000000;color: #000000;\"><span class=\"sv\">∨</span></td>"
     ), "vertical arrow cell");
@@ -240,7 +273,10 @@ fn assert_edge_cells() {
 /// uses — the document is self-contained (upstream `css()` shape).
 #[test]
 fn p4() {
-    assert!(!document(&Graph::default()).is_empty(), "document is emitted");
+    assert!(
+        !document(&Graph::default()).is_empty(),
+        "document is emitted"
+    );
     assert_document_wrapper();
     assert_css_rule_coverage();
 }
@@ -250,8 +286,14 @@ fn p4() {
 fn assert_document_wrapper() {
     let g = parse("[ a ] --> [ b ]\n");
     let doc = document(&g);
-    assert!(doc.starts_with("<style type=\"text/css\">\n<!--\n"), "{doc}");
-    assert!(doc.contains("-->\n</style>\n\n\n<table class=\"graph\" cellpadding=0 cellspacing=0>\n"), "{doc}");
+    assert!(
+        doc.starts_with("<style type=\"text/css\">\n<!--\n"),
+        "{doc}"
+    );
+    assert!(
+        doc.contains("-->\n</style>\n\n\n<table class=\"graph\" cellpadding=0 cellspacing=0>\n"),
+        "{doc}"
+    );
     assert!(doc.contains(&render(&g)), "the document embeds the table");
     for rule in [
         "table.graph .edge {\n  font-family: monospaced, courier-new, courier, sans-serif;\n  margin: 0.1em;\n  padding: 0.2em;\n  vertical-align: bottom;\n}",
@@ -263,7 +305,10 @@ fn assert_document_wrapper() {
     ] {
         assert!(doc.contains(rule), "rule block missing: {rule}");
     }
-    assert!(!document(&parse("[ A ]\n")).contains(".lh"), "edge rules stay out");
+    assert!(
+        !document(&parse("[ A ]\n")).contains(".lh"),
+        "edge rules stay out"
+    );
 }
 
 /// Every class token the table references has a matching CSS rule,
@@ -306,7 +351,10 @@ fn used_class_tokens(table: &str) -> Vec<String> {
 /// CSS classes (observed bytes, without the colspan/rowspan machinery).
 #[test]
 fn p5() {
-    assert!(!render(&Graph::default()).contains("style="), "no styles on empty graphs");
+    assert!(
+        !render(&Graph::default()).contains("style="),
+        "no styles on empty graphs"
+    );
     assert_color_declarations();
     assert_shape_classes();
     assert_border_components();
@@ -332,7 +380,9 @@ fn assert_color_declarations() {
     ] {
         let g = parse(&format!("[ A ] {{ fill: {name}; }}\n"));
         assert!(
-            render(&g).contains(&format!("<td class='node' style=\"background: {hex}\">A</td>")),
+            render(&g).contains(&format!(
+                "<td class='node' style=\"background: {hex}\">A</td>"
+            )),
             "fill={name}"
         );
     }
@@ -346,11 +396,15 @@ fn assert_color_declarations() {
     let g = parse("[ A ] { color: blue; }\n");
     assert!(render(&g).contains("<td class='node' style=\"color: #0000ff\">A</td>"));
     let g = parse("[ A ] { fill: red; color: blue; }\n");
-    assert!(render(&g).contains("<td class='node' style=\"background: #ff0000; color: #0000ff\">A</td>"));
+    assert!(render(&g)
+        .contains("<td class='node' style=\"background: #ff0000; color: #0000ff\">A</td>"));
 
     // `background` on a plain node is suppressed (observed) — only fill
     let g = parse("[ A ] { background: #00ff00; }\n");
-    assert!(render(&g).contains("<td class='node'>A</td>"), "background suppressed");
+    assert!(
+        render(&g).contains("<td class='node'>A</td>"),
+        "background suppressed"
+    );
     assert!(!render(&g).contains("style="), "{:?}", render(&g));
 
     // edge color: the border value and the color declaration both carry
@@ -372,12 +426,17 @@ fn assert_shape_classes() {
         )), "shape {shape}: {}", render(&g));
     }
     let g = parse("[ A ] { shape: point; }\n");
-    assert!(render(&g).contains("<td class='node' style=\"background: inherit; border: none\">★</td>"));
+    assert!(
+        render(&g).contains("<td class='node' style=\"background: inherit; border: none\">★</td>")
+    );
     let g = parse("[ A ] { shape: invisible; }\n");
     assert!(render(&g).contains("<td style=\"border: none; background: inherit;\"></td>"));
     for shape in ["rect", "diamond", "house", "parallelogram", "triangle"] {
         let g = parse(&format!("[ A ] {{ shape: {shape}; }}\n"));
-        assert!(render(&g).contains("<td class='node'>A</td>"), "shape {shape}");
+        assert!(
+            render(&g).contains("<td class='node'>A</td>"),
+            "shape {shape}"
+        );
     }
 }
 
@@ -394,7 +453,8 @@ fn assert_border_components() {
         let g = parse(&format!("[ A ] {{ border: {border}; }}\n"));
         assert!(
             render(&g).contains(&format!("<td class='node' style=\"border: {want}\">A</td>")),
-            "border {border}: {}", render(&g)
+            "border {border}: {}",
+            render(&g)
         );
     }
 }

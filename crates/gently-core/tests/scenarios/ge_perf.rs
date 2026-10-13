@@ -58,7 +58,11 @@ fn round_trip_source(nodes: usize, edges: usize) -> String {
         src.push_str(&format!("[ n{i} ]\n"));
     }
     for e in 0..edges {
-        src.push_str(&format!("[ n{} ] --> [ n{} ]\n", e % nodes, (e + 1) % nodes));
+        src.push_str(&format!(
+            "[ n{} ] --> [ n{} ]\n",
+            e % nodes,
+            (e + 1) % nodes
+        ));
     }
     src
 }
@@ -138,11 +142,8 @@ fn p2() {
     // Structural memory bound: the five outputs together are O(cells) —
     // bounded well under the 256 MB RSS budget (16 MB here leaves a 16×
     // margin against the structural peak).
-    let total_bytes = ascii_out.len()
-        + boxart_out.len()
-        + html_out.len()
-        + txt_out.len()
-        + graphviz_out.len();
+    let total_bytes =
+        ascii_out.len() + boxart_out.len() + html_out.len() + txt_out.len() + graphviz_out.len();
     assert!(
         total_bytes < 16_000_000,
         "all-format output bytes {total_bytes} must stay under the 16 MB structural bound (256 MB budget / 16× margin)"
@@ -170,7 +171,10 @@ fn p3() {
     let l2 = layout::layout(&g);
     let out2 = ascii::render(&g, &l2).expect("second render");
 
-    assert_eq!(out1, out2, "renders must be identical — no cross-stage cache state");
+    assert_eq!(
+        out1, out2,
+        "renders must be identical — no cross-stage cache state"
+    );
     assert_eq!(l1.node_cells, l2.node_cells, "layouts must be identical");
 }
 
@@ -190,11 +194,24 @@ fn p4() {
     let err = perf::check("ascii_render", C1_BUDGET, measured)
         .expect_err("120 ms against a 50 ms budget must violate");
     let msg = err.to_string();
-    assert!(msg.contains("ascii_render"), "diagnostic must name the stage: {msg}");
-    assert!(msg.contains("50ms"), "diagnostic must name the budget: {msg}");
-    assert!(msg.contains("120ms"), "diagnostic must name the measured value: {msg}");
+    assert!(
+        msg.contains("ascii_render"),
+        "diagnostic must name the stage: {msg}"
+    );
+    assert!(
+        msg.contains("50ms"),
+        "diagnostic must name the budget: {msg}"
+    );
+    assert!(
+        msg.contains("120ms"),
+        "diagnostic must name the measured value: {msg}"
+    );
     // Non-zero exit semantics for `just perf-check` (c4).
-    assert_eq!(err.exit_code(), 1, "budget violation must map to a non-zero exit code");
+    assert_eq!(
+        err.exit_code(),
+        1,
+        "budget violation must map to a non-zero exit code"
+    );
 }
 
 /// ge.perf.p5 (c5, advisory): scaling reported, regressions never
@@ -236,12 +253,13 @@ fn p5() {
     let t400 = median_time(400);
     let t1600 = median_time(1600);
 
-    for (small, large, ts, tl) in
-        [(100, 400, t100, t400), (400, 1600, t400, t1600)]
-    {
+    for (small, large, ts, tl) in [(100, 400, t100, t400), (400, 1600, t400, t1600)] {
         // c5 "reported" clause: every measured ratio is printed, green or
         // not — deviations beyond the bound additionally fail the run.
-        eprintln!("p5 sweep: t({small})={ts:?} t({large})={tl:?} ratio={:.2}", tl.as_secs_f64() / ts.as_secs_f64());
+        eprintln!(
+            "p5 sweep: t({small})={ts:?} t({large})={tl:?} ratio={:.2}",
+            tl.as_secs_f64() / ts.as_secs_f64()
+        );
         let bound = ts.mul_f64(SCALE_FACTOR) + ABSOLUTE_SLACK;
         assert!(
             tl <= bound,

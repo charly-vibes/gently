@@ -41,8 +41,10 @@ fn p1() {
     assert_eq!(count(&out, "\"#4\""), 1, "anonymous node as #<index>");
 
     // node attributes map onto DOT counterparts
-    assert!(out.contains("a [ color=\"#000000\", fillcolor=white, shape=box ]"),
-        "attrs on a: {out:?}");
+    assert!(
+        out.contains("a [ color=\"#000000\", fillcolor=white, shape=box ]"),
+        "attrs on a: {out:?}"
+    );
 }
 
 /// ge.graphviz_render.p2 (c2): one edge statement per model edge, the
@@ -63,8 +65,10 @@ fn p2() {
 
     assert_eq!(count(&out, "a -> b"), 1, "directed edge uses ->");
     assert_eq!(count(&out, "b -- c"), 1, "undirected edge uses --");
-    assert!(out.contains("a -> b [ color=\"#000000\", style=dotted ]"),
-        "edge attrs: {out:?}");
+    assert!(
+        out.contains("a -> b [ color=\"#000000\", style=dotted ]"),
+        "edge attrs: {out:?}"
+    );
 }
 
 /// ge.graphviz_render.p3 (c3): every group emits a subgraph cluster
@@ -86,16 +90,31 @@ fn p3() {
     let out = graphviz::render(&g);
 
     // named group keeps its name; cluster label is the group label
-    let cluster = out.split("subgraph cluster_grp {").nth(1).expect("named cluster emitted");
+    let cluster = out
+        .split("subgraph cluster_grp {")
+        .nth(1)
+        .expect("named cluster emitted");
     let cluster = cluster.split('}').next().unwrap();
     assert!(cluster.contains("\n  a\n"), "member a inside: {cluster:?}");
     assert!(cluster.contains("\n  b\n"), "member b inside: {cluster:?}");
-    assert!(!cluster.contains("\n  c\n"), "non-member c outside: {cluster:?}");
-    assert!(out.contains("label=\"my grp\""), "group label as cluster label: {out:?}");
+    assert!(
+        !cluster.contains("\n  c\n"),
+        "non-member c outside: {cluster:?}"
+    );
+    assert!(
+        out.contains("label=\"my grp\""),
+        "group label as cluster label: {out:?}"
+    );
 
     // anonymous group emits cluster<N> in internal-id order (index 1)
-    let anon_cluster = out.split("cluster1").nth(1).expect("anonymous cluster1 emitted");
-    assert!(anon_cluster.contains("\n  c\n"), "anon member c inside: {out:?}");
+    let anon_cluster = out
+        .split("cluster1")
+        .nth(1)
+        .expect("anonymous cluster1 emitted");
+    assert!(
+        anon_cluster.contains("\n  c\n"),
+        "anon member c inside: {out:?}"
+    );
     // grouped nodes appear exactly once (inside their cluster, not top-level)
     assert_eq!(count(&out, "\n  a\n"), 1, "a emitted once");
     assert_eq!(count(&out, "\n  c\n"), 1, "c emitted once");
@@ -132,7 +151,13 @@ fn node_names(g: &Graph) -> Vec<&str> {
 fn edge_triples(g: &Graph) -> Vec<(&str, &str, bool)> {
     g.edges
         .iter()
-        .map(|e| (g.nodes[e.from].name.as_str(), g.nodes[e.to].name.as_str(), e.directed))
+        .map(|e| {
+            (
+                g.nodes[e.from].name.as_str(),
+                g.nodes[e.to].name.as_str(),
+                e.directed,
+            )
+        })
         .collect()
 }
 
@@ -143,7 +168,10 @@ fn member_names(g: &Graph, marker: &str) -> Vec<String> {
         .iter()
         .find(|x| x.name.contains(marker))
         .unwrap_or_else(|| panic!("group containing {marker:?} must exist"));
-    grp.members.iter().map(|&i| g.nodes[i].name.clone()).collect()
+    grp.members
+        .iter()
+        .map(|&i| g.nodes[i].name.clone())
+        .collect()
 }
 
 /// Sorted group-name list (isomorphism: same group identity — a verbatim
@@ -157,7 +185,11 @@ fn group_names(g: &Graph) -> Vec<&str> {
 /// Member names of the anonymous group (empty name) — empty if none.
 fn anon_member_names(g: &Graph) -> Vec<String> {
     match g.groups.iter().find(|grp| grp.name.is_empty()) {
-        Some(grp) => grp.members.iter().map(|&i| g.nodes[i].name.clone()).collect(),
+        Some(grp) => grp
+            .members
+            .iter()
+            .map(|&i| g.nodes[i].name.clone())
+            .collect(),
         None => Vec::new(),
     }
 }
@@ -174,10 +206,26 @@ fn p4() {
     let reparsed = dot::parse(&out).expect("emitted DOT must re-parse");
 
     assert_eq!(node_names(&g), node_names(&reparsed), "same node names");
-    assert_eq!(edge_triples(&g), edge_triples(&reparsed), "same edges incl. direction");
-    assert_eq!(reparsed.edges[0].attributes.get("style"), Some("dotted"), "edge attr preserved");
-    assert_eq!(member_names(&g, "grp"), member_names(&reparsed, "grp"), "same group membership");
-    assert_eq!(group_names(&g), group_names(&reparsed), "verbatim group names");
+    assert_eq!(
+        edge_triples(&g),
+        edge_triples(&reparsed),
+        "same edges incl. direction"
+    );
+    assert_eq!(
+        reparsed.edges[0].attributes.get("style"),
+        Some("dotted"),
+        "edge attr preserved"
+    );
+    assert_eq!(
+        member_names(&g, "grp"),
+        member_names(&reparsed, "grp"),
+        "same group membership"
+    );
+    assert_eq!(
+        group_names(&g),
+        group_names(&reparsed),
+        "verbatim group names"
+    );
     assert_eq!(
         anon_member_names(&g),
         anon_member_names(&reparsed),

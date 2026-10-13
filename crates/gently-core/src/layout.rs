@@ -158,7 +158,13 @@ pub fn layout(graph: &Graph) -> Layout {
             (2 * col, rows.row_of_band[band])
         })
         .collect();
-    let width = 2 * placement.cell.iter().filter_map(|c| c.map(|p| p.0)).max().unwrap_or(0) + 1;
+    let width = 2 * placement
+        .cell
+        .iter()
+        .filter_map(|c| c.map(|p| p.0))
+        .max()
+        .unwrap_or(0)
+        + 1;
     let edge_paths = route_edges(graph, &placement, &node_cells, &rows);
     let labels = label_cells(graph, &edge_paths);
     let grid = Layout {
@@ -176,17 +182,21 @@ pub fn layout(graph: &Graph) -> Layout {
 /// base edge class), `None` otherwise (ge.layout.c4). Paths are
 /// non-empty for every routed edge, so the middle cell always exists.
 fn label_cells(graph: &Graph, edge_paths: &[Vec<Cell>]) -> Vec<Option<Cell>> {
-    graph.edges.iter().enumerate().map(|(ei, _)| {
-        let labelled = graph.get_attr(Scope::Edge(ei), "label").is_some()
-            || graph
-                .get_attr(Scope::Class(ObjectKind::Edge, String::new()), "label")
-                .is_some();
-        if labelled {
-            let path = &edge_paths[ei];
-            Some(path[(path.len() - 1) / 2])
-        } else {
-            None
-        }
-    })
-    .collect()
+    graph
+        .edges
+        .iter()
+        .enumerate()
+        .map(|(ei, _)| {
+            let labelled = graph.get_attr(Scope::Edge(ei), "label").is_some()
+                || graph
+                    .get_attr(Scope::Class(ObjectKind::Edge, String::new()), "label")
+                    .is_some();
+            if labelled {
+                let path = &edge_paths[ei];
+                Some(path[(path.len() - 1) / 2])
+            } else {
+                None
+            }
+        })
+        .collect()
 }
