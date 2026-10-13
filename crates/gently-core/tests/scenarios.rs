@@ -367,6 +367,7 @@ mod ge_ascii_render;
 /// ge.layout (gently-4nx): the deterministic grid layout capability (specs/ge-layout.md p1–p5).
 #[path = "scenarios/ge_layout.rs"]
 mod ge_layout;
+#[path = "scenarios/ge_layout_ports.rs"] mod ge_layout_ports; // gently-89r
 
 /// ge.oracle (gently-mwo): tier-1 admission enforcement — the repro-probe
 /// harness (`tests/repro/probes.pl admit`) classifies every corpus fixture

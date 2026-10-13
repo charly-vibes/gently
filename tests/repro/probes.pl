@@ -146,7 +146,7 @@ my %SERVES = (
     'pod-label-attr'         => 'gently-bpq (POD mining — Parser.pm arrowless-label example; gently draws a spurious target arrowhead → bug bead)',
     'pod-repeat-patterns'    => 'gently-ni9.1 (POD mining — Parser.pm repeated-pattern example; gently collapses repeated styles to plain → bug bead)',
     'edge-style-short-runs'  => 'gently-oy2 (POD repeated-pattern family — the full short-edge style run rule: arrowed runs, undirected rx-shifted runs, dot-dot-dash gap widening)',
-    'pod-triangle'           => 'gently-ni9.1 + gently-klf (POD mining — Easy.pm interlinked-triangle example; hash-stable 4 seeds; gently's vertical back-edge attachments drifted to the node center → fixed at left+2)',
+    'pod-triangle'           => 'gently-ni9.1 + gently-klf (POD mining — Easy.pm interlinked-triangle example; hash-stable 4 seeds; gently\'s vertical back-edge attachments drifted to the node center → fixed at left+2)',
     'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
     'pod-style-family'       => 'gently-ni9.1, gently-51d (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead gently-51d)',
     'edge-style-wide-undirected' => 'gently-51d (the arrowless wide/broad short-edge run — pod-style-family covers only directed runs; pins the undirected ## family bytes)',
@@ -163,12 +163,12 @@ my %SERVES = (
     'bg-minlen-stretch'      => 'gently-ni9.2 + gently-yhg (re-derivation probe — minlen >= 2 widens the straight gap exactly one column; minlen 2..5 identical, 4-seed stable)',
     'bg-edge-node'           => 'gently-ni9.2 (bloodgate mining — tutorial_edges.html shape:edge nodes; gently path-cells render error → bug bead)',
     'bg-joint-classes'       => 'gently-ni9.2 (bloodgate mining — syntax.html joint-node class:border example; PINNED PARSER REJECTS it — site rendered by a newer Graph::Easy)',
-    'bg-start-right'         => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html start:right port attr; gently ignores it → bug bead)',
+    'bg-start-right'         => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html start:right port attr; gently ignores it → bug bead gently-89r. DIS-ENTANGLED: the inline-Trier layout is the shared-middle bypass shape, NOT the port effect — the no-port chain renders identically, see port-side-minimal; the layout shape is gently-jrr, the port attachment is gently-89r)',
     'bg-textwrap'            => 'gently-ni9.2 (bloodgate mining — syntax.html textwrap:auto + textwrap:10; gently does not wrap → bug bead)',
     'so-graph-convert'       => 'gently-ni9.4 (community mining — SO 71869025 accepted answer: Graph.pm→Graph::Easy URI tree; stem column off by one → gently-5vf)',
     'so-edge-labels'         => 'gently-ni9.4 (community mining — SO 47661180: bare-number edge labels on a text-frequency digraph)',
     'so-flowchart-size'      => 'gently-ni9.4 (community mining — SO 47323345 question: { size: 5,10; } node attrs + literal-\\n edge label printed raw → gently-527)',
-    'so-start-port-index'    => 'gently-ni9.4 (community mining — SO 47323345 answer: {start: front,N} indexed start/end port attrs ignored → gently-byq)',
+    'so-start-port-index'    => 'gently-ni9.4 (community mining — SO 47323345 answer: {start: front,N} indexed start/end port attrs ignored → gently-byq; side mapping front = east flow-space front, gently-89r owns the unindexed side routing)',
     'so-graphviz-unknown-attrs' => 'gently-ni9.4 (community mining — SO 59659560: Graph::Easy::Parser::Graphviz unknown dot attrs warn and render anyway)',
 );
 
@@ -408,6 +408,29 @@ pod_probe_body('so-flowchart-size', <<'EXAMPLE')
 [Msg Server] -- 3. X Msg --> [Client]
 
 [Client] -- 2. read X --> [Msg Server]
+EXAMPLE
+PROBE
+
+    'port-side-minimal' => <<'PROBE',
+# serves: gently-89r
+# claim probed: DIS-ENTANGLEMENT of the tutorial_bypass start:right port
+# effect from the shared-middle bypass shape (gently-jrr). Example 1 (the
+# chain WITHOUT the port attr): the pinned oracle already lays Trier
+# inline and routes Koblenz->Frankfurt over the top — the bypass layout
+# is independent of the port attribute, so gently-jrr owns that shape
+# and gently-89r must not pin it. Example 2 (a lone { start: right; }
+# edge): the port's OWN effect is attachment-only — in east flow
+# `right` = inflow+90 = SOUTH, so the edge leaves the source's south
+# side, runs along the gap row below, and climbs into the target's
+# south with ^ (end: right renders identically; ports never change node
+# placement).
+pod_probe_body('port-side-minimal-chain', <<'EXAMPLE');
+[ Bonn ] --> [ Koblenz ] --> [ Frankfurt ] --> [ Dresden ]
+
+[ Koblenz ] --> [ Trier ] --> [ Frankfurt ]
+EXAMPLE
+pod_probe_body('port-side-minimal-edge', <<'EXAMPLE')
+[ A ] --> { start: right; } [ B ]
 EXAMPLE
 PROBE
 
