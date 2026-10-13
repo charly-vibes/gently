@@ -1,0 +1,20 @@
+Done. Summary:
+
+**What was linked where**
+
+- `README.md` → added a 4-line intro to the "For contributors" section (the natural first-use spot — the README no longer contains the literal "Specodelic four-layer format" phrase the ticket referenced; the section-stabilization change removed it): work tracked with [wai](https://github.com/charly-vibes/wai); capability corpus in `specs/` written in the [Specodelic](https://crates.io/crates/specodelic) four-layer format (intent statement + state model + constraints/properties per spec).
+- `docs/known-hard-cases.md` → `(beads)` now links to https://github.com/gastownhall/beads.
+
+Only those two files touched, no section reordering, no glossary section, no fact changes.
+
+**Gate results**
+
+- `just gates` ✅ (full pre-commit lefthook suite also green: ah-check ×2, pretender, spk-lint ×3, spec-drift)
+- `just examples-verify` ✅ — all examples byte-identical to committed expected output
+- `ah check` ✅ — 0 structural, 0 execution findings
+
+**Ship**
+
+- Commit: `abb2a89` — `docs: define/link Specodelic, beads, wai jargon (gently-cof)` (2 files, +6/−1)
+- `bd close gently-cof` ✅ closed
+- Not pushed — left for the orchestrator, as instructed.
