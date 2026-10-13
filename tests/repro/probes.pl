@@ -114,6 +114,7 @@ my %SERVES = (
     'layout-flow-direction'  => 'gently-89d (layout c3)',
     'layout-edge-drop'       => 'gently-89d (layout c1/c4 — alarm timeout, silent edge drop at scale)',
     'subgraph-handling'      => 'gently-13f (dot_parser c4 — named/nested/bare-scope subgraphs)',
+    'dot-bare-scope-in-named' => 'gently-fb1 (dot_parser c4 — bare scope nested in a named subgraph: group_stack survives bare-scope boundaries)',
     'dot-direction'          => 'gently-13f (dot_parser c1/c2 — header×operator direction matrix)',
     'dot-records-ports'      => 'gently-13f (dot_parser c5 — records, HTML-like labels, port references)',
     'cli-flags'              => 'gently-0h9 (closed — kept as upstream evidence)',
@@ -1067,6 +1068,31 @@ for my $c (@cases) {
   my $gs = join(';', map { $_->name()."=[".join(',', sort map {$_->name()} $_->nodes())."]" } sort { $a->name() cmp $b->name() } $g->groups());
   my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
   print "OK   [$label]\n     groups: $gs\n     as_txt: $txt\n";
+}
+PROBE
+
+    'dot-bare-scope-in-named' => <<'PROBE',
+# serves: gently-fb1 (dot_parser c4)
+# claim probed: dot_parser c4 — a bare '{ .. }' scope keeps its nodes
+# ungrouped at TOP level (pinned p4, both parsers), but a bare scope nested
+# INSIDE a named subgraph inherits the enclosing named group: the oracle's
+# group_stack survives bare-scope boundaries, so x lands IN group 'outer'
+# (GROUP(outer: x)). gently keeps x ungrouped — this divergence is the
+# remaining delta.
+use Graph::Easy::Parser::Graphviz;
+my $p = Graph::Easy::Parser::Graphviz->new();
+my @cases = (
+  [ 'bare scope, top level',        "digraph G { { x } }" ],
+  [ 'bare scope in named subgraph', "digraph G { subgraph outer { { x } } }" ],
+);
+for my $c (@cases) {
+  my ($label, $text) = @$c;
+  my $g = eval { $p->from_text($text) };
+  if ($@) { my ($m) = split /\n/, $@; $m =~ s/ at \(eval \d+\) line \d+\.//; print "ERR  [$label]\n     $m\n"; next; }
+  my $gs = join(';', map { $_->name()."=[".join(',', sort map {$_->name()} $_->nodes())."]" } sort { $a->name() cmp $b->name() } $g->groups());
+  my $txt = $g->as_txt(); $txt =~ s/\s+\z//; $txt =~ s/\n/ | /g;
+  print "OK   [$label]\n     groups: $gs\n     as_txt: $txt\n";
+  print "     as_ascii:\n", $g->as_ascii(), "\n";
 }
 PROBE
 
