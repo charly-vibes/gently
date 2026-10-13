@@ -1,9 +1,7 @@
 //! ge.text_parser (gently-bzx): the Graph::Easy text-format grammar — each
 //! property row of specs/ge-text_parser.md is one test below, named for its
-//! id. The pinned upstream oracle (Graph::Easy 0.69 Parser.pm @
-//! ededa3d787ad89ac532c578c06390e8a7b270499) is authoritative; the probe
-//! evidence in tests/repro/claims/*.observed pins the binding observed
-//! behavior (never the POD, which diverges on `..-..-..>` and `.-`).
+//! id. The pinned oracle (Graph::Easy 0.69 @ ededa3d7) is authoritative; the
+//! probe evidence in tests/repro/claims/*.observed pins the observed bytes.
 
 use gently_core::graph::{Graph, ObjectKind, Scope};
 use gently_core::parse::text;
@@ -23,9 +21,20 @@ fn members(g: &Graph, idx: usize) -> Vec<usize> {
     g.groups[idx].members.clone()
 }
 
+/// ge.text_parser.p11 (c11): comma lists (gently-m4i, bg-comma-lists.observed).
+#[path = "ge_text_parser_p11.rs"]
+mod p11;
+
+/// ge.text_parser.p12 (c12): edges after closed groups (gently-58m, pod-anon-group.observed).
+#[path = "ge_text_parser_p12.rs"]
+mod p12;
+
+/// ge.text_parser.p13 (c13): trailing node attr blocks (gently-8xd, bg-trailing-node-attr.observed).
+#[path = "ge_text_parser_p13.rs"]
+mod p13;
+
 /// ge.text_parser.p1 (c1): named tokens intern and reuse; a bare `[ ]`
-/// creates an anonymous node named `#N` (odd counter) that a later escaped
-/// `[ \#N ]` reference reuses as the same node.
+/// creates an anonymous `#N` that a later escaped `[ \#N ]` reuses.
 #[test]
 fn p1() {
     let g = text::parse("[ a ] --> [ ]\n").expect("must parse");
@@ -43,9 +52,8 @@ fn p1() {
 }
 
 /// ge.text_parser.p2 (c2): the operator table maps to edge styles;
-/// `<`-prefixed operators are the same styles with bidirectional arrows;
-/// missing endpoints and a lone `<` are parse errors; style-only styles
-/// are settable via the attribute only.
+/// `<`-prefixed operators are the same styles bidirectionally; missing
+/// endpoints and a lone `<` are errors; style-only styles via attribute.
 #[test]
 fn p2() {
     let g = text::parse("[ a ] => [ b ]\n").expect("must parse");
@@ -113,8 +121,7 @@ fn style_only_styles_come_via_the_attribute() {
     }
 }
 
-/// ge.text_parser.p3 (c3): a chain creates exactly one edge per adjacent
-/// pair, sharing node objects for repeated names.
+/// ge.text_parser.p3 (c3): a chain creates one edge per adjacent pair, sharing repeated names.
 #[test]
 fn p3() {
     let g = text::parse("[ a ] --> [ b ] --> [ c ]\n").expect("must parse");
@@ -126,15 +133,14 @@ fn p3() {
     assert_eq!(g.nodes.len(), 2, "repeated names share nodes");
     assert_eq!(g.edges.len(), 2);
     assert_eq!((g.edges[1].from, g.edges[1].to), (1, 0), "edge back to a");
-    let src: Vec<String> = (0..6).map(|i| format!("[ n{i} ]")).collect();
-    let g = text::parse(&src.join(" --> ")).expect("chain must parse");
+    let chain = (0..6).map(|i| format!("[ n{i} ]")).collect::<Vec<_>>().join(" --> ");
+    let g = text::parse(&chain).expect("chain must parse");
     assert_eq!(g.nodes.len(), 6);
     assert_eq!(g.edges.len(), 5);
 }
 
-/// ge.text_parser.p4 (c4): an inline edge label sets the label only when
-/// both flanking patterns match and the edge has an arrow; mismatched
-/// flanks and arrow-less inline labels are parse errors.
+/// ge.text_parser.p4 (c4): an inline edge label lands only when both
+/// flanks match and the edge has an arrow; mismatches are errors.
 #[test]
 fn p4() {
     let g = text::parse("[ a ] -- go --> [ b ]\n").expect("must parse");
@@ -153,8 +159,7 @@ fn p4() {
     }
 }
 
-/// ge.text_parser.p5 (c5): attribute blocks apply to the nearest
-/// preceding object; class sections apply to the whole class.
+/// ge.text_parser.p5 (c5): attribute blocks apply to the nearest preceding object; class sections to the whole class.
 #[test]
 fn p5() {
     let g = text::parse("[ a ] { color: red; } [ b ]\n").expect("must parse");
@@ -165,8 +170,7 @@ fn p5() {
     let src = "[ a ] -->\n{ style: bold; }\n[ b ]\n";
     let g = text::parse(src).expect("must parse");
     assert_eq!(style(&g, 0), Some(String::from("bold")), "edge attrs across lines");
-    // a block after a completed edge line targets the edge's right node
-    // (the oracle's stack-top; verified under the pinned oracle)
+    // a block after a completed edge line targets the edge's right node (the oracle's stack-top)
     let src = "[ a ] --> [ b ]\n{ color: red; }\n";
     let g = text::parse(src).expect("must parse");
     assert_eq!(g.get_attr(Scope::Node(1), "color"), Some("red"), "last node target");
@@ -181,8 +185,7 @@ fn p5() {
 }
 
 /// ge.text_parser.p6 (c6): group blocks — colon names, one-group
-/// membership with move-on-redeclare, nested inner-only containment,
-/// anonymous `Group #N`.
+/// membership with move-on-redeclare, nesting, anonymous `Group #N`.
 #[test]
 fn p6() {
     let g = text::parse("( G: [ a ] )\n").expect("must parse");
@@ -208,8 +211,7 @@ fn p6() {
 }
 
 /// ge.text_parser.p7 (c7): an unescaped `#` truncates everywhere (even
-/// inside quotes); `\#` escapes it; hex colour tokens after an attribute
-/// separator are auto-escaped and accepted.
+/// inside quotes); `\#` escapes it; hex colours after a separator pass.
 #[test]
 fn p7() {
     let g = text::parse("[ a ] # junk\n").expect("must parse");
@@ -233,8 +235,7 @@ fn p7() {
     }
 }
 
-/// ge.text_parser.p8 (c8): a malformed input line produces a typed parse
-/// error naming the 1-based line and a reason, aborting without a graph.
+/// ge.text_parser.p8 (c8): a malformed line produces a typed error naming the 1-based line and a reason.
 #[test]
 fn p8() {
     let cases = [
@@ -254,9 +255,8 @@ fn p8() {
 }
 
 /// ge.text_parser.p9 (c9): the unit-token grammar — directed style follows
-/// the last unit token; arrow-less `.-`/`..-` are valid singles; plain
-/// units need at least two repetitions; single-character patterns error.
-/// All expected styles were verified against the pinned oracle.
+/// the last unit token; `.-`/`..-` are valid singles; plain units need two
+/// reps; singles error. Styles verified against the pinned oracle.
 #[test]
 fn p9() {
     let g = text::parse("[ a ] ..-..-..-> [ b ]\n").expect("must parse");
@@ -318,8 +318,7 @@ fn plain_singles_are_errors() {
     }
 }
 
-/// ge.text_parser.p10 (c10): attribute-value unquoting — the upstream two-layer
-/// composite, pinned byte-for-byte by tests/repro/claims/attr-quote-value.observed.
+/// ge.text_parser.p10 (c10): attribute-value unquoting, pinned by attr-quote-value.observed.
 #[test]
 fn p10() {
     // headline: single-quoted values lose their quotes (the bug report)

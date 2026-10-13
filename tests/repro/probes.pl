@@ -155,8 +155,9 @@ my %SERVES = (
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
     'gh-4-nodes-first'       => 'gently-ni9.3, gently-a0k, gently-2n5 (GitHub issue #4 — nodes declared first; graph-scope attrs rankdir→flow → gently-a0k, bare-scope edge endpoints → gently-2n5)',
     'bg-multiline-align'     => 'gently-ni9.2 (bloodgate mining — syntax.html \l\r\c alignment escapes; gently prints them raw → bug bead)',
-    'bg-comma-lists'         => 'gently-ni9.2 (bloodgate mining — syntax.html comma-chained node lists; gently parse-errors → bug bead)',
-    'bg-trailing-node-attr'  => 'gently-ni9.2 (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
+    'bg-comma-lists'         => 'gently-m4i (bloodgate mining — syntax.html comma-chained node lists; gently parse-errors → bug bead)',
+    'bg-trailing-node-attr'  => 'gently-8xd (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
+    'pod-anon-group'         => 'gently-58m (POD mining — Parser.pm anonymous-group example; gently parse-errors on the following edge → bug bead)',
     'bg-anon-chain'          => 'gently-ni9.2 (bloodgate mining — syntax.html anon nodes in chain; gently renders boxed #N, oracle hides them → bug bead)',
     'bg-minlen-bypass'       => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html minlen:3; gently ignores it → bug bead)',
     'bg-edge-node'           => 'gently-ni9.2 (bloodgate mining — tutorial_edges.html shape:edge nodes; gently path-cells render error → bug bead)',
@@ -189,8 +190,23 @@ pod_probe_body('bg-multiline-align', <<'EXAMPLE')
 EXAMPLE
 PROBE
 
+    'pod-anon-group' => <<'PROBE',
+# serves: gently-58m
+# claim probed: Graph::Easy::Parser POD 'groups' section anonymous-group
+# example: '( [ Bonn ] ) -> [ Berlin ]' creates the anon group containing
+# Bonn and links it to Berlin. Observed (pinned oracle): the group-end
+# handler makes the closed group the node stack, so the edge links the
+# GROUP to Berlin; as_txt renders the group block only, as_ascii renders
+# the group-to-node edge. gently: parse error, line 1: '-' not recognized.
+pod_probe_body('pod-anon-group', <<'EXAMPLE')
+( [ Bonn ] ) -> [ Berlin ]
+
+( [ Bonn ] { color: red; } )
+EXAMPLE
+PROBE
+
     'bg-comma-lists' => <<'PROBE',
-# serves: gently-ni9.2
+# serves: gently-m4i
 # claim probed: bloodgate.com/manual/syntax.html comma-chained node lists
 # (shared-source fan-out and multi-source fan-in). Observed: oracle lays
 # them out with the extra node(s) hanging off the chain. gently:
@@ -199,6 +215,11 @@ pod_probe_body('bg-comma-lists', <<'EXAMPLE')
 [ A ] -> [ B ], [ C ], [ D ]
 
 [ A ], [ B ], [ C ] --> [ D ]
+
+[ A ], [ B ] { color: red; }
+
+[ A ] --> [ B ]
+, [ C ]
 EXAMPLE
 PROBE
 
