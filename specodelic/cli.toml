@@ -9,7 +9,7 @@ traces_to = "[[cli]]"
 [[constraints]]
 id = "c2"
 kind = "invariant"
-expr = "The `--as` flag selects the output format (ascii, boxart, html, graphviz, txt; `dot` aliases graphviz), defaulting to ascii, or to the output filename's extension format when `--as` is absent; the `--output` flag names the output file that receives the rendered bytes — stdout when absent."
+expr = "The `--as` flag selects the output format (ascii, html, graphviz, txt; `dot` aliases graphviz), each routed to its library renderer, defaulting to ascii, or to the output filename's extension format when `--as` is absent; the `--output` flag names the output file that receives the rendered bytes — stdout when absent."
 traces_to = "[[cli]]"
 
 [[constraints]]
@@ -21,7 +21,7 @@ traces_to = "[[cli]]"
 [[constraints]]
 id = "c4"
 kind = "effect"
-expr = "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 255 — bug-for-bug with the upstream script, whose unknown `--as` dies calling the missing `as_<fmt>` method."
+expr = "An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 255 — bug-for-bug with the upstream script, whose unknown `--as` dies calling the missing `as_<fmt>` method. The upstream-renderable but unwired names stay on this exit path as documented scope-offs (gently-4ig, tests/repro/claims/cli-formats.observed): svg dies under the pinned oracle's shebang perl (no in-dist `As_svg`), and boxart/vcg/gdl/graphml have no gently renderer yet."
 traces_to = "[[cli]]"
 
 [[constraints]]

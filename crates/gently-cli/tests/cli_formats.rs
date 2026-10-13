@@ -10,7 +10,6 @@
 
 mod common;
 
-
 mod scenarios {
     mod cli {
         use crate::common::{fixture_bytes, run_gently, run_gently_in, TempDir};
@@ -29,8 +28,17 @@ mod scenarios {
             assert!(want.starts_with("digraph GRAPH_0 {"), "sanity: {want}");
             for fmt in ["dot", "graphviz"] {
                 let r = run_gently(&["--as", fmt], b"[ a ] --> [ b ]\n");
-                assert_eq!(Some(0), r.code, "--as {fmt} must exit 0: {}", String::from_utf8_lossy(&r.stderr));
-                assert_eq!(want.as_bytes(), &r.stdout[..], "--as {fmt} must route to the graphviz renderer");
+                assert_eq!(
+                    Some(0),
+                    r.code,
+                    "--as {fmt} must exit 0: {}",
+                    String::from_utf8_lossy(&r.stderr)
+                );
+                assert_eq!(
+                    want.as_bytes(),
+                    &r.stdout[..],
+                    "--as {fmt} must route to the graphviz renderer"
+                );
             }
 
             // --as html routes to the html renderer (document form).
@@ -39,28 +47,63 @@ mod scenarios {
             let want = fixture_bytes("html");
             assert!(want.starts_with("<style"), "sanity: {want}");
             let r = run_gently(&["--as", "html"], b"[ a ] --> [ b ]\n");
-            assert_eq!(Some(0), r.code, "--as html must exit 0: {}", String::from_utf8_lossy(&r.stderr));
-            assert_eq!(want.as_bytes(), &r.stdout[..], "--as html must route to the html renderer");
+            assert_eq!(
+                Some(0),
+                r.code,
+                "--as html must exit 0: {}",
+                String::from_utf8_lossy(&r.stderr)
+            );
+            assert_eq!(
+                want.as_bytes(),
+                &r.stdout[..],
+                "--as html must route to the html renderer"
+            );
 
             // --as txt routes to the canonical text serializer — for the
             // plain corpus fixture the bytes match the oracle exactly
             // (tests/repro/claims/cli-formats.observed).
             let want = fixture_bytes("txt");
-            assert_eq!("[ a ] --> [ b ]\n", want, "plain fixture serializes in the oracle form");
+            assert_eq!(
+                "[ a ] --> [ b ]\n", want,
+                "plain fixture serializes in the oracle form"
+            );
             let r = run_gently(&["--as", "txt"], b"[ a ] --> [ b ]\n");
-            assert_eq!(Some(0), r.code, "--as txt must exit 0: {}", String::from_utf8_lossy(&r.stderr));
-            assert_eq!(want.as_bytes(), &r.stdout[..], "--as txt must route to the txt renderer");
+            assert_eq!(
+                Some(0),
+                r.code,
+                "--as txt must exit 0: {}",
+                String::from_utf8_lossy(&r.stderr)
+            );
+            assert_eq!(
+                want.as_bytes(),
+                &r.stdout[..],
+                "--as txt must route to the txt renderer"
+            );
 
-            // extension inference (upstream map): with `--as` absent the
-            // output filename's extension selects the format; each wired
-            // extension now resolves to a real render, not exit 255.
+        }
+
+        /// cli.p2 (c2, gently-4ig): extension inference (upstream map) —
+        /// with `--as` absent the output filename's extension selects the
+        /// format; each wired extension resolves to a real render, not
+        /// exit 255.
+        #[test]
+        fn p2_extensions() {
             let dir = TempDir::new("p2-ext");
             let input = dir.0.join("in.txt");
             std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture");
             for (ext, fmt) in [("html", "html"), ("txt", "txt"), ("dot", "graphviz")] {
                 let out = dir.0.join(format!("out.{ext}"));
-                let r = run_gently_in(&dir.0, &[input.to_str().unwrap(), out.to_str().unwrap()], b"");
-                assert_eq!(Some(0), r.code, ".{ext} must resolve {fmt}: {}", String::from_utf8_lossy(&r.stderr));
+                let r = run_gently_in(
+                    &dir.0,
+                    &[input.to_str().unwrap(), out.to_str().unwrap()],
+                    b"",
+                );
+                assert_eq!(
+                    Some(0),
+                    r.code,
+                    ".{ext} must resolve {fmt}: {}",
+                    String::from_utf8_lossy(&r.stderr)
+                );
                 assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
                 assert_eq!(
                     fixture_bytes(fmt).as_bytes(),
@@ -82,8 +125,14 @@ mod scenarios {
             assert_eq!(Some(255), r.code, "unknown format must exit 255");
             assert!(r.stdout.is_empty(), "diagnostics must not touch stdout");
             let err = String::from_utf8_lossy(&r.stderr);
-            assert!(err.contains("nosuch"), "diagnostic must name the requested format: {err}");
-            assert!(err.contains("ascii"), "diagnostic must name the valid formats: {err}");
+            assert!(
+                err.contains("nosuch"),
+                "diagnostic must name the requested format: {err}"
+            );
+            assert!(
+                err.contains("ascii"),
+                "diagnostic must name the valid formats: {err}"
+            );
 
             // gently-4ig: the known-but-unwired formats stay exit 255 with
             // the same message shape (scope-offs, evidence in
@@ -94,12 +143,20 @@ mod scenarios {
             for fmt in ["boxart", "svg", "vcg", "gdl", "graphml"] {
                 let r = run_gently(&["--as", fmt], b"[ a ] --> [ b ]\n");
                 assert_eq!(Some(255), r.code, "--as {fmt} must exit 255");
-                assert!(r.stdout.is_empty(), "--as {fmt}: diagnostics must not touch stdout");
+                assert!(
+                    r.stdout.is_empty(),
+                    "--as {fmt}: diagnostics must not touch stdout"
+                );
                 let err = String::from_utf8_lossy(&r.stderr);
-                assert!(err.contains(fmt), "--as {fmt}: diagnostic must name the requested format: {err}");
-                assert!(err.contains("ascii"), "--as {fmt}: diagnostic must name the valid formats: {err}");
+                assert!(
+                    err.contains(fmt),
+                    "--as {fmt}: diagnostic must name the requested format: {err}"
+                );
+                assert!(
+                    err.contains("ascii"),
+                    "--as {fmt}: diagnostic must name the valid formats: {err}"
+                );
             }
         }
-
     }
 }

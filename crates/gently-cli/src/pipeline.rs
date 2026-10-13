@@ -18,14 +18,21 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use genesis::guide::{Guide, Output, OutputFormat};
-use gently_core::{layout, parse::text, render::ascii};
+use gently_core::{
+    layout,
+    parse::text,
+    render::{ascii, graphviz, html, txt},
+};
 use serde::Serialize;
 
 use crate::{Cli, CliError};
 
-/// Output formats valid in this slice (specs/cli.md c2 — only ascii is
-/// wired; boxart/html/graphviz/txt land with later capability slices).
-pub const SUPPORTED_FORMATS: &[&str] = &["ascii"];
+/// Output formats wired in this slice (specs/cli.md c2): ascii, html,
+/// graphviz (`dot` aliases it upstream) and txt — each routed to its
+/// library renderer. `boxart`/`svg`/`vcg`/`gdl`/`graphml` stay exit-255
+/// (c4): upstream v0.69 has no `as_boxart`/`as_svg` method, and the
+/// vcg/gdl/graphml writers are documented scope-offs (gently-4ig).
+pub const SUPPORTED_FORMATS: &[&str] = &["ascii", "html", "graphviz", "txt"];
 
 /// Upstream's extension → format map (bin/graph-easy get_options): the
 /// output filename infers the format when `--as` is absent. `dot` is an
@@ -75,9 +82,10 @@ pub fn run(
     cli: &Cli,
     output_path: Option<PathBuf>,
     format: OutputFormat,
+    format_name: &str,
 ) -> i32 {
     guide.run_formatted(format, || {
-        let result = render(cli, output_path.as_deref());
+        let result = render(cli, format_name);
         match result {
             Ok(art) => match write_output(&art, output_path.as_deref()) {
                 // When the rendered bytes go to the `--output` file, nothing
@@ -88,7 +96,7 @@ pub fn run(
                 }
                 Ok(()) => {
                     let note = format!(
-                        "rendered {} bytes of ascii via the gently pipeline",
+                        "rendered {} bytes of {format_name} via the gently pipeline",
                         art.len()
                     );
                     Ok(Output::success(RawAscii::new(art)).with_warning(note))
@@ -102,7 +110,10 @@ pub fn run(
 
 /// Route a failure to the emit path: a typed error envelope in json mode
 /// (c6), a bare human diagnostic otherwise.
-fn error_output(e: CliError, format: OutputFormat) -> Result<Output<RawAscii>, Box<dyn std::error::Error>> {
+fn error_output(
+    e: CliError,
+    format: OutputFormat,
+) -> Result<Output<RawAscii>, Box<dyn std::error::Error>> {
     if format == OutputFormat::Json {
         // c6: failures emit a typed error envelope, not a bare human
         // diagnostic.
@@ -123,16 +134,30 @@ fn write_output(art: &str, output_path: Option<&Path>) -> Result<(), CliError> {
 }
 
 /// Parse, lay out, and render the requested format, returning the rendered
-/// bytes (c1/c2). Only ascii is wired in this slice (c4 guards unknown
-/// formats before dispatch).
-fn render(cli: &Cli, _output_path: Option<&Path>) -> Result<String, CliError> {
+/// bytes (c1/c2). ascii, html, graphviz and txt route to their library
+/// renderers (c2); the c4 guard rejects other formats before dispatch.
+fn render(cli: &Cli, format_name: &str) -> Result<String, CliError> {
     let source = read_source(cli)?;
     let graph = text::parse(&source)
         .map_err(|e| CliError(format!("parse error, line {}: {}", e.line, e.message)))?;
-    let lay = layout::layout(&graph);
-    let art = ascii::render(&graph, &lay)
-        .map_err(|e| CliError(format!("render error: {}", e.message)))?;
-    Ok(art)
+    match format_name {
+        "graphviz" => Ok(graphviz::render(&graph)),
+        "txt" => Ok(txt::render(&graph)),
+        "html" => {
+            let lay = layout::layout(&graph);
+            // The upstream script's `as_html_file` alias embeds the table in
+            // a full document (ge.html_render's scope-off); the CLI serves
+            // the document form the library pins.
+            html::document(&graph, &lay)
+                .map_err(|e| CliError(format!("render error: {}", e.message)))
+        }
+        _ => {
+            let lay = layout::layout(&graph);
+            let art = ascii::render(&graph, &lay)
+                .map_err(|e| CliError(format!("render error: {}", e.message)))?;
+            Ok(art)
+        }
+    }
 }
 
 /// Resolve the output format per upstream bin/graph-easy (specs/cli.md c2):
@@ -140,7 +165,11 @@ fn render(cli: &Cli, _output_path: Option<&Path>) -> Result<String, CliError> {
 /// extension via the upstream map; else the ascii default.
 pub fn resolve_format(cli: &Cli, output_path: Option<&Path>) -> String {
     if let Some(fmt) = cli.as_.as_deref() {
-        return if fmt == "dot" { "graphviz".to_string() } else { fmt.to_string() };
+        return if fmt == "dot" {
+            "graphviz".to_string()
+        } else {
+            fmt.to_string()
+        };
     }
     if let Some(path) = output_path {
         if let Some(ext) = path.extension().and_then(|e| e.to_str()) {

@@ -26,11 +26,7 @@ use genesis::guide::{ErrorSink, Guide, OutputFormat, Verbosity};
 use pipeline::SUPPORTED_FORMATS;
 
 #[derive(Parser)]
-#[command(
-    name = "gently",
-    version,
-    about = "Graph text in, rendered output out"
-)]
+#[command(name = "gently", version, about = "Graph text in, rendered output out")]
 struct Cli {
     /// Positional arguments: `[inputfile [outputfile ...]]` — the first is
     /// the input, the second names the output file, further arguments are
@@ -39,6 +35,8 @@ struct Cli {
     files: Vec<PathBuf>,
 
     /// Output format (upstream `--as <fmt>`; `dot` aliases graphviz).
+    /// Wired: ascii (default), html, graphviz, txt. Other upstream names
+    /// (boxart, svg, vcg, gdl, graphml) exit 255 (specs/cli.md c2/c4).
     /// Defaults to ascii, or the output extension's format when `--output`
     /// names a mapped extension (specs/cli.md c2).
     #[arg(long = "as")]
@@ -131,7 +129,7 @@ fn dispatch(cli: &Cli, guide: &Guide, subcommand: Option<&str>) -> i32 {
         );
         return 255;
     }
-    pipeline::run(guide, cli, output_path, format)
+    pipeline::run(guide, cli, output_path, format, &format_name)
 }
 
 /// The emit format (c5/c6): `--json` wraps results in the genesis

@@ -48,12 +48,12 @@ classes are deliberately outside byte-compat — see
 | Stage                  | Formats                                    |
 |------------------------|--------------------------------------------|
 | Parse                  | Graph::Easy text, Graphviz DOT             |
-| Render via CLI (`--as`) | `ascii`                                   |
-| Render via library      | boxart, HTML, Graphviz DOT (CLI wiring pending) |
+| Render via CLI (`--as`) | `ascii`, `html`, `txt`, `dot`/`graphviz`    |
+| Render via library      | boxart (CLI wiring pending)                 |
 
-The CLI currently advertises `valid formats: ascii` — asking for any
-other format errors with `gently: unknown output format` until the
-remaining renderers are wired to the CLI.
+Asking for an unwired format (e.g. `--as boxart`, `--as svg`) errors with
+`gently: unknown output format` and exit 255 until a renderer is wired
+to the CLI.
 
 ## For contributors
 
