@@ -1,0 +1,18 @@
+Done — budget held, all gates green, both beads closed and pushed.
+
+## Report
+
+**Commits** (all pushed to `origin/main`):
+| sha | one-line |
+|-----|----------|
+| `7f3191e` | test(ascii_render): pin the textwrap auto/numeric label wrap and the left+2 vertical stem column (gently-emd, gently-5vf) |
+| `a61759d` | feat(ascii_render): textwrap: auto / numeric textwrap wraps label text per the oracle's `_wrapped_label` (gently-emd) |
+| `464fbfd` | docs(spec): re-derive ascii_render c5 with the textwrap wrap rule (gently-emd, gently-5vf) — openspec mirror + specodelic artifacts in the same commit |
+
+**Implementation** (gently-emd): ported upstream `Node::_wrapped_label` into `crates/gently-core/src/render/ascii/labels.rs` — when the effective `textwrap` ≠ `none` (object attr → class → graph, upstream `inherit` over graph default `none`), wrapping *replaces* the 527 escape split: `\n`/`\r`/`\l`/`\c` → spaces, whitespace collapsed, breaks at the last space (dropped) or last hyphen (kept) once a line reaches the width; `auto` = `int(sqrt(bytes)·1.4)` floored at 2; all rows keep the object's default alignment. Wired through `geometry.rs` (node box widths + labelled-gap widths from the wrapped lines; `label_lines` resolves before `column_geometry` in `canvas.rs`). Layout untouched — it is label-agnostic. Split into helpers (`wrap_width`/`flatten_escapes`/`collapse_spaces`/`wrap_lines`/`wrap_point`, plus `frame_grid`/`edge_arrow_flags`/`label_cell_width`) to clear the pretender ratchets that initially blocked the commit.
+
+**gently-5vf (bonus)**: verified already fixed — the gently-klf left+2 vertical attachment rule produces the oracle bytes byte-identically; pinned as a regression scenario, bead closed.
+
+**Gates** (all exit 0): `cargo test -p gently-core` (185 pass) · `cargo clippy --workspace --all-targets -- -D warnings` · `ah check --run-tests` (74 passed) · `just gates` · `just oracle-verify` · `just examples-verify` · `spk lint openspec` · `git status` clean except `.wai` session files · `git log origin/main..HEAD` empty · `bd show gently-emd`/`gently-5vf` → CLOSED + `bd export`.
+
+**Deviations**: (1) `.beads/issues.jsonl` is gitignored in this repo (embedded-Dolt mode) — `bd export -o` ran; nothing to commit. (2) The spec-drift pre-commit hook required the stash dance for both non-spec commits (as the brief anticipated); an aborted first attempt briefly bundled feat into the test commit — caught and re-split via soft reset. (3) Left the pre-existing `canvas.rs::new` hotspot tidy-refactor alone beyond what the ratchet demanded.
