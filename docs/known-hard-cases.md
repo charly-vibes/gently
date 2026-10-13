@@ -13,8 +13,6 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-0d6` | arrowless dot-dash edge `.-.-` — oracle renders `-.`-style arrowless, gently renders `---` |
-| `gently-1kv` | `= >` double-dash edges — oracle renders `= >` as written, gently renders plain `-->` |
 | `gently-51d` | wide/broad edge styles — oracle renders `##>` double-line arrowhead, gently renders plain `-->` |
 | `gently-527` | literal `\n` in an edge label — oracle splits into a two-row label, gently prints it raw |
 | `gently-5vf` | vertical stem column — gently indents 2 spaces where the oracle uses 3 (SO 71860) |
@@ -25,7 +23,6 @@ when it is byte-identical to the oracle.
 | `gently-bvb` | Unicode box width — oracle counts UTF-8 bytes (`Köln` box is 1 column wider), gently counts characters |
 | `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path |
 | `gently-klf` | interlinked triangle layout — gently's back-edge drifts 2 columns from the oracle drawing |
-| `gently-oy2` | repeated edge-style patterns (`..-..-..->`, `.-.-.->`) — oracle keeps `..->`/`..-` rendering, gently collapses to plain styles |
 
 ### Text parser
 

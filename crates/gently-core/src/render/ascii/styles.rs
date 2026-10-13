@@ -73,26 +73,60 @@ pub(super) fn shape(attr: Option<&str>) -> Shape {
     }
 }
 
-/// The 3-cell arrow run of an edge style (ge.ascii_render.c2 — observed
-/// bytes: solid `-->`/`---`, double `==>`/`===`, dotted `..>`/`...`,
-/// wave `~~>`/`~~~`, dashed `- >`/single `-`, bold `##>`/`###`).
-pub(super) fn edge_run(style: &str, arrowed: bool) -> String {
-    match (style, arrowed) {
-        ("dashed", true) => "- >".to_string(),
-        ("double", true) => "==>".to_string(),
-        ("dotted", true) => "..>".to_string(),
-        ("wave", true) => "~~>".to_string(),
-        ("bold", true) => "##>".to_string(),
-        (s, true) => {
-            let _ = s;
-            "-->".to_string()
+/// The style's repeating unit token (upstream As_ascii `$edge_styles`
+/// row-0 patterns / Parser.pm `_edge_style` classes).
+pub(super) fn edge_pattern(style: &str) -> &'static str {
+    match style {
+        "double" => "==",
+        "double-dash" => "= ",
+        "dotted" => ".",
+        "dot-dash" => ".-",
+        "dot-dot-dash" => "..-",
+        "dashed" => "- ",
+        "wave" => "~",
+        "bold" => "##",
+        _ => "-",
+    }
+}
+
+/// The style's glyph run over a straight short-edge cell of gap width `w`
+/// whose left edge sits at absolute column `rx`, directed (`arrowed`) or
+/// not — the upstream `Edge/Cell.pm _draw_hor` rule, pinned byte-for-byte
+/// by tests/repro/claims/edge-style-short-runs.observed (gently-oy2):
+/// fill the width with the pattern, undirected cells shift the fill by
+/// `rx % len` (upstream's ofs removal — directed SHORT cells skip it),
+/// truncate to `w`, then drop one char per START_W and START_E/END_E
+/// flag (both always present on a short cell); a directed run REPLACES
+/// the remaining last char with the arrow head (upstream END_E: chop,
+/// then `substr($line,-1,1) = arrow`).
+pub(super) fn edge_run_at(style: &str, arrowed: bool, w: usize, rx: usize) -> String {
+    let pat = edge_pattern(style);
+    let len = pat.len();
+    let mut line = pat.repeat(2 + w / len);
+    if !arrowed {
+        let ofs = rx % len;
+        if ofs != 0 {
+            line.replace_range(..ofs, "");
         }
-        ("dashed", false) => "-".to_string(),
-        ("double", false) => "===".to_string(),
-        ("dotted", false) => "...".to_string(),
-        ("wave", false) => "~~~".to_string(),
-        ("bold", false) => "###".to_string(),
-        (_, false) => "---".to_string(),
+    }
+    line.truncate(w);
+    line.pop(); // START_W: the line starts one cell column in (x = 1)
+    line.pop(); // START_E (undirected) / END_E chop (directed)
+    if arrowed {
+        line.pop(); // END_E replace: the char the head takes over
+        line.push('>');
+    }
+    line
+}
+
+/// The minimum straight-edge gap width of a style: upstream's default 5
+/// cell columns, widened by one for dot-dot-dash (`_correct_size`'s
+/// `w++ if $style eq 'dot-dot-dash'` — the ` ..-> ` gap; probed).
+pub(super) fn edge_gap_width(style: &str) -> usize {
+    if style == "dot-dot-dash" {
+        6
+    } else {
+        5
     }
 }
 
@@ -105,6 +139,9 @@ pub(super) fn edge_fill(style: &str) -> String {
         "wave" => "~~".to_string(),
         "dashed" => "- ".to_string(),
         "bold" => "##".to_string(),
+        "dot-dash" => ".-".to_string(),
+        "dot-dot-dash" => "..-".to_string(),
+        "double-dash" => "= ".to_string(),
         _ => "--".to_string(),
     }
 }
@@ -137,7 +174,7 @@ fn is_wide(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{border, display_width, edge_run, h_run, shape, Shape};
+    use super::{border, display_width, edge_run_at, h_run, shape, Shape};
 
     #[test]
     fn solid_border_glyphs() {
@@ -161,23 +198,54 @@ mod tests {
         assert_eq!(h_run(&border("double-dash"), 3), " = ");
     }
 
+    /// The full straight-edge run rule (gently-oy2): upstream
+    /// `_draw_hor` pinned by tests/repro/claims/edge-style-short-runs
+    /// .observed — arrowed runs at the minimum gap, undirected runs
+    /// shifted by the cell's absolute x (ofs removal), dot-dot-dash's
+    /// 6-column minimum gap, and the position-dependent undirected
+    /// dot-dot-dash variants (chain gap 2/3 = x 15/25).
     #[test]
-    fn edge_runs_match_oracle_table() {
-        for (style, arrowed, want) in [
-            ("solid", true, "-->"),
-            ("solid", false, "---"),
-            ("double", true, "==>"),
-            ("double", false, "==="),
-            ("dotted", true, "..>"),
-            ("dotted", false, "..."),
-            ("wave", true, "~~>"),
-            ("wave", false, "~~~"),
-            ("dashed", true, "- >"),
-            ("dashed", false, "-"),
-            ("bold", true, "##>"),
-            ("bold", false, "###"),
+    fn edge_runs_at_match_oracle_rule() {
+        for (style, arrowed, w, rx, want) in [
+            // arrowed: no ofs shift, run = w-2 with the head
+            ("dot-dash", true, 5, 5, ".->"),
+            ("dot-dot-dash", true, 6, 5, "..->"),
+            ("double-dash", true, 5, 5, "= >"),
+            // undirected: ofs removal by rx % len, no head
+            ("dot-dash", false, 5, 5, "-.-"),
+            ("dot-dot-dash", false, 6, 5, "-..-"),
+            ("double-dash", false, 5, 5, " = "),
+            // position-dependence of the undirected shift (chain gaps)
+            ("dot-dot-dash", false, 6, 15, "..-."),
+            ("dot-dot-dash", false, 6, 25, ".-.."),
+            // pre-existing styles obey the same rule at rx=5
+            ("solid", true, 5, 5, "-->"),
+            ("solid", false, 5, 5, "---"),
+            ("dashed", true, 5, 5, "- >"),
+            ("dashed", false, 5, 5, " - "),
+            ("dotted", true, 5, 5, "..>"),
+            ("dotted", false, 5, 5, "..."),
+            ("double", true, 5, 5, "==>"),
+            ("double", false, 5, 5, "==="),
         ] {
-            assert_eq!(edge_run(style, arrowed), want, "{style} arrowed={arrowed}");
+            assert_eq!(
+                edge_run_at(style, arrowed, w, rx),
+                want,
+                "{style} arrowed={arrowed} w={w} rx={rx}"
+            );
+        }
+    }
+
+    #[test]
+    fn edge_gap_width_widens_for_dot_dot_dash() {
+        for (style, want) in [
+            ("solid", 5),
+            ("dashed", 5),
+            ("dot-dash", 5),
+            ("dot-dot-dash", 6),
+            ("double-dash", 5),
+        ] {
+            assert_eq!(super::edge_gap_width(style), want, "{style} gap");
         }
     }
 

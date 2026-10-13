@@ -144,6 +144,7 @@ my %SERVES = (
     'pod-bidir-label'        => 'gently-ni9.1 (POD mining — Parser.pm \'<-- label -->\' example; gently drops the start arrowhead → bug bead)',
     'pod-label-attr'         => 'gently-ni9.1 (POD mining — Parser.pm arrowless-label example; gently draws a spurious target arrowhead → bug bead)',
     'pod-repeat-patterns'    => 'gently-ni9.1 (POD mining — Parser.pm repeated-pattern example; gently collapses repeated styles to plain → bug bead)',
+    'edge-style-short-runs'  => 'gently-oy2 (POD repeated-pattern family — the full short-edge style run rule: arrowed runs, undirected rx-shifted runs, dot-dot-dash gap widening)',
     'pod-triangle'           => 'gently-ni9.1 (POD mining — Easy.pm interlinked-triangle example; gently layout diverges by 2 columns → bug bead)',
     'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
     'pod-style-family'       => 'gently-ni9.1 (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead)',
@@ -564,6 +565,43 @@ pod_probe_body('pod-repeat-patterns', <<'EXAMPLE')
 [ B ] ~~~~~> [ C ]
 [ C ] ..-..-..-> [ D ]
 EXAMPLE
+PROBE
+
+    'edge-style-short-runs' => <<'PROBE',
+# serves: gently-oy2
+# claim probed: the full short-edge style run rule behind the repeated
+# patterns (POD '..-..-..->' / '.-.-.->' / '= = >'). Pins, for the
+# minimum straight-edge gap (rx = 5): arrowed dot-dash '.->', dot-dot-dash
+# '..->' (6-wide gap — upstream _correct_size widens w for the style),
+# double-dash '= >'; arrow-less (undirected) dot-dash '-.-', dot-dot-dash
+# '-..-', double-dash ' = ' (runs shift with the gap's absolute x —
+# upstream _draw_hor's ofs removal applies to undirected SHORT cells
+# only, so gap 2 of a chain renders '..-.').
+# Custom body (not pod_probe_body): each example is its OWN graph —
+# combining them into one graph yields 7 parallel a..b edges whose layout
+# is hash-seed-dependent (that is the pod-repeat-patterns rejection), so
+# each input is probed in isolation and annotated with its source text.
+use Graph::Easy::Parser;
+my @examples = (
+  '[ a ] .-.-.-> [ b ]',
+  '[ a ] ..-..-..-> [ b ]',
+  '[ a ] = = > [ b ]',
+  '[ a ] .-.- [ b ]',
+  '[ a ] ..-..- [ b ]',
+  '[ a ] = = [ b ]',
+  '[ a ] --> [ b ] ..-..- [ c ]',
+);
+for my $seed (0, 1) {
+  print "== seed $seed ==\n";
+  local $ENV{PERL_HASH_SEED} = $seed;
+  for my $text (@examples) {
+    my $g = eval { Graph::Easy::Parser->new->from_text($text) };
+    die "parse failed: $text\n" unless $g;
+    print "-- $text --\n";
+    print $g->as_txt();
+    print $g->as_ascii();
+  }
+}
 PROBE
 
     'pod-label-attr' => <<'PROBE',

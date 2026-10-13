@@ -11,7 +11,7 @@
 //! (tests/repro/claims/ascii-render-tables.observed — gently-0cq).
 
 use super::polyline;
-use super::styles::{self, border, display_width, edge_fill, edge_run, h_run, shape, Shape};
+use super::styles::{self, border, display_width, edge_fill, edge_gap_width, edge_run_at, h_run, shape, Shape};
 use super::RenderError;
 use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::Layout;
@@ -130,6 +130,7 @@ fn column_geometry(
     layout: &Layout,
     node_style: &[(String, Shape)],
     selfloop_node: &[bool],
+    edge_style: &[String],
 ) -> (Vec<usize>, Vec<usize>) {
     let mut node_width = vec![0usize; layout.width];
     let mut node_col = vec![false; layout.width];
@@ -151,6 +152,11 @@ fn column_geometry(
                 let c = path[0].0;
                 col_width[c] = col_width[c].max(display_width(label) + 5);
             }
+            // The style's minimum gap width (gently-oy2: upstream
+            // `_correct_size` widens the cell for dot-dot-dash — the
+            // ` ..-> ` gap; the other styles keep the 5-column floor).
+            let c = path[0].0;
+            col_width[c] = col_width[c].max(edge_gap_width(&edge_style[ei]));
         }
     }
     let mut offsets = vec![0usize; layout.width + 1];
@@ -170,7 +176,7 @@ impl Canvas {
         let node_style = node_styles(graph);
         let edge_style = edge_styles(graph);
         let (col_width, offsets) =
-            column_geometry(graph, layout, &node_style, &selfloop_node);
+            column_geometry(graph, layout, &node_style, &selfloop_node, &edge_style);
         let total_width = offsets[layout.width];
         let grid = vec![vec![' '; total_width]; layout.height * BAND_HEIGHT];
         let edge_arrow_end: Vec<bool> = graph.edges.iter().map(|e| e.arrows.end).collect();
@@ -257,7 +263,7 @@ impl Canvas {
                 self.stamp(sr * BAND_HEIGHT, c, &centered(&label, width));
                 s
             }
-            None => edge_run(&style, arrowed),
+            None => edge_run_at(&style, arrowed, width, self.offsets[c]),
         };
         let run = if westward { mirror_run(&run) } else { run };
         self.stamp(sr * BAND_HEIGHT + 1, c, &centered(&run, width));

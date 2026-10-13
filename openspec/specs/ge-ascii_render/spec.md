@@ -25,7 +25,7 @@ straight from the upstream test corpus.
 | id | kind | expr | traces_to | satisfies |
 |----|------|------|-----------|-----------|
 | c1 | invariant | Each node renders as a box whose interior is its label and whose border style (solid, dotted, dashed, double, wave, bold, wide, broad, dot-dash, dot-dot-dash, double-dash, none) comes from the node's border attributes. Re-derived (gently-dcp): bold, wide, and broad render the SAME `#####` outline in ASCII — distinct attribute values only in the HTML border widths (tests/repro/claims/shape-outline-collapse.observed) — so the ASCII style table collapses them onto one glyph set (tests/repro/claims/ascii-render-tables.observed). | [[ge.ascii_render]] | [[ge.layout.c5]] |
-| c2 | invariant | Edge style maps to glyph runs exactly as Graph::Easy does: at the minimum gap width the observed runs are solid `-->`, double `==>`, dotted `..>`, wave `~~>`, dashed `- >`, and bold `##>`, and arrow-less edges use the pattern without the arrow head; labelled or wider runs repeat the style's fill pattern up to the run length. Re-derived (gently-dcp): the earlier fixed-width forms `....>` and `- - >` are false at the probed minimum width — the oracle emits the minimum runs above (tests/repro/claims/ascii-render-tables.observed); gently implements exactly this table. | [[ge.ascii_render]] | |
+| c2 | invariant | Edge style maps to glyph runs exactly as Graph::Easy's short-edge `_draw_hor` rule: fill the gap with the style's unit token (`solid` `-`, `dotted` `.`, `dashed` `- `, `double` `==`, `wave` `~`, `bold` `##`, `dot-dash` `.-`, `dot-dot-dash` `..-`, `double-dash` `= `), undirected cells shift the fill by the gap cell's absolute x (`rx % len` — directed SHORT cells skip the shift), truncate to the gap width, drop one char per START_W and START_E/END_E, and a directed run replaces its last char with `>`. At the minimum gap width (5 columns, widened to 6 for dot-dot-dash per upstream `_correct_size`) the observed runs are solid `-->`/`---`, double `==>`/`===`, dotted `..>`/`...`, wave `~~>`/`~~~`, dashed `- >`/` - `, bold `##>`/`###`, dot-dash `.->`/`-.-`, dot-dot-dash `..->`/`-..-`, and double-dash `= >`/` = ` — the undirected runs therefore shift with the edge's column position (chain gap 2 renders `..-.`, gap 3 `.-..`). Re-derived (gently-dcp): the earlier fixed-width forms `....>` and `- - >` are false at the probed minimum width — the oracle emits the minimum runs above (tests/repro/claims/ascii-render-tables.observed); re-derived (gently-oy2): the repeated POD patterns (`..-..-..->`, `.-.-.->`, `= = >`) keep their styling, previously collapsed to plain `-->` (tests/repro/claims/edge-style-short-runs.observed); gently implements exactly this rule. | [[ge.ascii_render]] | |
 | c3 | invariant | The rendered output is a function of the grid output alone: no hidden state, no dependence on input text or parse order. | [[ge.ascii_render]] | |
 | c4 | invariant | Edge labels occupy cells on their edge's routed path and never overlap node cells or other labels. | [[ge.ascii_render]] | |
 | c5 | invariant | A node label wraps into multiple interior rows exactly as upstream does, and each glyph occupies its display width (double-width glyphs take two columns); alignment never depends on byte length. | [[ge.ascii_render]] | |
@@ -52,7 +52,7 @@ straight from the upstream test corpus.
 | id | kind | derives_from | generator | predicate |
 |----|------|--------------|-----------|-----------|
 | p1 | unit | [[ge.ascii_render.c1]] | nodes with every border style | each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed |
-| p2 | unit | [[ge.ascii_render.c2]] | graphs with every edge style | each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less) |
+| p2 | unit | [[ge.ascii_render.c2]] | graphs with every edge style, in straight gaps and chains | each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), undirected runs shift with the gap's absolute column, and dot-dot-dash widens its gap to 6 |
 | p3 | unit | [[ge.ascii_render.c3]] | one graph rendered via two different construction orders | outputs are byte-identical |
 | p4 | unit | [[ge.ascii_render.c4]] | graphs with labelled crossing edges | no label cell coincides with a node cell or another label cell |
 | p5 | unit | [[ge.ascii_render.c5]] | node labels with long text, explicit line breaks, and double-width glyphs | wrapped lines each occupy one interior row and column counts follow display width, not byte count |
@@ -73,8 +73,8 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 
 #### Scenario: p2
 
-- **WHEN** graphs with every edge style
-- **THEN** each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less)
+- **WHEN** graphs with every edge style, in straight gaps and chains
+- **THEN** each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), undirected runs shift with the gap's absolute column, and dot-dot-dash widens its gap to 6
 - **VERIFIES** [[ge.ascii_render.p2]]
 
 #### Scenario: p3

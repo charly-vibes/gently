@@ -100,12 +100,43 @@ fn p2() {
         ("dashed", false, "+---+     +---+\n| a |  -  | b |\n+---+     +---+\n"),
         ("bold", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
         ("bold", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
+        // gently-oy2: the repeated-pattern family — arrowed runs keep the
+        // dot-dot-dash styling, undirected runs shift by the gap's
+        // absolute x, and dot-dot-dash widens the gap to 6 (upstream
+        // _draw_hor + _correct_size; edge-style-short-runs.observed).
+        ("dot-dash", true, "+---+     +---+\n| a | .-> | b |\n+---+     +---+\n"),
+        ("dot-dot-dash", true, "+---+      +---+\n| a | ..-> | b |\n+---+      +---+\n"),
+        ("double-dash", true, "+---+     +---+\n| a | = > | b |\n+---+     +---+\n"),
+        ("dot-dash", false, "+---+     +---+\n| a | -.- | b |\n+---+     +---+\n"),
+        ("dot-dot-dash", false, "+---+      +---+\n| a | -..- | b |\n+---+      +---+\n"),
+        ("double-dash", false, "+---+     +---+\n| a |  =  | b |\n+---+     +---+\n"),
     ];
     for (style, arrowed, want) in cases {
         let g = styled_edge(style, arrowed);
         let art = ascii::render(&g, &layout::layout(&g)).expect("styled edge must render");
         assert_eq!(art, want, "edge {style} arrowed={arrowed}");
     }
+}
+
+/// ge.ascii_render.p2 (c2), rx-dependence: the undirected run shifts with
+/// the gap's absolute x — chain gap 2 renders `..-.`, gap 1 renders
+/// `-..-` (edge-style-short-runs.observed, upstream _draw_hor ofs rule).
+#[test]
+fn p2_undirected_dot_dot_dash_shifts_with_rx() {
+    let mut g = Graph::default();
+    let a = g.add_node("a");
+    let b = g.add_node("b");
+    let c = g.add_node("c");
+    let e1 = g.add_edge(a, b, true).expect("live endpoints");
+    let e2 = g.add_edge(b, c, false).expect("live endpoints");
+    g.set_attr(Scope::Edge(e1), "style", "solid");
+    g.set_attr(Scope::Edge(e2), "style", "dot-dot-dash");
+    g.edges[e2].arrows.end = false;
+    let art = ascii::render(&g, &layout::layout(&g)).expect("styled edges must render");
+    assert_eq!(
+        art,
+        "+---+     +---+      +---+\n| a | --> | b | ..-. | c |\n+---+     +---+      +---+\n"
+    );
 }
 
 /// ge.ascii_render.p3 (c3): the output is a function of the grid alone —
