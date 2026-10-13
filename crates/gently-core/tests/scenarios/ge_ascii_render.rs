@@ -2,9 +2,9 @@
 //! each property row of specs/ge-ascii_render.md is one test below, named
 //! for its id. Expected bytes are the probed pinned oracle
 //! (Graph::Easy v0.69 @ ededa3d7; tests/repro/claims/ascii-render-tables
-//! .observed), except where the oracle is display-broken: the wide-glyph
-//! box follows c5's display-width letter (the oracle aligns CJK by UTF-8
-//! byte length — recorded as a divergence for gently-dcp).
+//! .observed); label width is UTF-8 BYTE width per the oracle's
+//! byte-string length() (gently-bvb, re-derived from the display-width
+//! letter under gently-527).
 //!
 //! Scope notes (probed): upstream hangs on multiline labels
 //! (tests/repro/probes.pl note), so label *wrapping* is unverifiable

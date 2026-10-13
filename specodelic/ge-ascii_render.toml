@@ -21,13 +21,13 @@ traces_to = "[[ge.ascii_render]]"
 [[constraints]]
 id = "c4"
 kind = "invariant"
-expr = "Edge labels occupy cells on their edge's routed path and never overlap node cells or other labels."
+expr = "Edge labels occupy cells on their edge's routed path and never overlap node cells or other labels. Re-derived (gently-527): a straight edge's label CELL is sized by its widest line — width = longest-line byte length + 5 (+1 for a bidirectional arrowhead column), height = lines + 2 — and every cell in that row is grown to the row height (upstream `_prepare_layout` rewrites each cell's h to its row's height), so a multiline label grows its band and both endpoint boxes grow one blank interior row with vertically centered labels; the label rows render one per line, bottom-aligned in the cell's `h-2` field starting at byte offset 2 (`w-5` bytes wide eastward — `ws = xs + xr = 3` with the east head reserving the last byte — `w-4` westward), left-aligned by default (upstream's edge `align` attribute defaults `left`, node `center`) (tests/repro/claims/edge-label-split-minimal.observed, bg-multiline-align.observed, so-flowchart-size.observed); gently implements exactly this rule."
 traces_to = "[[ge.ascii_render]]"
 
 [[constraints]]
 id = "c5"
 kind = "invariant"
-expr = "A node label wraps into multiple interior rows exactly as upstream does, and each glyph occupies its display width (double-width glyphs take two columns); alignment never depends on byte length."
+expr = '''A label splits into one interior row per line — a literal `\n` splits (gently-527) and the `\l`/`\r`/`\c` escapes align the FOLLOWING line left/right/center (gently-y7i) exactly as upstream `Node::_aligned_label` does: each escape terminates the previous segment (which is unescaped `\|` → `|`, `\\` → `\`, and trimmed), the segment's alignment is the PREVIOUS terminator's (`\n` means the object's default — node `center`, edge `left`), a trailing terminator adds no line, and multiline node boxes grow to lines+2 with the label rows vertically centered (upstream `_draw_label`'s middle alignment, `ys = 0.5`). Label width arithmetic counts UTF-8 BYTES (gently-bvb, re-derived: the oracle byte-lengths label text via its byte-string `length()` — `[ Köln ]` is a 7-dash box and the 中 pin is a 7-byte box, tests/repro/claims/ascii-render-tables.observed label wide glyph, label-byte-width.observed), superseding the earlier display-width reading recorded for gently-dcp; text WRAPPING (`textwrap`) stays a separate surface (gently-emd).'''
 traces_to = "[[ge.ascii_render]]"
 
 [[constraints]]

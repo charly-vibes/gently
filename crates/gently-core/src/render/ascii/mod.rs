@@ -1,7 +1,7 @@
 //! Purpose: ascii-art renderer byte-compatible with the pinned oracle's
 //! classic ascii output for the recorded corpus (gently-0of), deepened to
 //! the full ge.ascii_render capability (gently-0cq): border styles, edge
-//! style runs, shapes, labelled edges, and display-width centering.
+//! style runs, shapes, labelled edges (multiline, aligned, byte-width), and row-band growth.
 //! Responsibilities: resolve the graph against its layout into the char
 //! grid (glyph tables in `styles`, canvas in `canvas`, polylines in
 //! `polyline`); return a typed `RenderError` for unsupported geometry —

@@ -30,6 +30,14 @@ pub mod spec_gen {
         Just("bidirectional".into())
     }
 
+    pub fn escapes() -> impl Strategy<Value = String> {
+        Just("escapes".into())
+    }
+
+    pub fn glyphs() -> impl Strategy<Value = String> {
+        Just("glyphs".into())
+    }
+
     pub fn chain() -> impl Strategy<Value = String> {
         Just("chain".into())
     }
@@ -62,20 +70,21 @@ fn p3() {
         todo_predicate!("outputs are byte-identical");
 }
 
-// id: p4
-// generator: graphs with labelled crossing edges
-// predicate: no label cell coincides with a node cell or another label cell
-#[test]
-fn p4() {
-        todo_predicate!("no label cell coincides with a node cell or another label cell");
-}
-
-// id: p5
-// generator: node labels with long text, explicit line breaks, and double-width glyphs
-// predicate: wrapped lines each occupy one interior row and column counts follow display width, not byte count
-#[test]
-fn p5() {
-        todo_predicate!("wrapped lines each occupy one interior row and column counts follow display width, not byte count");
+proptest! {
+    // id: p4
+    // generator: graphs with labelled crossing edges, plus straight edges whose labels carry literal `\n` splits and `\r` alignment escapes (gently-527/y7i)
+    // predicate: no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed)
+    #[test]
+    fn p4(v0 in spec_gen::escapes()) {
+        todo_predicate!("no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed)");
+    }
+    // id: p5
+    // generator: node labels with long text, explicit `\n` breaks, `\l`/`\r`/`\c` alignment escapes, and multi-byte glyphs (`中`, `Köln`)
+    // predicate: each label line occupies one interior row placed by its `l`/`r`/`c` alignment (the escape aligning the FOLLOWING line), a multiline box grows to lines+2 with vertically centered rows, and all width arithmetic follows UTF-8 byte length — the 中 box is 7 bytes wide and Köln's 7-dash box renders byte-identically to the pinned oracle bytes (tests/repro/claims/label-byte-width.observed)
+    #[test]
+    fn p5(v0 in spec_gen::glyphs()) {
+        todo_predicate!("each label line occupies one interior row placed by its `l`/`r`/`c` alignment (the escape aligning the FOLLOWING line), a multiline box grows to lines+2 with vertically centered rows, and all width arithmetic follows UTF-8 byte length — the 中 box is 7 bytes wide and Köln's 7-dash box renders byte-identically to the pinned oracle bytes (tests/repro/claims/label-byte-width.observed)");
+    }
 }
 
 // id: p6
