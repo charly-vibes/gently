@@ -1,0 +1,23 @@
+# mdBook configuration — gently's user book.
+#
+# ddl-standard parity with dulce-de-leche's book.toml role. The book src
+# is `docs/src`; the volatile pages (gallery, examples, known-hard-cases,
+# release status) are GENERATED there from the authoritative repo files by
+# `just docs-sync` — never hand-edit the generated pages, edit the source
+# files instead (anti-drift: §6 of the ddl book, hand-typed versions drift).
+
+[book]
+title = "gently"
+description = "A Rust port of Perl's Graph::Easy — parse, lay out, and render graphs as ASCII art, HTML, and DOT"
+authors = ["charly vibes"]
+language = "en"
+src = "docs/src"
+
+[build]
+build-dir = "target/book"
+
+[output.html]
+default-theme = "coal"
+preferred-dark-theme = "coal"
+git-repository-url = "https://github.com/charly-vibes/gently"
+edit-url-template = "https://github.com/charly-vibes/gently/edit/main/docs/src/{path}"

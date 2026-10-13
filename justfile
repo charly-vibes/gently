@@ -249,6 +249,44 @@ check:
 help:
     @just --list
 
+# === Docs (mdbook, ddl-standard parity) ===
+
+# Sync the authoritative repo docs into the book src (docs/src). The
+# generated pages are gitignored — the repo files are the single source
+# of truth; docs / docs-serve / docs.yml all run this same recipe.
+docs-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p docs/src
+    # gallery: page + SVG assets — the `gallery/<name>.svg` paths stay valid
+    cp docs/gallery.md docs/src/gallery.md
+    sed -i 's|(../examples/README.md)|(examples.md)|' docs/src/gallery.md
+    rm -rf docs/src/gallery
+    cp -r docs/gallery docs/src/gallery
+    # examples: point at the book's sibling pages instead of repo-relative paths
+    sed -e 's|(../docs/gallery.md)|(gallery.md)|g' \
+        -e 's|(../docs/known-hard-cases.md)|(known-hard-cases.md)|g' \
+        examples/README.md > docs/src/examples.md
+    # known hard cases: same treatment
+    sed 's|(../examples/)|(examples.md)|' docs/known-hard-cases.md > docs/src/known-hard-cases.md
+    # release status: version claims come from Cargo.toml, never hand-typed
+    VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+    {
+        echo '> **Generated artifact** (`just docs-sync`, from workspace Cargo.toml + git).'
+        echo '> Do not hand-edit — the repo source files remain authoritative.'
+        echo
+        echo "- **Version:** v${VERSION}"
+        echo "- **Built from:** $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    } > docs/src/release.md
+
+# Build the book into target/book
+docs: docs-sync
+    mdbook build
+
+# Live preview the book at localhost:3000 (requires mdbook)
+docs-serve: docs-sync
+    mdbook serve
+
 # Run the performance budget gates (spec: ge.perf c1-c5)
 perf-check:
     #!/usr/bin/env bash

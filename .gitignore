@@ -24,3 +24,10 @@
 # tool data dirs (managed by `ddl init --gates`)
 .testaruda/
 .pretender/
+
+# mdbook generated pages (sources live in docs/, examples/ — see just docs-sync)
+docs/src/gallery.md
+docs/src/gallery/
+docs/src/examples.md
+docs/src/known-hard-cases.md
+docs/src/release.md
