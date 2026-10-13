@@ -36,5 +36,8 @@ jobs:
         run: |
           echo '[ Bonn ] --> [ Berlin ] --> [ Hamburg ]' \
             | target/debug/gently --as ascii > /tmp/out.txt
-          grep -q 'Bonn' /tmp/out.txt && grep -q 'Berlin' /tmp/out.txt \
-            || { echo "smoke: rendered output missing expected nodes" >&2; cat /tmp/out.txt >&2; exit 1; }
+          if ! grep -q 'Bonn' /tmp/out.txt || ! grep -q 'Berlin' /tmp/out.txt; then
+            echo "smoke: rendered output missing expected nodes" >&2
+            cat /tmp/out.txt >&2
+            exit 1
+          fi
