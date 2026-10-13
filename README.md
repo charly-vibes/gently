@@ -55,6 +55,11 @@ remaining renderers are wired to the CLI.
 
 ## For contributors
 
+Work is tracked with [wai](https://github.com/charly-vibes/wai); the
+capability corpus in `specs/` is written in the
+[Specodelic](https://crates.io/crates/specodelic) four-layer format
+(intent statement + state model + constraints/properties per spec).
+
 ```bash
 just lint            # all specs must be lint-clean
 just gates           # compile + model-check the corpus

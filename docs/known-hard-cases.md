@@ -3,7 +3,7 @@
 gently is gated byte-identically against the pinned Graph::Easy oracle
 (**v0.69** @ `ededa3d7…`). The cases below are where the two currently
 differ. This is a *compatibility status page*, not a to-do list: each row
-is tracked in the issue tracker (beads), and gently is deliberately
+is tracked in the issue tracker ([beads](https://github.com/gastownhall/beads)), and gently is deliberately
 conservative — an example is only published in [`examples/`](../examples/)
 when it is byte-identical to the oracle.
 
