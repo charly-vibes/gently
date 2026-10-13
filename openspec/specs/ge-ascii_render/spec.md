@@ -30,6 +30,8 @@ straight from the upstream test corpus.
 | c4 | invariant | Edge labels occupy cells on their edge's routed path and never overlap node cells or other labels. | [[ge.ascii_render]] | |
 | c5 | invariant | A node label wraps into multiple interior rows exactly as upstream does, and each glyph occupies its display width (double-width glyphs take two columns); alignment never depends on byte length. | [[ge.ascii_render]] | |
 | c6 | invariant | A node's `shape` attribute (upstream vocabulary: rounded, point, circle, ellipse, diamond, triangle, pentagon, hexagon, octagon, parallelogram, house, invisible, img — `box` is NOT valid; the default shape is `rect`) changes the rendered outline per the upstream ASCII shape table; color attributes do not affect ASCII output. Re-derived (gently-dcp): the probed table collapses to four distinct outlines — every non-special shape renders the plain box for small nodes, `rounded` blanks the corners, `point` swaps the label for a centered `*`, `invisible` draws nothing, and `shape: box` is upstream-rejected (tests/repro/claims/ascii-render-tables.observed, shape-outline-collapse.observed); gently implements exactly this collapse. | [[ge.ascii_render]] | |
+| c7 | invariant | An anonymous node renders BOXLESS: the upstream `Node::Anon` class carries borderstyle `none` and the label `' '` (its `_correct_size` fixes the cell at 3×3), so the node's own cell renders blank and the edges terminate at the empty space around it (`[ ] --> [ Bonn ]` leaves the anon cell as 3 blank columns with the arrow centered in the gap); an edgeless anon node contributes no visible bytes. Anonymous nodes are the empty-name nodes of the model API plus the parser-generated `#N` names (gently-6j0's odd counter; upstream's parser rejects a literal `#` in node names, so a `#\d+` name can only be parser-generated). Re-derived (gently-b0z): gently previously rendered boxed `#1`/`#3` — the oracle bytes are tests/repro/claims/pod-anon-nodes.observed (also bg-anon-chain.observed); gently implements exactly this rule. | [[ge.ascii_render]] | |
+| c8 | invariant | A named group with members renders a dashed border FRAME around its members' bounding box: the `dashed` style's border glyphs (`+` corners, `- ` run shifted one, `'` sides — one char/row of padding between frame and members), the 3-row title band above (border row, title row, blank row) and the blank row + border row below. The title row renders the group's stored name verbatim at the leftmost member's box x — upstream's parser keeps the `Name:` colon in the group name (probed: `$grp->{name}` is `Cities:`) — and the title cell sits in the leftmost member's grid column, whose `label+2` minimum widens that column so the member box fills it with its label re-centered (`Cities:` widens the westmost member's box from 8 to 9 columns, `Verylonggroupname:` to 20; `G:` stays 8). Re-derived (gently-b0z, gently-7rx): gently previously drew no border — the oracle bytes are tests/repro/claims/pod-group.observed plus the probed relatives (single member, stacked members, long titles); the frame is drawn by the renderer as an overlay around the member box extents (gently's layout has no group cells), so groups whose members are disconnected (the oracle frames each separately) or whose frame a foreign edge crosses (the oracle shifts the edge through the frame) remain unpinned divergences; gently implements exactly the pinned rule. | [[ge.ascii_render]] | |
 
 ## Model
 
@@ -57,6 +59,8 @@ straight from the upstream test corpus.
 | p4 | unit | [[ge.ascii_render.c4]] | graphs with labelled crossing edges | no label cell coincides with a node cell or another label cell |
 | p5 | unit | [[ge.ascii_render.c5]] | node labels with long text, explicit line breaks, and double-width glyphs | wrapped lines each occupy one interior row and column counts follow display width, not byte count |
 | p6 | unit | [[ge.ascii_render.c6]] | nodes with every shape in the upstream vocabulary, with and without color attributes | each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical |
+| p7 | unit | [[ge.ascii_render.c7]] | the POD anon chain (`[ ] --> [ Bonn ]`, `[ Bonn ] --> [ ]`) | the anon cells render blank (3 columns wide, no box, no `#N` label) and the arrows attach to the empty space, byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed) |
+| p8 | unit | [[ge.ascii_render.c8]] | named groups over connected members — one row, stacked rows, three-member chains, long titles | each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes |
 
 ## Requirements
 
@@ -100,4 +104,16 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 - **WHEN** nodes with every shape in the upstream vocabulary, with and without color attributes
 - **THEN** each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical
 - **VERIFIES** [[ge.ascii_render.p6]]
+
+#### Scenario: p7
+
+- **WHEN** the POD anon chain (`[ ] --> [ Bonn ]`, `[ Bonn ] --> [ ]`)
+- **THEN** the anon cells render blank (3 columns wide, no box, no `#N` label) and the arrows attach to the empty space, byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)
+- **VERIFIES** [[ge.ascii_render.p7]]
+
+#### Scenario: p8
+
+- **WHEN** named groups over connected members — one row, stacked rows, three-member chains, long titles
+- **THEN** each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes
+- **VERIFIES** [[ge.ascii_render.p8]]
 

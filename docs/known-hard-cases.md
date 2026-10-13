@@ -15,8 +15,6 @@ when it is byte-identical to the oracle.
 |------|----------------------------------|
 | `gently-527` | literal `\n` in an edge label — oracle splits into a two-row label, gently prints it raw |
 | `gently-5vf` | vertical stem column — gently indents 2 spaces where the oracle uses 3 (SO 71860) |
-| `gently-7rx` | node groups — oracle draws the dashed `+ - - -+` border box with the group title, gently draws no border |
-| `gently-b0z` | anonymous nodes — oracle draws them boxless/unnamed, gently draws boxed `#N` |
 | `gently-bvb` | Unicode box width — oracle counts UTF-8 bytes (`Köln` box is 1 column wider), gently counts characters |
 | `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path |
 | `gently-klf` | interlinked triangle layout — gently's back-edge drifts 2 columns from the oracle drawing |
@@ -25,7 +23,7 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-58m` | group-endpoint edges from the anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` — the oracle's as_txt omits the group-only-connected node (Berlin is only reachable through the dropped group edge), gently lists it as a plain node (the parse itself is fixed, gently-m4i); the ascii group border is gently-7rx |
+| `gently-58m` | group-endpoint edges from the anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]` — the oracle's as_txt omits the group-only-connected node (Berlin is only reachable through the dropped group edge), gently lists it as a plain node (the parse itself is fixed, gently-m4i) |
 | `gently-y7i` | `\l` `\r` `\c` label-alignment escapes — oracle aligns, gently renders them raw |
 
 ### Layout & edge attributes

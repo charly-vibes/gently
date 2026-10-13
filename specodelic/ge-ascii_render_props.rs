@@ -30,6 +30,10 @@ pub mod spec_gen {
         Just("bidirectional".into())
     }
 
+    pub fn chain() -> impl Strategy<Value = String> {
+        Just("chain".into())
+    }
+
 }
 
 // id: p1
@@ -80,5 +84,23 @@ fn p5() {
 #[test]
 fn p6() {
         todo_predicate!("each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical");
+}
+
+proptest! {
+    // id: p7
+    // generator: the POD anon chain (`[ ] --> [ Bonn ]`, `[ Bonn ] --> [ ]`)
+    // predicate: the anon cells render blank (3 columns wide, no box, no `#N` label) and the arrows attach to the empty space, byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)
+    #[test]
+    fn p7(v0 in spec_gen::chain()) {
+        todo_predicate!("the anon cells render blank (3 columns wide, no box, no `#N` label) and the arrows attach to the empty space, byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)");
+    }
+}
+
+// id: p8
+// generator: named groups over connected members — one row, stacked rows, three-member chains, long titles
+// predicate: each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes
+#[test]
+fn p8() {
+        todo_predicate!("each group's dashed frame (`+ - - +` corners, `'` sides) encloses its members with the 3-row title band above and the blank row + border below, the title renders the stored group name verbatim at the leftmost member's box x, and the title widens the leftmost member's column (`title+2`) with the label re-centered — byte-identical to the pinned POD bytes");
 }
 
