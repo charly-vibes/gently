@@ -147,14 +147,14 @@ my %SERVES = (
     'pod-repeat-patterns'    => 'gently-ni9.1 (POD mining — Parser.pm repeated-pattern example; gently collapses repeated styles to plain → bug bead)',
     'edge-style-short-runs'  => 'gently-oy2 (POD repeated-pattern family — the full short-edge style run rule: arrowed runs, undirected rx-shifted runs, dot-dot-dash gap widening)',
     'pod-triangle'           => 'gently-ni9.1 + gently-klf (POD mining — Easy.pm interlinked-triangle example; hash-stable 4 seeds; gently\'s vertical back-edge attachments drifted to the node center → fixed at left+2)',
-    'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
+    'pod-unicode'            => 'gently-ni9.1, gently-bvb (POD mining — UTF-8 input prose; oracle width-counts bytes, gently counted chars → bug bead gently-bvb, implemented under gently-527)',
     'pod-style-family'       => 'gently-ni9.1, gently-51d (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead gently-51d)',
     'edge-style-wide-undirected' => 'gently-51d (the arrowless wide/broad short-edge run — pod-style-family covers only directed runs; pins the undirected ## family bytes)',
     'pod-bidir'              => 'gently-7qz (POD mining — Easy.pm \'<->\' example — the straight bidirectional run rule)',
     'pod-bidir-parallel'     => 'gently-7qz (parallel \'<-->\' pair — the start arrowhead on a bent bidirectional edge)',
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
     'gh-4-nodes-first'       => 'gently-ni9.3, gently-a0k, gently-2n5 (GitHub issue #4 — nodes declared first; graph-scope attrs rankdir→flow → gently-a0k, bare-scope edge endpoints → gently-2n5)',
-    'bg-multiline-align'     => 'gently-ni9.2 (bloodgate mining — syntax.html \l\r\c alignment escapes; gently prints them raw → bug bead)',
+    'bg-multiline-align'     => 'gently-ni9.2, gently-y7i (bloodgate mining — syntax.html \l\r\c alignment escapes and \r/\n label splits; gently prints them raw → bug bead gently-y7i; the split/align rule is implemented under gently-527)',
     'bg-comma-lists'         => 'gently-m4i (bloodgate mining — syntax.html comma-chained node lists; gently parse-errors → bug bead)',
     'bg-trailing-node-attr'  => 'gently-8xd (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
     'pod-anon-group'         => 'gently-58m (POD mining — Parser.pm anonymous-group example; gently parse-errors on the following edge → bug bead)',
@@ -167,7 +167,7 @@ my %SERVES = (
     'bg-textwrap'            => 'gently-ni9.2 (bloodgate mining — syntax.html textwrap:auto + textwrap:10; gently does not wrap → bug bead)',
     'so-graph-convert'       => 'gently-ni9.4 (community mining — SO 71869025 accepted answer: Graph.pm→Graph::Easy URI tree; stem column off by one → gently-5vf)',
     'so-edge-labels'         => 'gently-ni9.4 (community mining — SO 47661180: bare-number edge labels on a text-frequency digraph)',
-    'so-flowchart-size'      => 'gently-ni9.4 (community mining — SO 47323345 question: { size: 5,10; } node attrs + literal-\\n edge label printed raw → gently-527)',
+    'so-flowchart-size'      => 'gently-ni9.4, gently-527 (community mining — SO 47323345 question: { size: 5,10; } node attrs + literal-\\n edge label printed raw → gently-527 owns the label-split effect; the { size: attrs and the 2x2 layout divergence stay out of scope)',
     'so-start-port-index'    => 'gently-ni9.4 (community mining — SO 47323345 answer: {start: front,N} indexed start/end port attrs ignored → gently-byq; side mapping front = east flow-space front, gently-89r owns the unindexed side routing)',
     'so-graphviz-unknown-attrs' => 'gently-ni9.4 (community mining — SO 59659560: Graph::Easy::Parser::Graphviz unknown dot attrs warn and render anyway)',
 );
@@ -180,6 +180,60 @@ my %CLAIMS = (
     # manual/tutorial_*.html — the rendered Graph::Easy::Manual POD).
     # Each renders under the pinned oracle across seeds 0/1; gently's
     # divergence is named per probe.
+    # byte-compat claim (gently-527 run): the minimal byte-width pin —
+    # the oracle length()s label text in UTF-8 BYTES, so the Köln box is
+    # 7 dashes wide where a char count draws 6. Kept on its own graph so
+    # the width rule is pinned unentangled (gently-bvb).
+    'label-byte-width' => <<'PROBE',
+# serves: gently-bvb
+# claim probed: the byte-width rule on its own graph — upstream measures
+# label text with a BYTE-string length() when the input is raw UTF-8
+# bytes (unflagged, as the pinned ascii-render-tables probe passes its
+# \\x{}-escape input and as gently's byte-compat scope reads it), so the
+# multi-byte 'ö' makes the Köln box one column WIDER than a char count
+# would (7 dashes). NOTE: a UTF-8-DECODED input string (a :utf8 read
+# layer, as pod_probe_body's children use and pod-unicode.observed
+# records) flips upstream's length() to chars — the same oracle renders
+# a 6-dash box there; the byte-compat pin is the RAW-BYTES path, matching
+# the pinned tables (中 renders `+-----+`, 3 bytes + 4).
+# Observed (pinned oracle, raw-bytes input): `+-------+` with the label
+# row 9 bytes (`| Köln |`).
+use Graph::Easy::Parser;
+my $example = "[ A ] --> [ K\xc3\xb6ln ]\n";
+for my $seed (0, 1) {
+  print "== seed $seed ==\n";
+  local $ENV{PERL_HASH_SEED} = $seed;
+  # raw BYTES into from_text — an undecoded (unflagged) byte string,
+  # the same shape gently's parser reads the input as
+  my $g = Graph::Easy::Parser->new->from_text($example);
+  my $ascii = $g->as_ascii();
+  # the render is a raw byte string; the output capture runs a :utf8
+  # layer, so flag the bytes as UTF-8 (in place, no byte change) and
+  # print — the recorded bytes stay the render's bytes
+  utf8::decode($ascii);
+  print "as_ascii:\n", $ascii;
+}
+PROBE
+
+
+    # byte-compat claim (gently-527 run): the label-split DIS-ENTANGLEMENT
+    # — so-flowchart-size.observed couples the \n split with { size: }
+    # attrs and a 2x2 layout; this probe pins the \n-split effect on its
+    # own graph (two anonymous-name-free nodes, no attrs): two left-aligned
+    # rows ride the band's top two lines, the arrow on the grown band's
+    # H-2 line, both boxes one blank row taller.
+    'edge-label-split-minimal' => <<'PROBE',
+# serves: gently-527
+# claim probed: the minimal literal-\n edge-label split, disentangled
+# from so-flowchart-size's { size: 5,10; } attrs and 2x2 layout (out of
+# scope). Observed (pinned oracle): 'put msg\n via http' renders as two
+# left-aligned rows above the arrow; both node boxes grow one blank
+# interior row; the gap is the widest line (8) + 5 = 13 columns.
+pod_probe_body('edge-label-split-minimal', <<'EXAMPLE')
+[ A ] -- put msg\n via http --> [ B ]
+EXAMPLE
+PROBE
+
     'bg-multiline-align' => <<'PROBE',
 # serves: gently-ni9.2
 # claim probed: bloodgate.com/manual/syntax.html multiline-label section.

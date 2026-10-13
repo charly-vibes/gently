@@ -1,0 +1,11 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: label-byte-width
+== seed 0 ==
+as_ascii:
++---+     +-------+
+| A | --> | Köln |
++---+     +-------+
+== seed 1 ==
+as_ascii:
++---+     +-------+
+| A | --> | Köln |
++---+     +-------+

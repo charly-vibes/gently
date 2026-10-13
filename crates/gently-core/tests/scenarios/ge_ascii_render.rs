@@ -264,9 +264,12 @@ fn p4() {
     assert_eq!(art, want);
 }
 
-/// ge.ascii_render.p5 (c5): each glyph occupies its display width —
-/// double-width glyphs take two columns (diverging from the oracle's
-/// byte-length alignment, see the module notes) — and a long label keeps
+/// ge.ascii_render.p5 (c5, re-derived gently-bvb/527): label width is
+/// BYTE width — the oracle is NOT display-broken: it byte-lengths the
+/// label (`中` = 3 bytes → a 7-byte box, the box's label row is 7 bytes
+/// wide) and the earlier display-width reading was a divergence, not a
+/// divergence to keep. Probed: tests/repro/claims/ascii-render-tables
+/// .observed (label wide glyph) and the Köln claim; a long label keeps
 /// one interior row (probed: upstream grows the box, no wrap).
 #[test]
 fn p5() {
@@ -274,8 +277,8 @@ fn p5() {
     g.add_node("中");
     let l = layout::layout(&g);
     let art = ascii::render(&g, &l).expect("wide glyph must render");
-    let want = "+----+\n| 中 |\n+----+\n";
-    assert_eq!(art, want, "中 occupies two columns");
+    let want = "+-----+\n| 中 |\n+-----+\n";
+    assert_eq!(art, want, "中 box width follows byte length (7 bytes)");
 
     let long = "this is a very long node label that must wrap somewhere";
     let mut g = Graph::default();
@@ -331,6 +334,19 @@ fn p6() {
 /// stays under the 400-line ratchet.
 #[path = "ge_ascii_render_klf.rs"]
 mod p2;
+
+/// ge.ascii_render p4 additions (gently-527, gently-y7i): the straight
+/// edge's label rows — the `\n` split, the `\r`/`\l`/`\c` alignment and
+/// the grown band. Side file for the 400-line ratchet; the nested module
+/// names resolve to the same `ge_ascii_render::p4`/`p5` test filters as
+/// the contract TOMLs declare.
+#[path = "ge_ascii_render_edge_labels.rs"]
+mod p4;
+
+/// ge.ascii_render p5 additions (gently-527, gently-y7i, gently-bvb):
+/// multiline node labels, alignment escapes, and the byte-width rule.
+#[path = "ge_ascii_render_node_labels.rs"]
+mod p5;
 
 /// ge.ascii_render.p7 (c7, gently-b0z): anonymous nodes render boxless —
 /// the oracle's `node.anon` class carries borderstyle none and the label
