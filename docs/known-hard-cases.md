@@ -9,12 +9,6 @@ when it is byte-identical to the oracle.
 
 ## Divergences (open)
 
-### ASCII rendering
-
-| bead | behavior delta (oracle → gently) |
-|------|----------------------------------|
-| `gently-cbk` | `shape: edge` nodes — the render bytes diverge: the oracle renders the edge-shaped node along the edge path (EDGE_HOR + EDGE_LABEL_CELL, dash continuation through the cell with a single arrowhead, the node's label above the cell line, Scout.pm start/end flag stripping); gently draws the box-chain row with the edge cell breaking the dash run. The RANKING divergence behind the old "edge path cells are not orthogonally adjacent" error is RESOLVED (gently-pua): the east pass processes edges in upstream's chain order — the box chain `Bonn(0,2) → train(2,2) → Ulm(4,2)` lands inline (Bonn west via the undirected `--`, Ulm east via `-->`) and the anon `buy` leaf ranks one band below train `(2,4)` (tests/repro/claims/bg-edge-node.observed) — so the render completes; the scaffold pins the remaining byte divergence (`ge_ascii_render_edge_node.rs`; the `#[ignore]`d oracle-bytes test un-ignores in the render GREEN run). |
-
 ### Text parser
 
 | bead | behavior delta (oracle → gently) |
