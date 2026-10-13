@@ -1,0 +1,18 @@
+## Summary
+
+**Where the guide lives:** `examples/README.md` — new "## Adding an example" section (Martini-glass style: 4 guided steps, then pointers to `tests/fixtures/graph-easy/` and `just repro-claims` for exploration). Every step is a real runnable command:
+
+1. `just oracle-record` — mine oracle bytes from the differential fixture corpus (pinned Graph::Easy v0.69, `PERL_HASH_SEED=0`)
+2. Commit `examples/<name>/input.gv` + `expected.txt` = `.ascii.expected` with the `# oracle: ` pin header stripped
+3. `just examples-verify` — publish only when green (byte-identical)
+4. Not byte-identical → divergence row in `docs/known-hard-cases.md`, not an example (the admission rule cross-ref)
+
+**Gate results:**
+- `just gates` — GREEN
+- `just examples-verify` — GREEN ("all examples byte-identical to their committed expected output")
+- `ah check` — 0 findings (also ran in pre-commit hook)
+- lefthook pre-commit: all 7 hooks passed
+
+**Commit:** `cba715daaeac1d289c6ae2e6f12af83f01341f5c` — `docs: add-an-example how-to — the byte-verified admission rule (gently-zf5)` (1 file changed, 25 insertions; only `examples/README.md`)
+
+**Ticket:** `gently-zf5` closed via `bd close`. Not pushed — orchestrator pushes. Note: the earlier `ah_check --changes` calls failed because there is no openspec change overlay for this beads-only ticket; plain `ah check` is the correct invocation here (0 findings).

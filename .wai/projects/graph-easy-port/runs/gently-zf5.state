@@ -1,0 +1,8 @@
+ticket: gently-zf5
+branch: main
+brief_path: .wai/projects/graph-easy-port/briefs/gently-zf5.md
+steps:
+  - claim $(git rev-parse --short HEAD)
+  - claim+gates 0a8b1ae
+  - gates 0a8b1ae
+  - brief bd2ae32
