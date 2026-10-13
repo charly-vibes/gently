@@ -83,3 +83,11 @@ fn p7() {
 fn p8() {
     todo_predicate!("the DoctorReport names each check's status and applies available auto-fixes");
 }
+
+// id: p9
+// generator: no-file-argument invocations with terminal stdin and with piped stdin
+// predicate: a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF
+#[test]
+fn p9() {
+    todo_predicate!("a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF");
+}

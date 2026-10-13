@@ -28,7 +28,7 @@ positionals are `[inputfile [outputfile]]`.
 
 | id | kind | expr | traces_to | observes |
 |----|------|------|-----------|----------|
-| c1 | invariant | With no file arguments, input is read from stdin; otherwise the first file argument is the input, a second file argument (or `--output`) names the output file, and further file arguments are silently ignored — bug-for-bug with the upstream script. | [[cli]] | |
+| c1 | invariant | With no file arguments, input is read from stdin; otherwise the first file argument is the input, a second file argument (or `--output`) names the output file, and further file arguments are silently ignored — bug-for-bug with the upstream script. Exception: when stdin is a terminal and no file argument is given, the source read fails fast with a diagnostic instead of blocking on interactive input (the oracle only ever exercises piped stdin, so agent/interactive invocations never hang; gently-in2). | [[cli]] | |
 | c2 | invariant | The `--as` flag selects the output format (ascii, html, graphviz, txt; `dot` aliases graphviz), each routed to its library renderer, defaulting to ascii, or to the output filename's extension format when `--as` is absent; the `--output` flag names the output file that receives the rendered bytes — stdout when absent. | [[cli]] | |
 | c3 | invariant | Rendered output goes to stdout, diagnostics go to stderr, and the process exits 0 on success and nonzero on any parse or render error. | [[cli]] | [[cli.c4]] |
 | c4 | effect | An unknown output format produces a diagnostic on stderr naming the requested format and the valid formats, followed by exit code 255 — bug-for-bug with the upstream script, whose unknown `--as` dies calling the missing `as_<fmt>` method. The upstream-renderable but unwired names stay on this exit path as documented scope-offs (gently-4ig, tests/repro/claims/cli-formats.observed): svg dies under the pinned oracle's shebang perl (no in-dist `As_svg`), and boxart/vcg/gdl/graphml have no gently renderer yet. | [[cli]] | [[cli.c7]] |
@@ -70,6 +70,7 @@ positionals are `[inputfile [outputfile]]`.
 | p6 | unit | [[cli.c6]] | render runs with and without `--json` | json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output |
 | p7 | unit | [[cli.c7]] | misspelled subcommands and flags | every misspelling yields a DidYouMean/Fix suggestion naming the closest known name |
 | p8 | unit | [[cli.c8]] | environments with and without the oracle toolchain and fresh/stale fixture pins | the DoctorReport names each check's status and applies available auto-fixes |
+| p9 | unit | [[cli.c1]] | no-file-argument invocations with terminal stdin and with piped stdin | a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF |
 
 ## Requirements
 
@@ -125,4 +126,10 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 - **WHEN** environments with and without the oracle toolchain and fresh/stale fixture pins
 - **THEN** the DoctorReport names each check's status and applies available auto-fixes
 - **VERIFIES** [[cli.p8]]
+
+#### Scenario: p9
+
+- **WHEN** no-file-argument invocations with terminal stdin and with piped stdin
+- **THEN** a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF
+- **VERIFIES** [[cli.p9]]
 

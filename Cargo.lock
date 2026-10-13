@@ -220,7 +220,7 @@ dependencies = [
 
 [[package]]
 name = "gently-cli"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "clap",
  "genesis-vibes",
@@ -231,7 +231,7 @@ dependencies = [
 
 [[package]]
 name = "gently-core"
-version = "0.0.1"
+version = "0.1.0"
 
 [[package]]
 name = "getrandom"

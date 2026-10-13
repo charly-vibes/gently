@@ -3,7 +3,7 @@ source = "cli"
 [[constraints]]
 id = "c1"
 kind = "invariant"
-expr = "With no file arguments, input is read from stdin; otherwise the first file argument is the input, a second file argument (or `--output`) names the output file, and further file arguments are silently ignored — bug-for-bug with the upstream script."
+expr = "With no file arguments, input is read from stdin; otherwise the first file argument is the input, a second file argument (or `--output`) names the output file, and further file arguments are silently ignored — bug-for-bug with the upstream script. Exception: when stdin is a terminal and no file argument is given, the source read fails fast with a diagnostic instead of blocking on interactive input (the oracle only ever exercises piped stdin, so agent/interactive invocations never hang; gently-in2)."
 traces_to = "[[cli]]"
 
 [[constraints]]

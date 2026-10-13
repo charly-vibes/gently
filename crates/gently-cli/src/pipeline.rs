@@ -14,7 +14,7 @@
 //! upstream writing nothing to stdout when a file receives the bytes.
 
 use std::fmt;
-use std::io::Read;
+use std::io::{IsTerminal, Read};
 use std::path::{Path, PathBuf};
 
 use genesis::guide::{Guide, Output, OutputFormat};
@@ -186,7 +186,22 @@ pub fn resolve_format(cli: &Cli, output_path: Option<&Path>) -> String {
 /// names the output file, further positionals are ignored, so only the
 /// first is ever parsed).
 fn read_source(cli: &Cli) -> Result<String, CliError> {
+    read_source_impl(cli, std::io::stdin().is_terminal())
+}
+
+/// The source read with the stdin kind injected so the interactive guard is
+/// unit-testable: a terminal stdin with no file argument fails fast (c1
+/// guard for gently-in2 — the upstream oracle is always exercised with
+/// piped stdin, so this deviates from upstream only where upstream would
+/// block forever on an interactive prompt).
+fn read_source_impl(cli: &Cli, stdin_is_terminal: bool) -> Result<String, CliError> {
     let Some(file) = cli.files.first() else {
+        if stdin_is_terminal {
+            return Err(CliError(
+                "no input file given and stdin is a terminal; pipe graph text into gently or pass an input file"
+                    .to_string(),
+            ));
+        }
         let mut buf = String::new();
         std::io::stdin()
             .read_to_string(&mut buf)
@@ -196,4 +211,35 @@ fn read_source(cli: &Cli) -> Result<String, CliError> {
     let content = std::fs::read_to_string(file)
         .map_err(|e| CliError(format!("cannot read {}: {e}", file.display())))?;
     Ok(content)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser as _;
+
+    fn cli_with(args: &[&str]) -> Cli {
+        Cli::try_parse_from(std::iter::once("gently").chain(args.iter().cloned()))
+            .expect("valid args")
+    }
+
+    /// gently-in2: with no file argument and a terminal stdin, the source
+    /// read fails fast with a diagnostic instead of blocking forever —
+    /// interactive invocations (and agent subprocesses inheriting an open
+    /// TTY) get a usable error, piped stdin keeps the c1 oracle contract.
+    #[test]
+    fn terminal_stdin_without_file_fails_fast() {
+        let cli = cli_with(&[]);
+        let err = read_source_impl(&cli, true).expect_err("must not block on a TTY");
+        assert!(err.to_string().contains("stdin is a terminal"));
+        assert!(err.to_string().contains("input file"));
+    }
+
+    /// The piped path is unchanged: non-terminal stdin is read (cli.c1).
+    #[test]
+    fn piped_stdin_still_read_when_not_terminal() {
+        let cli = cli_with(&[]);
+        let source = read_source_impl(&cli, false).expect("piped stdin reads");
+        assert_eq!(source, "");
+    }
 }
