@@ -5,7 +5,7 @@ members = ["crates/gently-core", "crates/gently-cli"]
 [workspace.package]
 edition = "2021"
 version = "0.0.1"
-license = "MIT"
+license = "GPL-2.0-or-later"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
