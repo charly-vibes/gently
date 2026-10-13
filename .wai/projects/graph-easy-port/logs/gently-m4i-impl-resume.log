@@ -1,0 +1,30 @@
+# Report: gently-m4i — text-parser statement surface
+
+## Commits (all pushed to `origin/main`)
+| sha | one-line |
+|---|---|
+| `832f336` | test: pin the comma-chain, anon-group, and trailing-attr oracle bytes (gently-m4i) |
+| `04110dd` | feat(text_parser): comma-chain lists, post-group linkage, and the node display label (gently-m4i) |
+| `b3aac4d` | docs(spec): re-derive ge-text_parser c6/c11/c12/c13 for comma chains, post-group linkage, and the display label (gently-m4i) |
+
+## Gate results (all exit 0)
+- `cargo test -p gently-core` — 103 scenario tests + unit/lib, 0 failed
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean
+- `ah check --run-tests` — OK, 72 passed, 0 findings (3 new contracts p11–p13 authored; `ah sync` is broken repo-wide by a pre-existing bundled-spk version mismatch refusing *every* spec on `linter.total_refs` — contracts were authored in the existing format instead)
+- `just gates`, `just lint`, `spk lint openspec` — 0 findings
+- `just examples-verify`, `just oracle-verify` — byte-identical, green
+- `pretender check --mode gate` — green (mod.rs compressed to exactly the 400-line ceiling; new p11/p12/p13 scenarios split into child modules whose paths still match the contract filters)
+- `git status` — clean except `.wai`/`.whisper` session files; `git log origin/main..HEAD` — empty
+
+## Tickets
+- **Closed**: `gently-m4i`, `gently-8xd` (`bd close` + `bd export` run; `.beads/` is gitignored in this repo — export stays local).
+- **Kept open, re-scoped**: `gently-58m` — the POD anonymous-group example now parses (p12 pins it), but the oracle's `as_txt` *omits* the group-only-connected node while gently lists it; residual reworded in the bead and in `docs/known-hard-cases.md`.
+- **Filed**: `gently-4ga` — comma-chain fan layouts can hit the render adjacency error (`[ A ] -> [ B ], [ C ], [ D ]` parses but errors at render; layout capability, sibling of gently-cbk).
+
+## Deviations
+1. **gently-8xd is render-side, not parser-side**: the parser already applied the trailing attr block; the oracle delta was the ascii/boxart *displayed label*. Fixed in `render/ascii/canvas.rs` + `render/boxart/{canvas,columns}.rs` (outside the brief's allowed-file list; noted in the feat commit message).
+2. `pod-anon-group.observed` **did not exist** despite the brief claiming it was pinned — authored the probe (POD example + attrs-in-anon-group case), re-recorded seed-stable; `bg-comma-lists` probe extended with the shared-attr + cross-line rules and re-recorded (all under the v0.69 pin).
+3. Model-level bounded divergence documented in c12: group-endpoint edges record no edge in gently's model (upstream's own layouter drops them anyway — "could only place 2 nodes/0 edges").
+
+## Remaining delta
+None for the cluster; follow-up work is `gently-4ga` (fan render) and the residual `gently-58m` as_txt delta. Did **not** run `wai close` — orchestrator owns session close.
