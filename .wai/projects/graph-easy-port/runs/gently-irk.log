@@ -1,0 +1,24 @@
+Done. Ticket closed, not pushed (orchestrator pushes).
+
+## Summary — gently-irk
+
+**Gallery structure** (`docs/gallery.md`):
+- Intro: what the gallery is, how SVG is produced (gently's own `gently_core::render::graphviz` DOT render → `dot -Tsvg` — upstream has no SVG module), and the drift-gate pointer
+- 7 sections (diamond, edge-attributes, edge-styles, isolated-node, parallel-edges, self-loop, simple-chain), each with: input snippet, CLI ASCII render (byte-verified against `examples/<name>/expected.txt` — I programmatically checked all 7 blocks match exactly), and `![](gallery/<name>.svg)`
+- Links back to `examples/README.md` and `docs/known-hard-cases.md`
+
+**Generator** — `crates/gently-core/examples/gallery.rs`: standalone cargo example (not a CLI flag, per the gently-4ig boundary); reads `input.gv`, `text::parse`, prints `graphviz::render(&graph)` DOT to stdout. No layout (dot lays out its own graph). Notes it may be retired once `gently --as dot` lands.
+
+**Committed SVGs** — `docs/gallery/{diamond,edge-attributes,edge-styles,isolated-node,parallel-edges,self-loop,simple-chain}.svg` (7 files, regenerated deterministically).
+
+**Drift gate** — `just gallery-verify`: needs `dot` on PATH, regenerates every SVG through the identical pipeline, `cmp` byte-checks each committed artifact, rejects orphans. Listed in the README gates block alongside `examples-verify`.
+
+**Links** — README.md example paragraph + gates block; examples/README.md one-liner to the gallery.
+
+**Gate results** — all green:
+- `just ci` (lint 0 findings · specodelic compile+model-check · `ah check` 0 findings · clippy `-D warnings` clean · 130 tests pass)
+- `just gallery-verify`: all SVGs byte-identical
+- `just examples-verify`: all examples byte-identical (unchanged)
+- pre-commit hooks (lefthook: ah-check, spk-lint, pretender, spec gates): all ✓
+
+**Commit**: `3b9ecdc631442f1ceaa7f6b94aa5de7c0096a684` on main · **bd**: `gently-irk` closed · **not pushed** (orchestrator pushes).
