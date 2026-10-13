@@ -6,12 +6,23 @@
 //! band/gap row sequence, and realize every route as an orthogonal cell
 //! path — straight, bend, port dip, parallel channel, selfloop, and the
 //! multi-band walks (east-going along the source band; west-going bending
-//! out of the source's north/south first, gently-cbk).
+//! out of the source's north/south first, gently-cbk), both vertical
+//! walks jogging east around band rows occupied by stacked nodes
+//! (gently-4ga).
 //! Rationale: shaped by the recorded v0.69 @ ededa3d7 companions —
 //! ge.layout.c1 (pure function) and c4 (orthogonal routes).
 
 use super::{Cell, Placement, Route, Rows};
 use crate::graph::Graph;
+use std::collections::HashSet;
+
+/// Shared routing context: the occupied node cells (the walks never
+/// enter one) and the eastmost grid column (the dodge side guard,
+/// gently-4ga).
+struct Ctx<'a> {
+    occupied: &'a HashSet<Cell>,
+    max_x: usize,
+}
 
 /// How many gap rows each boundary needs (boundary `k` is the gap above
 /// band `k`; `k == bands` trails the last band). Only edges that route
@@ -108,7 +119,13 @@ pub(super) fn route_edges(
     placement: &Placement,
     node_cells: &[Cell],
     rows: &Rows,
+    max_x: usize,
 ) -> Vec<Vec<Cell>> {
+    let occupied: HashSet<Cell> = node_cells.iter().copied().collect();
+    let ctx = Ctx {
+        occupied: &occupied,
+        max_x,
+    };
     graph
         .edges
         .iter()
@@ -123,6 +140,7 @@ pub(super) fn route_edges(
                 node_cells[e.from],
                 node_cells[e.to],
                 rows,
+                &ctx,
             )
         })
         .collect()
@@ -136,7 +154,15 @@ pub(super) fn route_edges(
 /// c->d); west-going bends out of the source's north/south first and runs
 /// along the gap row adjacent to the target band (oracle: bg-edge-node's
 /// Ulm->car — the source-band walk would drive through the nodes between).
-fn edge_path(route: Route, su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) -> Vec<Cell> {
+fn edge_path(
+    route: Route,
+    su: Cell,
+    sv: Cell,
+    gu: Cell,
+    gv: Cell,
+    rows: &Rows,
+    ctx: &Ctx,
+) -> Vec<Cell> {
     match route {
         Route::Selfloop => selfloop_path(su, gu, rows),
         Route::Parallel(_) => bend_path(gu, gv, bend_gap_row(route, su.1, rows, gu.1)),
@@ -162,7 +188,7 @@ fn edge_path(route: Route, su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) 
             } else if gu.1 == gv.1 {
                 bend_path(gu, gv, bend_gap_row(route, su.1, rows, gu.1))
             } else {
-                multiband_path(su, sv, gu, gv, rows)
+                multiband_path(su, sv, gu, gv, rows, ctx)
             }
         }
     }
@@ -205,46 +231,78 @@ fn bend_path(gu: Cell, gv: Cell, g: usize) -> Vec<Cell> {
 }
 
 /// Cell path of a multi-band route. East-going: along the source band to
-/// the target column, then vertically through the gap rows between the
-/// bands. West-going: the recorded oracle A* shape (bg-edge-node's
-/// Ulm->car) bends out of the source's north/south first — vertically
-/// through the gap rows at the source column — then runs along the gap
-/// row adjacent to the target band, ending at the target column (the
+/// the target column, then the full-row walk down (or up) the target
+/// column. West-going: the recorded oracle A* shape (bg-edge-node's
+/// Ulm->car) bends out of the source's north/south first — the full-row
+/// walk at the source column toward the gap row adjacent to the target
+/// band — then runs along that gap row, ending at the target column (the
 /// source-band walk would drive through the intervening node cells).
-fn multiband_path(su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) -> Vec<Cell> {
+/// Both vertical walks jog east around band rows occupied by a stacked
+/// node (gently-4ga) — the gap-only walk jumped the occupied band row
+/// between two reserved gap rows, rendering non-adjacent paths.
+fn multiband_path(su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
     if gu.0 > gv.0 {
         let north = sv.1 < su.1;
-        // The gap rows between the bands, walked from the source side; the
-        // one adjacent to the target band hosts the horizontal run.
-        let walked: Vec<usize> = if north {
-            (sv.1 + 2..=su.1).rev().collect()
-        } else {
-            (su.1 + 1..sv.1).collect()
-        };
+        // The gap row adjacent to the target band hosts the horizontal
+        // run; the vertical walk covers every row between the source and
+        // that gap row at the source column.
         let home = if north { sv.1 + 1 } else { sv.1 };
-        let mut path: Vec<Cell> = walked
-            .iter()
-            .filter_map(|&k| rows.gap_rows.get(k)?.first().map(|&g| (gu.0, g)))
-            .collect();
-        if let Some(&g) = rows.gap_rows.get(home).and_then(|v| v.first()) {
-            path.extend((gv.0..=gu.0).rev().map(|c| (c, g)));
-        }
-        return path;
+        return match rows.gap_rows.get(home).and_then(|v| v.first()) {
+            Some(&g) => {
+                let mut path = walk_column(gu.0, gu.1, g, ctx);
+                path.extend((gv.0..=gu.0).rev().map(|c| (c, g)));
+                path
+            }
+            None => Vec::new(),
+        };
     }
     let mut path: Vec<Cell> = if gu.0 < gv.0 {
         (gu.0 + 1..=gv.0).map(|c| (c, gu.1)).collect()
     } else {
         Vec::new()
     };
-    let (b1, b2) = (su.1.min(sv.1), su.1.max(sv.1));
-    let mut slots: Vec<usize> = (b1 + 1..=b2).collect();
-    if su.1 > sv.1 {
-        slots.reverse(); // walk the gaps from the source side
+    path.extend(walk_column(gv.0, gu.1, gv.1, ctx));
+    path
+}
+
+/// Walk one column between two grid rows (exclusive of both), jogging
+/// east around rows occupied by a node (gently-4ga): when the walked
+/// column's cell is taken, the path shifts to the free gap column east
+/// of it — the jog happens on the free row before the blocked one and
+/// shifts back on the first free row after, so every step stays
+/// grid-adjacent and no node cell is entered. `to > from` walks south,
+/// otherwise north. The east gap column always exists for a walked
+/// column (a stacked column always has a node one column east —
+/// extend_or_below / attach_next_to only stack when the east slot is
+/// taken), so `max_x` only guards the eastmost stack, which dodges west
+/// instead (odd columns never hold nodes, whatever the side).
+fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
+    let rows: Vec<usize> = if to > from {
+        (from + 1..to).collect()
+    } else {
+        ((to + 1)..from).rev().collect()
+    };
+    let dodge = if col < ctx.max_x { col + 1 } else { col - 1 };
+    let mut path: Vec<Cell> = Vec::new();
+    let mut dodging = false;
+    for r in rows {
+        match (ctx.occupied.contains(&(col, r)), dodging) {
+            (true, false) => {
+                // Jog east on the previous (free) row, then step past the
+                // blocked row in the gap column.
+                let prev = path.last().map_or(from, |&(_, y)| y);
+                path.push((dodge, prev));
+                path.push((dodge, r));
+                dodging = true;
+            }
+            (true, true) => path.push((dodge, r)),
+            (false, true) => {
+                path.push((dodge, r));
+                path.push((col, r));
+                dodging = false;
+            }
+            (false, false) => path.push((col, r)),
+        }
     }
-    path.extend(
-        slots
-            .into_iter()
-            .filter_map(|k| rows.gap_rows[k].first().map(|&g| (gv.0, g))),
-    );
     path
 }

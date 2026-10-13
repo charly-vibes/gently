@@ -158,14 +158,15 @@ pub fn layout(graph: &Graph) -> Layout {
             (2 * col, rows.row_of_band[band])
         })
         .collect();
-    let width = 2 * placement
+    let max_col = placement
         .cell
         .iter()
         .filter_map(|c| c.map(|p| p.0))
         .max()
-        .unwrap_or(0)
-        + 1;
-    let edge_paths = route_edges(graph, &placement, &node_cells, &rows);
+        .unwrap_or(0);
+    let max_x = 2 * max_col;
+    let width = max_x + 1;
+    let edge_paths = route_edges(graph, &placement, &node_cells, &rows, max_x);
     let labels = label_cells(graph, &edge_paths);
     let grid = Layout {
         node_cells,

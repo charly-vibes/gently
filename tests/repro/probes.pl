@@ -113,6 +113,7 @@ my %SERVES = (
     'anon-reference'         => 'gently-6j0, gently-bzx (text_parser c1)',
     'layout-flow-direction'  => 'gently-89d (layout c3)',
     'layout-edge-drop'       => 'gently-89d (layout c1/c4 — alarm timeout, silent edge drop at scale)',
+    'fan-layout'             => 'gently-4ga (layout c4 re-derivation — fan-stack routes; oracle fan placement residuals)',
     'subgraph-handling'      => 'gently-13f (dot_parser c4 — named/nested/bare-scope subgraphs)',
     'dot-bare-scope-in-named' => 'gently-fb1 (dot_parser c4 — bare scope nested in a named subgraph: group_stack survives bare-scope boundaries)',
     'dot-direction'          => 'gently-13f (dot_parser c1/c2 — header×operator direction matrix)',
@@ -998,6 +999,29 @@ my $a = $g->as_ascii();
 print $a;
 my ($arrowhead_glyphs) = ($a =~ /[^-]v|<|\^/);
 print "non-east arrow present: ", (defined $arrowhead_glyphs ? 'YES' : 'no'), "\n";
+PROBE
+
+    'fan-layout' => <<'PROBE',
+# serves: gently-4ga (layout c4 — fan-stack routes, re-derived)
+# claim probed: the two fan repro classes under the pinned oracle.
+# Observed: the shared-source fan '[ A ] -> [ B ], [ C ], [ D ]' is
+# HASH-SEED-DEPENDENT (seed 2 reorders the flanking children — the pod-fan
+# class), so its exact bytes are oracle-scoped-off (ge.oracle c7 tier 2);
+# every seed flanks two children east/west of the source and hangs one
+# below. The fan-in star n1..n4 -> hub is hash-STABLE (12 seeds swept
+# ad hoc) and renders with hub grown to two east-side attachment rows,
+# the second source slotting below the first east attachment (upstream
+# _near_places slot rings over grown node clusters plus the repair
+# passes) — tier-1 bytes that need that placement engine ported; gently
+# renders the star deterministically with the jogged-walk shape instead
+# (specs/ge-layout.md c4, tests/scenarios/ge_layout.rs
+# p4_fan_stack_routes_jog_not_jump).
+use Graph::Easy::Parser;
+for my $t ('[ A ] -> [ B ], [ C ], [ D ]',
+           "[ n1 ] -> [ hub ]\n[ n2 ] -> [ hub ]\n[ n3 ] -> [ hub ]\n[ n4 ] -> [ hub ]") {
+  print "== input: $t\n";
+  print Graph::Easy::Parser->new->from_text($t)->as_ascii();
+}
 PROBE
 
     'layout-edge-drop' => <<'PROBE',

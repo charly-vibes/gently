@@ -13,9 +13,10 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-4ga` | Comma-chain fan layouts (`[ A ] -> [ B ], [ C ], [ D ]`): the oracle renders the fan fine, gently errors on the fan render (bytes below). Parser + model side is done and pinned (`gently-m4i` p11); only the fan render is open — sibling of `gently-cbk` (RESOLVED). |
+| `gently-4ga` | RESOLVED for the render error (comma-chain fans and fan-in stars route contiguously and render — the stacked-column walk jogs around occupied band rows, specs/ge-layout.md c4 re-derived). Residual: the oracle's exact fan PLACEMENT differs (bytes below). |
 
-**`gently-4ga`** — input and the divergence side-by-side:
+**`gently-4ga`** — residual (exact fan placement; the render error itself is
+fixed — fans render, routes grid-adjacent):
 
 input (`bg-comma-lists.observed`, example 1):
 
@@ -23,36 +24,50 @@ input (`bg-comma-lists.observed`, example 1):
 [ A ] -> [ B ], [ C ], [ D ]
 ```
 
-gently — render error (reproducible: `gently file.txt --as ascii`):
+gently (deterministic; the fan-in star n1..n4 -> hub renders with the same
+jogged-walk shape):
 
 ```
-gently: render error: edge 2 path cells (0, 1) -> (0, 3) are not orthogonally adjacent
++---+     +---+
+| A | --> | B |
++---+     +---+
+  |
+  +----+
+  v    |
++---+  |
+| C |  |
++---+  |
+       |
+  +----+
+  v
++---+
+| D |
++---+
 ```
 
-oracle — the comma-list fan renders fine (`bg-comma-lists.observed`, `as_ascii`):
+oracle — the fan-out class is HASH-SEED-DEPENDENT (seed 2 reorders the
+flanking children, same class as the pod-fan probe), so its exact bytes
+are oracle-scoped-off ([[ge.oracle]] c7 tier 2); every seed flanks two
+children east/west of the source and hangs one below:
 
 ```
-       +-------------------+
-       |                   v
-     +---+     +---+     +---+
-     |   | --> | C | --> |   |
-     |   |     +---+     |   |
-     |   |       ^       |   |
-     | A | ------+       | D |
-     |   |               |   |
-     |   |               |   |
-  +- |   | ------------> |   |
-  |  +---+               +---+
-  |    |                   ^
-  |    |                   |
-  |    v                   |
-  |  +---+                 |
-  +> | B | ----------------+
-     +---+
++---+     +---+     +---+
+| C | <-- | A | --> | D |
++---+     +---+     +---+
+            |
+            |
+            v
+          +---+
+          | B |
+          +---+
 ```
 
-Three edges leaving `A` land in one row with a 2-column gap the polyline
-cannot fill.
+The hash-STABLE fan-in star (n1..n4 -> hub, 12 seeds) would be tier-1, but
+matching it needs upstream's multi-celled `_near_places` slot rings over
+grown node clusters plus the repair passes (hub grows two east-side
+attachment rows; the second source slots below the first east attachment)
+— a placement-engine port, not a router fix. gently renders the same star
+deterministically with the jogged-walk shape instead.
 
 ### Text parser
 

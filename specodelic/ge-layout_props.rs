@@ -27,6 +27,10 @@ pub mod spec_gen {
     pub fn only() -> impl Strategy<Value = String> {
         Just("only".into())
     }
+
+    pub fn fans() -> impl Strategy<Value = String> {
+        Just("fans".into())
+    }
 }
 
 proptest! {
@@ -55,12 +59,14 @@ fn p3() {
     todo_predicate!("every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted");
 }
 
-// id: p4
-// generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges
-// predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path
-#[test]
-fn p4() {
-    todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; structurally (any scale): every model edge receives a routed path");
+proptest! {
+    // id: p4
+    // generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges, plus the stacked-column fans (comma-chain fan-out, fan-in star)
+    // predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; structurally (any scale): every model edge receives a routed path
+    #[test]
+    fn p4(v0 in spec_gen::fans()) {
+        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; structurally (any scale): every model edge receives a routed path");
+    }
 }
 
 // id: p5
