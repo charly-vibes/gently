@@ -1,0 +1,15 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: pod-bidir-label-straight
+== seed 0 ==
+as_txt:
+[ A ] <-- label --> [ B ]
+as_ascii:
++---+  label    +---+
+| A | <-------> | B |
++---+           +---+
+== seed 1 ==
+as_txt:
+[ A ] <-- label --> [ B ]
+as_ascii:
++---+  label    +---+
+| A | <-------> | B |
++---+           +---+

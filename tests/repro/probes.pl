@@ -141,14 +141,16 @@ my %SERVES = (
     'pod-parser-input'       => 'gently-ni9.1 (POD mining — Parser.pm Input section example is hash-dependent)',
     'pod-anon-nodes'         => 'gently-ni9.1 (POD mining — Parser.pm anonymous-node example; gently renders boxed #N, oracle renders boxless → bug bead)',
     'pod-group'              => 'gently-ni9.1 (POD mining — Parser.pm groups example; gently omits the dashed group border box → bug bead)',
-    'pod-bidir-label'        => 'gently-ni9.1 (POD mining — Parser.pm \'<-- label -->\' example; gently drops the start arrowhead → bug bead)',
-    'pod-label-attr'         => 'gently-ni9.1 (POD mining — Parser.pm arrowless-label example; gently draws a spurious target arrowhead → bug bead)',
+    'pod-bidir-label'        => 'gently-7qz (POD mining — Parser.pm \'<-- label -->\' example — start arrowhead, BD gap width, label field; hash-seed-dependent layout, see probe note)',
+    'pod-bidir-label-straight' => 'gently-7qz (POD mining — the POD \'<-- label -->\' example without the parallel red edge — the straight labeled-BD pin, hash-stable)',
+    'pod-label-attr'         => 'gently-bpq (POD mining — Parser.pm arrowless-label example; gently draws a spurious target arrowhead → bug bead)',
     'pod-repeat-patterns'    => 'gently-ni9.1 (POD mining — Parser.pm repeated-pattern example; gently collapses repeated styles to plain → bug bead)',
     'edge-style-short-runs'  => 'gently-oy2 (POD repeated-pattern family — the full short-edge style run rule: arrowed runs, undirected rx-shifted runs, dot-dot-dash gap widening)',
     'pod-triangle'           => 'gently-ni9.1 (POD mining — Easy.pm interlinked-triangle example; gently layout diverges by 2 columns → bug bead)',
     'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
     'pod-style-family'       => 'gently-ni9.1 (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead)',
-    'pod-bidir'              => 'gently-ni9.1 (POD mining — Easy.pm \'<->\' example; same start-arrowhead family as pod-bidir-label)',
+    'pod-bidir'              => 'gently-7qz (POD mining — Easy.pm \'<->\' example — the straight bidirectional run rule)',
+    'pod-bidir-parallel'     => 'gently-7qz (parallel \'<-->\' pair — the start arrowhead on a bent bidirectional edge)',
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
     'gh-4-nodes-first'       => 'gently-ni9.3 (GitHub issue #4 — nodes declared first; gently parse-errors on graph-scope attrs → gently-a0k, bare-scope edge endpoints → gently-2n5)',
     'bg-multiline-align'     => 'gently-ni9.2 (bloodgate mining — syntax.html \l\r\c alignment escapes; gently prints them raw → bug bead)',
@@ -605,27 +607,67 @@ for my $seed (0, 1) {
 PROBE
 
     'pod-label-attr' => <<'PROBE',
-# serves: gently-ni9.1
+# serves: gently-bpq
 # claim probed: Graph::Easy::Parser POD arrowless edge with label attribute
 # ("[ AB ] -- { label: edgelabel; } [ CD ]").
-# Observed: the oracle as_ascii renders NO arrowheads on the '--' edge;
-# gently appends a spurious '>' at the target end — fixture rejected,
-# divergence bug (arrowhead family).
+# Observed: the oracle as_ascii renders NO arrowheads on the '--' edge —
+# the undirected labeled run is the fill pattern only (upstream _draw_hor
+# draws no head without EDGE_END_* flags); gently appends a spurious '>'
+# at the target end (gently-bpq).
 pod_probe_body('pod-label-attr', <<'EXAMPLE')
 [ AB ] -- { label: edgelabel; } [ CD ]
 EXAMPLE
 PROBE
 
     'pod-bidir-label' => <<'PROBE',
-# serves: gently-ni9.1
+# serves: gently-7qz
 # claim probed: Graph::Easy::Parser POD bidirectional inline-label example
-# ("[ A ] <-- label --> [ B ]").
-# Observed: the oracle as_ascii draws arrowheads at BOTH endpoints ("v"
-# at source) with the label above the edge; gently drops the start
-# arrowhead and renders the label inline — fixture rejected, divergence bug.
+# with the POD's parallel red edge ("[ A ] <-- label --> [ B ]" plus
+# "[ A ] --> { color: red; } [ B ]").
+# Observed: the oracle draws arrowheads at BOTH endpoints (seed 0: 'v' at
+# the source of the bent route; seed 1: 'v' at the bent edge's target)
+# and, on the straight route, widens the gap by one column for the
+# bidirectional run (upstream _correct_size w++ for BD_HOR cells), draws
+# ' <...> ' with BOTH heads, and hosts the label centered in [2, w-3)
+# (upstream _draw_hor/_insert_label). CAVEAT: which of the two parallel
+# edges routes straight is hash-seed (and run) dependent — the two seeds
+# pin the two legitimate layouts, but a re-record can flip seed 1; the
+# hash-stable pin for the straight labeled-BD rule is
+# pod-bidir-label-straight (gently-7qz).
 pod_probe_body('pod-bidir-label', <<'EXAMPLE')
 [ A ] <-- label --> [ B ]
 [ A ] --> { color: red; } [ B ]
+EXAMPLE
+PROBE
+
+    'pod-bidir-label-straight' => <<'PROBE',
+# serves: gently-7qz
+# claim probed: the POD bidirectional inline-label example on its own
+# ("[ A ] <-- label --> [ B ]", no parallel edge) — the hash-stable pin
+# for the straight labeled-BD rule (pod-bidir-label's two-edge form is
+# run-nondeterministic in which edge routes straight).
+# Observed: hash-stable across seeds 0 and 1. The oracle widens the gap
+# to 11 (label 5 + 5 + 1 for the BD cell, upstream _correct_size), draws
+# ' <-------> ' with BOTH arrowheads (upstream _draw_hor END_W/END_E),
+# and hosts the label at cell-x 2 (centered in [2, w-3), upstream
+# _insert_label).
+pod_probe_body('pod-bidir-label-straight', <<'EXAMPLE')
+[ A ] <-- label --> [ B ]
+EXAMPLE
+PROBE
+
+    'pod-bidir-parallel' => <<'PROBE',
+# serves: gently-7qz
+# claim probed: two parallel '<-->' edges between one node pair (the
+# bidirectional analogue of the recorded parallel-elbow family).
+# Observed: hash-stable across seeds. The oracle draws the straight edge
+# as ' <--> ' (BD gap width 6, both arrowheads) and the bent edge with a
+# 'v' start arrowhead at the source's north side mirroring the 'v' end
+# arrowhead at the target — the polyline start-arrow rule gently-7qz
+# implements.
+pod_probe_body('pod-bidir-parallel', <<'EXAMPLE')
+[ A ] <--> [ B ]
+[ A ] <--> [ B ]
 EXAMPLE
 PROBE
 
