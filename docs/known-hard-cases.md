@@ -17,7 +17,6 @@ when it is byte-identical to the oracle.
 | `gently-5vf` | vertical stem column — gently indents 2 spaces where the oracle uses 3 (SO 71860) |
 | `gently-bvb` | Unicode box width — oracle counts UTF-8 bytes (`Köln` box is 1 column wider), gently counts characters |
 | `gently-cbk` | `shape: edge` nodes — gently errors with "edge path cells are not orthogonally adjacent"; oracle renders the node along the edge path |
-| `gently-klf` | interlinked triangle layout — gently's back-edge drifts 2 columns from the oracle drawing |
 
 ### Text parser
 
@@ -33,7 +32,7 @@ when it is byte-identical to the oracle.
 | `gently-89r` | `start:`/`end:` port attributes — oracle routes edges from the named port, gently ignores them |
 | `gently-byq` | indexed ports `{ start: front, N }` — oracle honors the index, gently ignores it (SO 47323345) |
 | `gently-emd` | `textwrap: auto` / `textwrap` edge attribute — oracle wraps labels, gently ignores it |
-| `gently-yhg` | `minlen` edge attribute — oracle enforces the minimum path length, gently ignores it |
+| `gently-bg-minlen-bypass-shape` | shared-middle bypass shape (`Koblenz -> Trier -> Frankfurt` beside a skip-edge to Frankfurt) — oracle ranks Trier inline and routes the skip-edge over the top, gently attaches Trier below; RE-DERIVATION (gently-klf run): renders byte-identically WITHOUT `minlen: 3`, so the tutorial's minlen is incidental — this is a ranking divergence, not a minlen one (tests/repro/claims/bg-minlen-bypass.observed) |
 
 ## Byte-compat scope-off (deliberate, no divergence claims)
 

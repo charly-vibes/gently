@@ -146,7 +146,7 @@ my %SERVES = (
     'pod-label-attr'         => 'gently-bpq (POD mining — Parser.pm arrowless-label example; gently draws a spurious target arrowhead → bug bead)',
     'pod-repeat-patterns'    => 'gently-ni9.1 (POD mining — Parser.pm repeated-pattern example; gently collapses repeated styles to plain → bug bead)',
     'edge-style-short-runs'  => 'gently-oy2 (POD repeated-pattern family — the full short-edge style run rule: arrowed runs, undirected rx-shifted runs, dot-dot-dash gap widening)',
-    'pod-triangle'           => 'gently-ni9.1 (POD mining — Easy.pm interlinked-triangle example; gently layout diverges by 2 columns → bug bead)',
+    'pod-triangle'           => 'gently-ni9.1 + gently-klf (POD mining — Easy.pm interlinked-triangle example; hash-stable 4 seeds; gently's vertical back-edge attachments drifted to the node center → fixed at left+2)',
     'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
     'pod-style-family'       => 'gently-ni9.1, gently-51d (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead gently-51d)',
     'edge-style-wide-undirected' => 'gently-51d (the arrowless wide/broad short-edge run — pod-style-family covers only directed runs; pins the undirected ## family bytes)',
@@ -159,7 +159,8 @@ my %SERVES = (
     'bg-trailing-node-attr'  => 'gently-8xd (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
     'pod-anon-group'         => 'gently-58m (POD mining — Parser.pm anonymous-group example; gently parse-errors on the following edge → bug bead)',
     'bg-anon-chain'          => 'gently-ni9.2 (bloodgate mining — syntax.html anon nodes in chain; gently renders boxed #N, oracle hides them → bug bead)',
-    'bg-minlen-bypass'       => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html minlen:3; gently ignores it → bug bead)',
+    'bg-minlen-bypass'       => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html minlen:3; the bypass SHAPE diverges — ranking, see re-derivation note; minlen is incidental, gently-bg-minlen-bypass-shape)',
+    'bg-minlen-stretch'      => 'gently-ni9.2 + gently-yhg (re-derivation probe — minlen >= 2 widens the straight gap exactly one column; minlen 2..5 identical, 4-seed stable)',
     'bg-edge-node'           => 'gently-ni9.2 (bloodgate mining — tutorial_edges.html shape:edge nodes; gently path-cells render error → bug bead)',
     'bg-joint-classes'       => 'gently-ni9.2 (bloodgate mining — syntax.html joint-node class:border example; PINNED PARSER REJECTS it — site rendered by a newer Graph::Easy)',
     'bg-start-right'         => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html start:right port attr; gently ignores it → bug bead)',
@@ -251,13 +252,30 @@ PROBE
 # serves: gently-ni9.2
 # claim probed: bloodgate.com/manual/tutorial_bypass.html minlen example
 # (Bonn→Koblenz→{minlen:3}→Frankfurt→Dresden plus Koblenz→Trier→Frankfurt
-# bypass). Observed (pinned oracle): minlen:3 stretches the edge and the
-# Trier bypass routes across the TOP. gently ignores minlen and routes
-# Trier below.
+# bypass). Observed (pinned oracle): the Trier bypass routes across the
+# TOP with Trier INLINE on the row.
+# RE-DERIVATION (gently-klf run): the SAME input WITHOUT minlen:3
+# renders byte-identically — minlen is INCIDENTAL here; the divergence
+# gently must close is the shared-middle bypass SHAPE (Koblenz, Trier,
+# Frankfurt inline ranks with the skip-edge over the top), i.e. a
+# longest-path ranking divergence, not a minlen one. See
+# bg-minlen-stretch for minlen's actual effect.
 pod_probe_body('bg-minlen-bypass', <<'EXAMPLE')
 [ Bonn ] --> [ Koblenz ] --> { minlen: 3; } [ Frankfurt ] --> [ Dresden ]
 
 [ Koblenz ] --> [ Trier ] --> [ Frankfurt ]
+EXAMPLE
+PROBE
+
+    'bg-minlen-stretch' => <<'PROBE',
+# serves: gently-ni9.2, gently-yhg
+# claim probed (re-derivation, gently-klf run): minlen's actual effect —
+# a two-node straight edge. Observed (pinned oracle, 4-seed stable):
+# minlen >= 2 widens the straight gap by exactly ONE column (the run
+# fills the doubled gap); minlen 0/1 stay adjacent; minlen 2, 3, 4 and 5
+# render identically, so the stretch saturates at one column.
+pod_probe_body('bg-minlen-stretch', <<'EXAMPLE')
+[ Bonn ] --> { minlen: 3; } [ Berlin ]
 EXAMPLE
 PROBE
 
