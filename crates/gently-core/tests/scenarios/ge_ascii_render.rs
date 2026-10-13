@@ -348,6 +348,17 @@ mod p4;
 #[path = "ge_ascii_render_node_labels.rs"]
 mod p5;
 
+/// ge.ascii_render p5 additions (gently-emd): `textwrap: auto` / numeric
+/// textwrap wrap label text. Side file for the 400-line ratchet; the
+/// nested module name keeps the `p5` test-filter prefix.
+#[path = "ge_ascii_render_textwrap.rs"]
+mod p5_textwrap;
+
+/// ge.ascii_render p2 addition (gently-5vf): the vertical stem column
+/// (SO 71869025). Side file for the 400-line ratchet.
+#[path = "ge_ascii_render_stem.rs"]
+mod p2_stem;
+
 /// ge.ascii_render.p7 (c7, gently-b0z): anonymous nodes render boxless —
 /// the oracle's `node.anon` class carries borderstyle none and the label
 /// `' '`, so the node's own 3×3 cell renders blank and the edges attach

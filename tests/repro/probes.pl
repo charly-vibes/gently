@@ -164,8 +164,8 @@ my %SERVES = (
     'bg-edge-node'           => 'gently-ni9.2 (bloodgate mining — tutorial_edges.html shape:edge nodes; gently path-cells render error → bug bead)',
     'bg-joint-classes'       => 'gently-ni9.2 (bloodgate mining — syntax.html joint-node class:border example; PINNED PARSER REJECTS it — site rendered by a newer Graph::Easy)',
     'bg-start-right'         => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html start:right port attr; gently ignores it → bug bead gently-89r. DIS-ENTANGLED: the inline-Trier layout is the shared-middle bypass shape, NOT the port effect — the no-port chain renders identically, see port-side-minimal; the layout shape is gently-jrr, the port attachment is gently-89r)',
-    'bg-textwrap'            => 'gently-ni9.2 (bloodgate mining — syntax.html textwrap:auto + textwrap:10; gently does not wrap → bug bead)',
-    'so-graph-convert'       => 'gently-ni9.4 (community mining — SO 71869025 accepted answer: Graph.pm→Graph::Easy URI tree; stem column off by one → gently-5vf)',
+    'bg-textwrap'            => 'gently-emd (bloodgate mining — syntax.html textwrap:auto + textwrap:10; the pinned bytes ground the wrap re-derivation)',
+    'so-graph-convert'       => 'gently-5vf (community mining — SO 71869025 accepted answer: Graph.pm→Graph::Easy URI tree; stem column pins the left+2 rule)',
     'so-edge-labels'         => 'gently-ni9.4 (community mining — SO 47661180: bare-number edge labels on a text-frequency digraph)',
     'so-flowchart-size'      => 'gently-ni9.4, gently-527 (community mining — SO 47323345 question: { size: 5,10; } node attrs + literal-\\n edge label printed raw → gently-527 owns the label-split effect; the { size: attrs and the 2x2 layout divergence stay out of scope)',
     'so-start-port-index'    => 'gently-ni9.4 (community mining — SO 47323345 answer: {start: front,N} indexed start/end port attrs ignored → gently-byq; side mapping front = east flow-space front, gently-89r owns the unindexed side routing)',
@@ -400,7 +400,9 @@ PROBE
 # SITE shows 'text-wrap: 10' but the PINNED parser only accepts
 # 'textwrap'; the site page itself is newer).
 # Observed (pinned oracle): node label wrapped into a 7-row box at 10
-# columns. gently: single unwrapped line — textwrap unimplemented.
+# columns — auto wraps the 33-byte label at int(sqrt(33)*1.4) = 8, the
+# edge's own textwrap: 10 overrides the inherited mode. RESOLVED
+# (gently-emd): gently implements _wrapped_label byte-identically.
 pod_probe_body('bg-textwrap', <<'EXAMPLE')
 graph { textwrap: auto; }
 
@@ -412,13 +414,14 @@ PROBE
     # in SO questions/answers, rendered under the pinned oracle across
     # seeds 0/1. Community inputs are the messy edge cases POD never shows.
     'so-graph-convert' => <<'PROBE',
-# serves: gently-ni9.4
+# serves: gently-5vf
 # claim probed: SO 71869025 / answer 71869162 (accepted) — converting a
 # Graph.pm URI tree to Graph::Easy and printing as_ascii. Parsed input
 # equivalent of the API-built edges ('/', '/a'), ('/', '/c'), ('/a', '/b').
 # Observed (pinned oracle): /a → /b on the top row, /c hanging below /
-# — matches the bytes the answerer posted. gently: stem column off by
-# one ('   |' vs '  |') → bug bead gently-5vf.
+# with the stem at /'s left+2 column — matches the bytes the answerer
+# posted. RESOLVED (gently-klf left+2 rule; pinned gently-5vf): gently
+# renders the stem column byte-identically.
 pod_probe_body('so-graph-convert', <<'EXAMPLE')
 [ / ] --> [ /a ]
 [ / ] --> [ /c ]
