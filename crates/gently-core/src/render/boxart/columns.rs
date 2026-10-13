@@ -52,6 +52,13 @@ pub(super) fn object_attr<'a>(
         .or_else(|| graph.get_attr(Scope::Class(kind, String::new()), key))
 }
 
+/// The node's display label: its `label` attribute (per-object, falling
+/// back to the node class) when set, else its name (upstream Node::label).
+pub(super) fn node_label(graph: &Graph, idx: usize) -> &str {
+    object_attr(graph, Scope::Node(idx), ObjectKind::Node, "label")
+        .unwrap_or(&graph.nodes[idx].name)
+}
+
 /// Per-node (border style, shape), per-object attributes over class ones.
 pub(super) fn node_styles(graph: &Graph) -> Vec<(String, Shape)> {
     (0..graph.nodes.len())
@@ -98,7 +105,7 @@ fn node_widths(graph: &Graph, layout: &Layout, node_style: &[(String, Shape)]) -
     for (idx, &(cx, _)) in layout.node_cells.iter().enumerate() {
         let (style, _) = &node_style[idx];
         let selfloop = graph.edges.iter().any(|e| e.from == idx && e.to == idx);
-        let w = box_width(&graph.nodes[idx].name, style, selfloop);
+        let w = box_width(node_label(graph, idx), style, selfloop);
         node_width[cx] = node_width[cx].max(w);
         node_col[cx] = true;
     }

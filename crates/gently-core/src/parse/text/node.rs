@@ -11,11 +11,11 @@
 //! tests/repro/claims/anon-reference.observed).
 
 use super::attrs::{collapse_ws, unescape};
-use super::{ParseError, Parser, Target};
+use super::{ParseError, Parser};
 
 /// Parse one `[ … ]` element (caller guarantees the cursor is at `[`),
-/// intern it, wire group membership, and set the attribute target.
-/// Returns the node index.
+/// intern it, and wire group membership (c6: exactly one group, move on
+/// redeclare). Returns the node index.
 pub fn parse_node_element(p: &mut Parser) -> Result<usize, ParseError> {
     let start_line = p.line();
     let raw = scan_name(p).ok_or_else(|| p.err(start_line, "unterminated node token: missing ']'"))?;
@@ -24,7 +24,6 @@ pub fn parse_node_element(p: &mut Parser) -> Result<usize, ParseError> {
     if let Some(&group) = p.group_stack.last() {
         p.graph.set_node_group(idx, group);
     }
-    p.last = Some(Target::Node(idx));
     Ok(idx)
 }
 

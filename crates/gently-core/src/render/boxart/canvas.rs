@@ -83,7 +83,7 @@ impl Canvas {
     /// (nothing).
     pub(super) fn draw_nodes(&mut self, graph: &Graph, layout: &Layout) {
         for (idx, &(cx, cy)) in layout.node_cells.iter().enumerate() {
-            let label = graph.nodes[idx].name.clone();
+            let label = super::columns::node_label(graph, idx).to_string();
             let (style, shp) = self.node_style[idx].clone();
             match shp {
                 Shape::Invisible => {}

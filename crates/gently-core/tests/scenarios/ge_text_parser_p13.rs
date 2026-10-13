@@ -39,7 +39,7 @@ fn trailing_block_lands_and_txt_keeps_the_name() {
 /// without a label attribute falls back to its name.
 #[test]
 fn ascii_displays_the_label_value() {
-    assert_eq!(render_ascii("[ Big ] { label: \"Huge\"; }\n"), "+--------+\n|  Huge  |\n+--------+\n");
+    assert_eq!(render_ascii("[ Big ] { label: \"Huge\"; }\n"), "+------+\n| Huge |\n+------+\n");
     assert_eq!(render_ascii("[ Big ]\n"), "+-----+\n| Big |\n+-----+\n");
 }
 

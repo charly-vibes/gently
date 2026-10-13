@@ -60,6 +60,13 @@ pub(super) fn centered(text: &str, width: usize) -> String {
     format!("{}{}{}", " ".repeat(left), text, " ".repeat(width - len - left))
 }
 
+/// The node's display label: its `label` attribute (per-object, falling
+/// back to the node class) when set, else its name (upstream Node::label).
+fn node_label(graph: &Graph, idx: usize) -> &str {
+    object_attr(graph, Scope::Node(idx), ObjectKind::Node, "label")
+        .unwrap_or(&graph.nodes[idx].name)
+}
+
 /// Box width of a node: display width of the label (double-width glyphs
 /// count two columns, ge.ascii_render.c5) plus two border chars per side
 /// — or one per side for a `none` border — widened for selfloop nodes so
@@ -130,7 +137,7 @@ fn column_geometry(
     let mut node_col = vec![false; layout.width];
     for (idx, &(cx, _)) in layout.node_cells.iter().enumerate() {
         let (style, _) = &node_style[idx];
-        let w = box_width(&graph.nodes[idx].name, style, selfloop_node[idx]);
+        let w = box_width(node_label(graph, idx), style, selfloop_node[idx]);
         node_width[cx] = node_width[cx].max(w);
         node_col[cx] = true;
     }
@@ -209,7 +216,7 @@ impl Canvas {
     /// rounded box (blank corners), point (`*`), or invisible (nothing).
     pub(super) fn draw_nodes(&mut self, graph: &Graph, layout: &Layout) {
         for (idx, &(cx, cy)) in layout.node_cells.iter().enumerate() {
-            let label = graph.nodes[idx].name.clone();
+            let label = node_label(graph, idx).to_string();
             let (style, shp) = self.node_style[idx].clone();
             let b = border(&style);
             match shp {
