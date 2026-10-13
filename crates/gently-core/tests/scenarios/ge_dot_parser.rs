@@ -23,9 +23,12 @@ fn p1() {
     assert_eq!(g.attributes.get("type"), Some("undirected"), "graph header");
     let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
     assert_eq!(g.attributes.get("type"), None, "digraph header");
-    // the header name is the graph title
+    // the header name is the graph title; an unnamed header names the
+    // graph `unnamed` — the oracle's own name for it (gh-4 observed)
     let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
     assert_eq!(g.attributes.get("title"), Some("G"), "header name is the title");
+    let g = dot::parse("digraph { a -> b }\n").expect("must parse");
+    assert_eq!(g.attributes.get("title"), Some("unnamed"), "unnamed header");
 }
 
 /// ge.dot_parser.p2 (c2): one model edge per arrow; direction follows the
@@ -70,6 +73,32 @@ fn p3() {
     let g = dot::parse("digraph G { a -> b [dir=both, weight=2] }\n").expect("must parse");
     assert_eq!(g.edges[0].attributes.get("dir"), Some("both"));
     assert_eq!(g.edges[0].attributes.get("weight"), Some("2"));
+    graph_scope_attr_statements();
+}
+
+/// ge.dot_parser.p3 (c3): a graph-scope attribute statement `key=value`
+/// (quoted or bare value) applies to the model graph, with `rankdir`
+/// remapped to `flow` per the oracle's direction map (gently-a0k).
+fn graph_scope_attr_statements() {
+    for (dir, flow) in [("LR", "east"), ("RL", "west"), ("TB", "south"), ("BT", "north")] {
+        let src = format!("digraph G {{ rankdir={dir} a -> b }}\n");
+        let g = dot::parse(&src).unwrap_or_else(|e| panic!("{src:?} must parse: {e}"));
+        assert_eq!(g.attributes.get("flow"), Some(flow), "{src:?}");
+    }
+    // any unrecognized rankdir value falls back to east (oracle `$rankdir->{$dir} || 'east'`)
+    for dir in ["XX", "lr"] {
+        let src = format!("digraph G {{ rankdir={dir} a -> b }}\n");
+        let g = dot::parse(&src).expect("must parse");
+        assert_eq!(g.attributes.get("flow"), Some("east"), "{src:?}");
+    }
+    // quoted values unescape exactly once
+    let g = dot::parse("digraph G { rankdir=\"LR\" a -> b }\n").expect("must parse");
+    assert_eq!(g.attributes.get("flow"), Some("east"), "quoted value");
+    // applies from inside a bare scope too, and the last statement wins
+    let g = dot::parse("digraph G { { rankdir=RL } a -> b }\n").expect("must parse");
+    assert_eq!(g.attributes.get("flow"), Some("west"), "inside a bare scope");
+    let g = dot::parse("digraph G { rankdir=TB; rankdir=BT a }\n").expect("must parse");
+    assert_eq!(g.attributes.get("flow"), Some("north"), "last statement wins");
 }
 
 /// ge.dot_parser.p4 (c4): a named subgraph becomes a model group with the
@@ -104,19 +133,23 @@ fn p4() {
     assert_eq!(g.groups[inner].members, vec![node(&g, "a")], "innermost membership");
     assert_eq!(g.groups[outer].members, vec![node(&g, "b")], "directly declared only");
 
-    // bare { } scope: nodes ungrouped; the left-edge stack survives the
-    // scope boundary, so `a -> b; { c -> d }` also yields the pinned
-    // spurious `b -> d` edge (observed, Graph::Easy v0.69 @ ededa3d7)
+    // bare { } scope: nodes ungrouped; the node stack survives the scope
+    // boundary, so `a -> b; { c -> d }` also yields the pinned leaked
+    // `b -> d` edge — linked when the scope's inner operator fires, before
+    // the scope's own edge (observed, Graph::Easy v0.69 @ ededa3d7)
     let g = dot::parse("digraph G { a -> b; { c -> d } }\n").expect("must parse");
     assert!(g.groups.is_empty(), "bare scope keeps nodes ungrouped");
-    assert_eq!(g.edges.len(), 3, "a->b, c->d, plus the pinned spurious b->d");
+    assert_eq!(g.edges.len(), 3, "a->b, plus the leaked b->d and the scope's c->d");
     assert_eq!((g.edges[0].from, g.edges[0].to), (node(&g, "a"), node(&g, "b")));
-    assert_eq!((g.edges[1].from, g.edges[1].to), (node(&g, "c"), node(&g, "d")));
-    assert_eq!((g.edges[2].from, g.edges[2].to), (node(&g, "b"), node(&g, "d")), "spurious edge");
+    assert_eq!((g.edges[1].from, g.edges[1].to), (node(&g, "b"), node(&g, "d")), "leaked stack edge");
+    assert_eq!((g.edges[2].from, g.edges[2].to), (node(&g, "c"), node(&g, "d")));
     // a bare scope as an edge target links the chain through it
     let g = dot::parse("digraph G { a -> { b } }\n").expect("must parse");
     assert!(g.groups.is_empty());
     assert_eq!((g.edges[0].from, g.edges[0].to), (node(&g, "a"), node(&g, "b")));
+
+    scope_stack_endpoints();
+    scope_stack_resets();
 
     // nameless `subgraph` keyword form is a tokenizing error (with or
     // without an attribute list), quoting the offending input
@@ -170,6 +203,81 @@ fn p5() {
 
     html_table_autosplits();
     failing_constructs_are_typed_errors();
+}
+
+/// ge.dot_parser.p4 (c4): bare scopes as edge-chain endpoints (gently-2n5,
+/// gh-4) under the oracle's node-stack semantics — the stack survives
+/// scope boundaries, an edge operator links EVERY node on it, and the
+/// statement's edge attributes land on every linked edge.
+fn scope_stack_endpoints() {
+    // {a b} -> c links BOTH scope nodes (gh-4 input b)
+    let g = dot::parse("digraph G { {foo bar} -> baz }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("foo", "baz"), ("bar", "baz")]);
+
+    // gh-4 input a: the pre-declared nodes leak into the scope's stack, so
+    // the pinned spurious self-edge fires FIRST (baz->baz), then both scope
+    // nodes — and rankdir/title land per c3/c1 (gh-4-nodes-first.observed)
+    let g = dot::parse(
+        "digraph {\n  rankdir=\"LR\"\n\n  foo\n  bar [label=\"bar-label!\"]\n  baz\n\n  {foo bar} -> baz\n}\n",
+    )
+    .expect("gh-4 input a must parse");
+    assert_eq!(g.attributes.get("flow"), Some("east"));
+    assert_eq!(g.attributes.get("title"), Some("unnamed"));
+    assert_eq!(
+        edge_pairs(&g),
+        vec![("baz", "baz"), ("foo", "baz"), ("bar", "baz")],
+        "gh-4 input a: leaked stack first"
+    );
+    assert_eq!(g.nodes[node(&g, "bar")].attributes.get("label"), Some("bar-label!"));
+
+    // the endpoint form links every scope node from the left side, and the
+    // chain continues through the scope (observed add_edge order)
+    let g = dot::parse("digraph G { a -> { b c } -> d }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")]);
+    // chains continue after a statement-position scope too
+    let g = dot::parse("digraph G { {a b} -> c -> d }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("a", "c"), ("b", "c"), ("c", "d")]);
+    // a named subgraph as an endpoint links its nodes — no node for its name
+    let g = dot::parse("digraph G { subgraph g { x } -> y }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("x", "y")]);
+    assert!(g.node_by_name("g").is_none(), "no node for the subgraph name");
+    // statement-end attributes land on every edge the statement linked
+    let g = dot::parse("digraph G { {a b} -> c [color=red] }\n").expect("must parse");
+    assert_eq!(g.edges.len(), 2);
+    assert_eq!(g.edges[0].attributes.get("color"), Some("red"));
+    assert_eq!(g.edges[1].attributes.get("color"), Some("red"));
+}
+
+/// ge.dot_parser.p4 (c4): the stack resets at a plain `}` — a scope with no
+/// inner edge links nothing; a nested scope's `}` cuts the leak; an
+/// operator with nothing on the stack is the oracle's not-recognized error;
+/// an attribute list after a scope is dropped (no operator) or fatal.
+fn scope_stack_resets() {
+    // no inner edge: nothing links, the stack does not leak out
+    let g = dot::parse("digraph G { a -> b; { c } }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("a", "b")]);
+    let g = dot::parse("digraph G { a; { c } b -> d }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("b", "d")]);
+    // a nested bare scope's plain `}` cuts the leak at its boundary
+    let g = dot::parse("digraph G { { a { b } c -> d } }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("c", "d")]);
+    // an operator with an empty stack is the oracle's not-recognized error
+    for src in ["digraph G { { } -> b }\n", "digraph G { { a b } [x=1] -> c }\n"] {
+        let err = dot::parse(src).expect_err("empty-stack operator must fail");
+        assert!(err.line >= 1, "{src:?} must name a line");
+        assert!(err.message.contains("not recognized"), "{src:?}: {}", err.message);
+    }
+    // an attribute list after a scope with no operator is dropped
+    let g = dot::parse("digraph G { a -> { b } [x=1] }\n").expect("must parse");
+    assert_eq!(edge_pairs(&g), vec![("a", "b")]);
+}
+
+/// The (from, to) name pairs of the graph's edges, in creation order.
+fn edge_pairs(g: &Graph) -> Vec<(&str, &str)> {
+    g.edges
+        .iter()
+        .map(|e| (g.nodes[e.from].name.as_str(), g.nodes[e.to].name.as_str()))
+        .collect()
 }
 
 /// HTML-like table label autosplits into one part per <TD> cell.

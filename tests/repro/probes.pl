@@ -153,7 +153,7 @@ my %SERVES = (
     'pod-bidir'              => 'gently-7qz (POD mining — Easy.pm \'<->\' example — the straight bidirectional run rule)',
     'pod-bidir-parallel'     => 'gently-7qz (parallel \'<-->\' pair — the start arrowhead on a bent bidirectional edge)',
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
-    'gh-4-nodes-first'       => 'gently-ni9.3 (GitHub issue #4 — nodes declared first; gently parse-errors on graph-scope attrs → gently-a0k, bare-scope edge endpoints → gently-2n5)',
+    'gh-4-nodes-first'       => 'gently-ni9.3, gently-a0k, gently-2n5 (GitHub issue #4 — nodes declared first; graph-scope attrs rankdir→flow → gently-a0k, bare-scope edge endpoints → gently-2n5)',
     'bg-multiline-align'     => 'gently-ni9.2 (bloodgate mining — syntax.html \l\r\c alignment escapes; gently prints them raw → bug bead)',
     'bg-comma-lists'         => 'gently-ni9.2 (bloodgate mining — syntax.html comma-chained node lists; gently parse-errors → bug bead)',
     'bg-trailing-node-attr'  => 'gently-ni9.2 (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
@@ -414,8 +414,9 @@ print $g->as_ascii();
 PROBE
 
     'gh-4-nodes-first' => <<'PROBE',
-# serves: gently-ni9.3 (GitHub issue #4, closed upstream — still reproduces
-# against the PINNED oracle v0.69, which is the contract).
+# serves: gently-ni9.3, gently-a0k, gently-2n5 (GitHub issue #4, closed
+# upstream — still reproduces against the PINNED oracle v0.69, which is the
+# contract).
 # claim probed: issue #4's two inputs. The reported bug reproduces exactly:
 # input 'a' (nodes declared first) yields the spurious self-edge
 # '[ baz ] --> [ baz ]' and the wrong drawing; input 'b' (no declarations)
@@ -423,8 +424,14 @@ PROBE
 # corpus fixture: gently parse-errors on BOTH inputs (graph-scope attribute
 # statement 'rankdir="LR"' and bare-scope edge endpoint '{foo bar} -> baz'),
 # so no byte-comparison is even reachable yet. Divergence beads: dot parser
-# missing graph-level attribute statements; bare scope unsupported as an
-# edge-chain endpoint.
+# missing graph-level attribute statements (gently-a0k); bare scope
+# unsupported as an edge-chain endpoint (gently-2n5). The oracle's rule,
+# re-derived for gently (see specs/ge-dot_parser.md c3/c4): a graph-scope
+# 'key=value' statement applies to the graph with rankdir remapped to flow
+# (LR→east, RL→west, TB→south, BT→north, unknown→east); the node stack
+# survives scope boundaries, an edge operator links EVERY node on it, and
+# a plain '}' resets it — so the leaked pre-declared baz links itself
+# first, then both scope nodes.
 use Graph::Easy::Parser::Graphviz;
 my $p = Graph::Easy::Parser::Graphviz->new();
 my @cases = (
