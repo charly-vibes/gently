@@ -4,6 +4,8 @@ description = "CLI for gently: graph text in, rendered output out"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
+repository.workspace = true
+readme.workspace = true
 
 [[bin]]
 name = "gently"
@@ -12,7 +14,7 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 genesis-vibes = { version = "0.12.1", default-features = false }
-gently-core = { path = "../gently-core" }
+gently-core = { path = "../gently-core", version = "0.1.0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

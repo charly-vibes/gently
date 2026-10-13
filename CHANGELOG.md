@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-13
+
+First published release: the complete initial capability wave.
+
 ### Added
 
 - **Compliance wave (ddl-standard parity)** — LICENSE (GPL-2.0-or-later) +

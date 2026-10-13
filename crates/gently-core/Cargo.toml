@@ -4,6 +4,8 @@ description = "Core pipeline for gently: parse -> model -> layout -> render"
 edition.workspace = true
 version.workspace = true
 license.workspace = true
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
 
