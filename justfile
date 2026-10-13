@@ -15,12 +15,51 @@ gates:
     specodelic compile specs --human
     specodelic model-check specs --human
 
-# Cargo gates (live since gently-2po.1)
+# === Build Commands ===
+
+# Build debug binary
+build:
+    cargo build
+
+# Build release binary (optimized)
+build-release:
+    cargo build --release
+
+# Run with arguments (e.g., `just run --as ascii < graph.txt`)
+run *args:
+    cargo run -p gently-cli -- {{args}}
+
+# Install locally to ~/.cargo/bin
+install:
+    cargo install --path crates/gently-cli
+
+# === Test Commands ===
+
+# Run all tests
 test:
     cargo test --workspace
 
+# Run tests with output
+test-verbose:
+    cargo test --workspace -- --nocapture
+
+# Run a specific test (e.g., `just test-one tb::oracle::`)
+test-one name:
+    cargo test -q -p gently-core --test scenarios {{name}} -- --nocapture
+
+# === Lint Commands ===
+
+# Run clippy linter
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
+
+# Show dependency tree
+deps:
+    cargo tree
+
+# Update dependencies
+update:
+    cargo update
 
 # ddl-standard CI parity entry point: the same gates lefthook runs, in one
 # recipe. CI (.github/workflows/ci.yml) runs exactly this — if CI fails,
@@ -32,6 +71,15 @@ ci:
     ah check
     just clippy
     just test
+
+# List the managed ecosystem tools gently gates on
+tools:
+    @echo "Rust tools:     specodelic (spec lint/compile/model-check gates)"
+    @echo "                ah / espectacular (spec-test correspondence, ah check)"
+    @echo "Non-Rust tools: bd (beads, Go), openspec, pretender, lefthook"
+    @echo
+    @echo "Justfile utilities use cargo only; the gates above run in just ci"
+    @echo "and in the lefthook pre-commit/pre-push hooks."
 
 # Record oracle fixtures for new inputs (spec: ge.oracle.c1/c5). Runner:
 # tools/oracle.pl — needs the pinned source checkout (Graph::Easy 0.69 @
@@ -173,6 +221,20 @@ gallery-verify:
         fi
     done
     echo "gallery-verify: all committed SVGs byte-identical to the regenerated path"
+
+# === Utility Commands ===
+
+# Clean build artifacts
+clean:
+    cargo clean
+
+# Check without building (faster feedback)
+check:
+    cargo check --workspace
+
+# Show available commands
+help:
+    @just --list
 
 # Run the performance budget gates (spec: ge.perf c1-c5)
 perf-check:
