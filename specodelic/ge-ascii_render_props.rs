@@ -59,10 +59,10 @@ fn p1() {
 proptest! {
     // id: p2
     // generator: graphs with every edge style (bold/wide/broad as one aliased family), in straight gaps and chains, plus bidirectional (`<-->`, `<-- label -->`) and labeled-undirected edges straight and bent
-    // predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box; vertical runs attach at their edge cell's left+2 (the POD triangle's back-edge and every pinned wide-box vertical), and a `minlen >= 2` straight edge fills its one-column-widened gap
+    // predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box; vertical runs attach at their edge cell's left+2 (the POD triangle's back-edge and every pinned wide-box vertical), a `minlen >= 2` straight edge fills its one-column-widened gap, an edge whose endpoint is a `shape: edge` node renders through the stripped endpoint flags (`--->` flush off the shape:edge source, the undirected `--------` chain through the edge cell, a directed `>` riding INTO the edge cell), and the vertical short cell heads its target-adjacent end (`^` into train's south)
     #[test]
     fn p2(v0 in spec_gen::style(), v1 in spec_gen::bidirectional()) {
-        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box; vertical runs attach at their edge cell's left+2 (the POD triangle's back-edge and every pinned wide-box vertical), and a `minlen >= 2` straight edge fills its one-column-widened gap");
+        todo_predicate!("each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box; vertical runs attach at their edge cell's left+2 (the POD triangle's back-edge and every pinned wide-box vertical), a `minlen >= 2` straight edge fills its one-column-widened gap, an edge whose endpoint is a `shape: edge` node renders through the stripped endpoint flags (`--->` flush off the shape:edge source, the undirected `--------` chain through the edge cell, a directed `>` riding INTO the edge cell), and the vertical short cell heads its target-adjacent end (`^` into train's south)");
     }
 }
 
@@ -77,10 +77,10 @@ fn p3() {
 proptest! {
     // id: p4
     // generator: graphs with labelled crossing edges, plus straight edges whose labels carry literal `\n` splits and `\r` alignment escapes (gently-527/y7i)
-    // predicate: no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed)
+    // predicate: no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed); a straight vertical single-gap edge's label rides the gap band's middle line at byte offset 4 (bg-edge-node.observed: `buy`)
     #[test]
     fn p4(v0 in spec_gen::escapes()) {
-        todo_predicate!("no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed)");
+        todo_predicate!("no label cell coincides with a node cell or another label cell; a multiline edge label renders one left-aligned row per line bottom-aligned in the band's `h-2` field at byte offset 2, the gap widening to the widest line + 5, the run staying on the grown band's `H-2` line, and both endpoint boxes growing one blank interior row — byte-identical to the pinned oracle bytes (tests/repro/claims/edge-label-split-minimal.observed); a straight vertical single-gap edge's label rides the gap band's middle line at byte offset 4 (bg-edge-node.observed: `buy`)");
     }
     // id: p5
     // generator: node labels with long text, explicit `\n` breaks, `\l`/`\r`/`\c` alignment escapes, multi-byte glyphs (`中`, `Köln`), and `textwrap: auto` / numeric `textwrap` on graph and edge scopes (gently-emd)
@@ -93,19 +93,19 @@ proptest! {
 
 // id: p6
 // generator: nodes with every shape in the upstream vocabulary, with and without color attributes
-// predicate: each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical
+// predicate: each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other non-edge valid shape renders the plain box; `box` is upstream-rejected; `edge` renders the edge cell — full-width dash line, label left-aligned above at offset 1) and color attributes leave the output byte-identical
 #[test]
 fn p6() {
-        todo_predicate!("each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other valid shape renders the plain box; `box` is upstream-rejected) and color attributes leave the output byte-identical");
+        todo_predicate!("each shape's outline matches the probed collapse (rounded/point/invisible diverge; every other non-edge valid shape renders the plain box; `box` is upstream-rejected; `edge` renders the edge cell — full-width dash line, label left-aligned above at offset 1) and color attributes leave the output byte-identical");
 }
 
 proptest! {
     // id: p7
     // generator: the POD anon chain (`[ ] --> [ Bonn ]`, `[ Bonn ] --> [ ]`)
-    // predicate: the anon cells render blank (3 columns wide, no box, no `#N` label) and the arrows attach to the empty space, byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)
+    // predicate: the anon cells render blank (3 columns wide, no box, no `#N` label), the arrows attach to the empty space, and a trailing anon-only band contributes no blank lines — byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)
     #[test]
     fn p7(v0 in spec_gen::chain()) {
-        todo_predicate!("the anon cells render blank (3 columns wide, no box, no `#N` label) and the arrows attach to the empty space, byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)");
+        todo_predicate!("the anon cells render blank (3 columns wide, no box, no `#N` label), the arrows attach to the empty space, and a trailing anon-only band contributes no blank lines — byte-identical to the pinned POD bytes (tests/repro/claims/pod-anon-nodes.observed)");
     }
 }
 

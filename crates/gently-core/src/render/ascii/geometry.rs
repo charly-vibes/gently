@@ -64,7 +64,15 @@ pub(super) fn band_layout(
     }
     for (ei, lines) in edge_lines.iter().enumerate() {
         if let Some(lines) = lines {
-            let r = layout.node_cells[graph.edges[ei].from].1;
+            let edge = &graph.edges[ei];
+            // Only a horizontal label cell sizes its band (its label rows
+            // ride the band's top rows); a vertical label cell rides the
+            // standard 3-line gap band between the endpoint bands.
+            let horizontal = layout.node_cells[edge.from].1 == layout.node_cells[edge.to].1;
+            if !horizontal {
+                continue;
+            }
+            let r = layout.node_cells[edge.from].1;
             row_height[r] = row_height[r].max(lines.len() + 2);
         }
     }
@@ -78,14 +86,18 @@ pub(super) fn band_layout(
     (row_height, band_tops)
 }
 
-/// Whether edge `ei` is a straight single-gap horizontal edge (the shape
-/// whose label cell is a full-gap `EDGE_HOR` label cell) and carries a
-/// label — such a label cell sizes its row band (gently-527).
+/// Whether edge `ei` is a straight single-gap edge — horizontal (the
+/// full-gap `EDGE_HOR` label cell) or vertical (the `EDGE_VER` label
+/// cell, gently-cbk: the buy edge's `| buy` rides the gap cell's middle
+/// line) — and carries a label. A horizontal label cell sizes its row
+/// band (gently-527); a vertical one rides the standard 3-line gap band.
 fn straight_label_lines(graph: &Graph, layout: &Layout, ei: usize) -> Option<Vec<LabelLine>> {
     let edge = &graph.edges[ei];
     let (sc, sr) = layout.node_cells[edge.from];
     let (tc, tr) = layout.node_cells[edge.to];
-    if sr != tr || layout.edge_paths[ei].len() != 1 || sc.abs_diff(tc) != 2 {
+    let horizontal = sr == tr && sc.abs_diff(tc) == 2;
+    let vertical = sc == tc && sr.abs_diff(tr) == 2;
+    if (!horizontal && !vertical) || layout.edge_paths[ei].len() != 1 {
         return None;
     }
     let label = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label")?;
@@ -106,7 +118,7 @@ const SELFLOOP_MIN_WIDTH: usize = 8;
 /// parser names its anonymous nodes `#N` with the odd counter
 /// (gently-6j0), and upstream's parser rejects a literal `#` in node
 /// names, so a `#\d+` name can only be a parser-generated anon node.
-fn is_anon(name: &str) -> bool {
+pub(super) fn is_anon(name: &str) -> bool {
     name.is_empty()
         || (name.len() > 1
             && name.starts_with('#')

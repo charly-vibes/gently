@@ -10,6 +10,7 @@
 //! companions (the parallel elbow, the diamond's verticals and c->d route).
 
 use super::canvas::Canvas;
+use super::edges::EdgeNodeEnds;
 use super::RenderError;
 use crate::layout::{Cell, Layout};
 
@@ -40,6 +41,13 @@ struct Ctx<'a> {
 /// source box, mirroring the entry rule at the target (gently-7qz, pinned
 /// by tests/repro/claims/pod-bidir-parallel.observed — the bent
 /// bidirectional edge draws `v` at the source's north attachment).
+/// `src_edge`/`dst_edge` flag `shape: edge` endpoint nodes (gently-cbk,
+/// upstream Scout.pm zeroes the START/END flags of a multi-cell path at
+/// such an endpoint): no arrowhead rides that end, and a final run that
+/// slides UNDER or OVER the target's cell extends flush through the
+/// target column's far edge instead of turning into it (the oracle's
+/// merged full-width dash cell — bg-edge-node's Ulm->car line ends at
+/// car's west edge with no stub and no corner).
 pub(super) fn draw(
     canvas: &mut Canvas,
     layout: &Layout,
@@ -47,6 +55,7 @@ pub(super) fn draw(
     (sc, sr): Cell,
     (tc, tr): Cell,
     start_arrow: bool,
+    ends: EdgeNodeEnds,
 ) -> Result<(), RenderError> {
     let ctx = Ctx {
         path: &layout.edge_paths[edge_index],
@@ -61,16 +70,82 @@ pub(super) fn draw(
     };
     let last = *ctx.path.last().expect("path has a first cell");
     let exit = exit_dir(&ctx, first, sc, sr)?;
-    let (entry, arrow) = entry_dir(&ctx, last)?;
+    let (entry, _) = entry_dir(&ctx, last)?;
     let a0 = exit_attachment(canvas, exit, sc, sr, edge_index)?;
     let a_end = entry_attachment(canvas, entry, tc, tr, edge_index)?;
-    let waypoints = waypoints(canvas, &ctx, exit, entry, a0, a_end)?;
+    let (waypoints, arrow) = final_waypoints(canvas, &ctx, exit, entry, a0, a_end, ends)?;
     // The start arrowhead points into the source box — opposite the exit
     // travel direction, the same glyph an end arrowhead arriving through
-    // that side would carry.
-    let start = if start_arrow { Some(start_glyph(exit)) } else { None };
+    // that side would carry. A shape:edge source carries none (upstream
+    // strips its START flags outright).
+    let start = if start_arrow && !ends.src {
+        Some(start_glyph(exit))
+    } else {
+        None
+    };
     draw_runs(canvas, &waypoints, a0, a_end, arrow, start);
     Ok(())
+}
+
+/// The waypoint chain and the (possibly suppressed) end arrowhead: a
+/// `shape: edge` target under (or over) a horizontal final run slides the
+/// run flush through the target column's far edge — no corner, no stub,
+/// no arrowhead (gently-cbk); any other `shape: edge` target keeps the
+/// normal chain but carries no head.
+fn final_waypoints(
+    canvas: &Canvas,
+    ctx: &Ctx,
+    exit: Dir,
+    entry: Dir,
+    a0: Pt,
+    a_end: Pt,
+    ends: EdgeNodeEnds,
+) -> Result<(Vec<Pt>, Option<char>), RenderError> {
+    if !ends.dst {
+        return Ok((waypoints(canvas, ctx, exit, entry, a0, a_end)?, Some(arrow_of(ctx)?)));
+    }
+    let last = *ctx.path.last().expect("path has a first cell");
+    // The direction of the final run: the last path hop's direction (a
+    // one-cell path travels straight from the exit).
+    let last_dir = match ctx.path.len() {
+        0..=1 => exit,
+        n => dir_between(ctx.path[n - 2], ctx.path[n - 1], ctx.edge_index)?,
+    };
+    let sliding_past = matches!(entry, Dir::North | Dir::South)
+        && matches!(last_dir, Dir::East | Dir::West);
+    if !sliding_past {
+        return Ok((waypoints(canvas, ctx, exit, entry, a0, a_end)?, None));
+    }
+    let far = if last_dir == Dir::West {
+        canvas.offsets[ctx.tc]
+    } else {
+        canvas.offsets[ctx.tc + 1]
+    };
+    let mut wps = waypoints_before_tail(canvas, ctx, exit, a0)?;
+    wps.push((far, canvas.mid(last.1)));
+    Ok((wps, None))
+}
+
+/// The entry arrowhead glyph for the path (the normal target-side rule).
+fn arrow_of(ctx: &Ctx) -> Result<char, RenderError> {
+    let last = *ctx.path.last().expect("path has a first cell");
+    Ok(entry_dir(ctx, last)?.1)
+}
+
+/// The waypoints up to (excluding) the final run's tail: the source
+/// attachment plus a corner wherever the run direction turns, walking all
+/// but the last path cell.
+fn waypoints_before_tail(canvas: &Canvas, ctx: &Ctx, exit: Dir, a0: Pt) -> Result<Vec<Pt>, RenderError> {
+    let mut wps = vec![a0];
+    let mut dir = exit;
+    for i in 0..ctx.path.len() - 1 {
+        let next_dir = dir_between(ctx.path[i], ctx.path[i + 1], ctx.edge_index)?;
+        if next_dir != dir {
+            push_corner(canvas, ctx, &mut wps, dir, next_dir, Some(ctx.path[i + 1]))?;
+        }
+        dir = next_dir;
+    }
+    Ok(wps)
 }
 
 /// The start arrowhead glyph for an edge leaving its source box through
@@ -245,15 +320,25 @@ fn push_corner(
 
 /// Draw the runs between consecutive waypoints, then the corners, then
 /// the arrowhead at the final approach — and the start arrowhead at the
-/// source attachment when the edge carries one (gently-7qz).
-fn draw_runs(canvas: &mut Canvas, wps: &[Pt], a0: Pt, a_end: Pt, arrow: char, start: Option<char>) {
+/// source attachment when the edge carries one (gently-7qz). A
+/// `shape: edge` target end carries no arrowhead (gently-cbk).
+fn draw_runs(
+    canvas: &mut Canvas,
+    wps: &[Pt],
+    a0: Pt,
+    a_end: Pt,
+    arrow: Option<char>,
+    start: Option<char>,
+) {
     for w in wps.windows(2) {
         draw_run(canvas, w[0], w[1], a0, a_end);
     }
     for &corner in &wps[1..wps.len() - 1] {
         canvas.grid[corner.1][corner.0] = b'+';
     }
-    canvas.grid[a_end.1][a_end.0] = arrow as u8;
+    if let Some(arrow) = arrow {
+        canvas.grid[a_end.1][a_end.0] = arrow as u8;
+    }
     if let Some(s) = start {
         canvas.grid[a0.1][a0.0] = s as u8;
     }

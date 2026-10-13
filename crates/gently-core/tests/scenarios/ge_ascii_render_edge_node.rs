@@ -1,18 +1,15 @@
 //! ge.ascii_render p2 additions (gently-cbk): `shape: edge` nodes render
 //! as edge cells — a full-pipeline feature pinned from the recorded oracle
-//! bytes. RED scaffold: the reproduction test below pins the CURRENT typed
-//! error (the orthogonality geometry rejects the edge-node's merged path);
-//! the oracle-bytes test is `#[ignore]`d until the GREEN run replaces the
-//! error with the real render — never by suppressing the error.
-//!
-//! Expected bytes: tests/repro/claims/bg-edge-node.observed (Graph::Easy
-//! v0.69 @ ededa3d7, seed 0; seeds 0 and 1 are byte-identical). The oracle
-//! ranks the edge-shaped nodes INLINE on their edges' rows (Bonn, train,
-//! Ulm on one row; car on Hof's row) and strips start/end flags: the dash
-//! run continues THROUGH the edge cell (Bonn --> train --> Ulm draws ONE
-//! line with a single `>` at Ulm), the node's label rides above the cell
-//! line (`train`, `rent`, `car`), and the anon cross node #3 ranks BELOW
-//! train with `buy` entering train's south side (`^`).
+//! bytes. GREEN: the oracle-bytes test below pins the render byte-identical
+//! against tests/repro/claims/bg-edge-node.observed (Graph::Easy v0.69 @
+//! ededa3d7, seed 0; seeds 0 and 1 are byte-identical). The oracle ranks
+//! the edge-shaped nodes INLINE on their edges' rows (Bonn, train, Ulm on
+//! one row; car on Hof's row) and strips start/end flags: the dash run
+//! continues THROUGH the edge cell (Bonn --> train --> Ulm draws ONE line
+//! with a single `>` at Ulm), the node's label rides above the cell line
+//! (`train`, `rent`, `car` — left-aligned on the fresh edge's `align`
+//! default), and the anon cross node #3 ranks BELOW train with `buy`
+//! entering train's south side (`^`).
 
 use super::{ascii, layout, text};
 
@@ -34,38 +31,17 @@ fn edge_node_graph() -> gently_core::graph::Graph {
     .expect("edge-node graph must parse")
 }
 
-/// ge.ascii_render.p2 (gently-cbk, RED state amended by gently-pua): the
-/// ranking fix (gently-pua) removed the orthogonality geometry error —
-/// the layout now ranks the box chain inline (Bonn west, Ulm east of the
-/// edge cell on one row) and the buy leaf one band below, so the render
-/// completes. The bytes still diverge from the oracle (the Edge::Cell
-/// render — dash continuation through the cell, label above, flag
-/// stripping — stays cbk's GREEN target), so this pin asserts the render
-/// succeeds and the placement-level ranks match the oracle dump, while
-/// the byte-identical render remains RED.
+/// ge.ascii_render.p2 (gently-cbk GREEN, placement level): the render
+/// completes — the gently-pua ranking fix removed the orthogonality
+/// geometry error and cbk's edge-cell render removed the byte divergence —
+/// so this pin keeps the placement-level oracle truth (the chain
+/// Bonn–train–Ulm inline, the buy leaf one band below train) as a cheap
+/// diagnostic beside the byte-identical pin below.
 #[test]
-fn p2_edge_node_renders_after_ranking_fix_but_bytes_diverge() {
+fn p2_edge_node_ranks_inline_with_the_buy_leaf_below() {
     let g = edge_node_graph();
     let l = layout::layout(&g);
-    let art = ascii::render(&g, &l).expect("the ranked layout must render — no geometry error");
-    assert_ne!(
-        art,
-        concat!(
-            "          rent    car          +-----+\n",
-            "         ------> ------------> | Hof |\n",
-            "                               +-----+\n",
-            "\n",
-            "                 ----------------+\n",
-            "                                 |\n",
-            "+------+          train        +-----+\n",
-            "| Bonn | --------------------> | Ulm |\n",
-            "+------+                       +-----+\n",
-            "                   ^\n",
-            "                   | buy\n",
-            "                   |\n",
-        ),
-        "cbk GREEN replaces this pin with the oracle bytes"
-    );
+    ascii::render(&g, &l).expect("the ranked layout must render — no geometry error");
     // placement truth (gently-pua's oracle re-derivation): the chain
     // Bonn–train–Ulm inline, the buy leaf one band below train.
     let by_name: Vec<(String, (usize, usize))> = g
@@ -89,16 +65,14 @@ fn p2_edge_node_renders_after_ranking_fix_but_bytes_diverge() {
     );
 }
 
-/// ge.ascii_render.p2 (gently-cbk, GREEN target): the full-pipeline render
-/// per the re-derivation — edge-shaped nodes claim their cell as an
-/// EDGE_HOR + EDGE_LABEL_CELL edge cell, the dash run continues through
-/// it (endpoint flags stripped Scout.pm-style), the label rides above the
-/// cell line, and the anon cross node ranks below. Expected bytes:
+/// ge.ascii_render.p2 (gently-cbk GREEN): the full-pipeline render —
+/// edge-shaped nodes claim their cell as an EDGE_HOR + EDGE_LABEL_CELL
+/// edge cell, the dash run continues through it (endpoint flags stripped
+/// Scout.pm-style), the label rides above the cell line, and the anon
+/// cross node ranks below. Expected bytes:
 /// tests/repro/claims/bg-edge-node.observed (seed 0, hash-stable across
-/// 2 seeds). `#[ignore]`d while the feature is RED — un-ignore in the
-/// GREEN commit together with the placement/render implementation.
+/// 2 seeds).
 #[test]
-#[ignore = "gently-cbk RED scaffold: shape:edge is unimplemented (errors today)"]
 fn p2_edge_node_renders_as_edge_cell_with_label_above() {
     let g = edge_node_graph();
     let art = ascii::render(&g, &layout::layout(&g)).expect("edge-node graph must render");

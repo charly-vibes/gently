@@ -52,15 +52,19 @@ pub(super) fn h_run(b: &Border, inner: usize) -> String {
 /// collapses every non-special shape to the plain box for small nodes —
 /// `circle`/`ellipse`/`diamond`/… all render `+---+`-style; `rounded`
 /// blanks the corners; `point` blanks the borders and swaps the label
-/// for a centered `*`; `invisible` draws nothing. (`box` is NOT a valid
-/// upstream shape — the default is `rect`; a `shape: box` attribute is
-/// upstream-rejected, recorded for gently-dcp.)
+/// for a centered `*`; `invisible` draws nothing; `edge` renders the
+/// node as an edge cell — a full-width dash line on the band's middle
+/// row with the label riding above it (upstream `Node::as_ascii` builds
+/// an `EDGE_HOR | EDGE_LABEL_CELL` cell for it, gently-cbk). (`box` is
+/// NOT a valid upstream shape — the default is `rect`; a `shape: box`
+/// attribute is upstream-rejected, recorded for gently-dcp.)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Shape {
     Box,
     Rounded,
     Point,
     Invisible,
+    Edge,
 }
 
 /// Resolve a node's `shape` attribute to its render class.
@@ -69,6 +73,7 @@ pub(super) fn shape(attr: Option<&str>) -> Shape {
         Some("rounded") => Shape::Rounded,
         Some("point") => Shape::Point,
         Some("invisible") => Shape::Invisible,
+        Some("edge") => Shape::Edge,
         _ => Shape::Box,
     }
 }

@@ -11,13 +11,12 @@
 //! geometry.rs, the group frames in groups.rs (gently-b0z).
 
 use super::geometry::{
-    band_layout, column_geometry, column_offsets, edge_styles, label_lines, node_styles, selfloops,
+    band_layout, column_geometry, column_offsets, edge_styles, is_anon, label_lines, node_styles,
+    selfloops,
 };
 use super::groups::{self, Frame};
 use super::labels::{Align, LabelLine};
-use super::polyline;
 use super::styles::{self, border, byte_width, h_run, Shape};
-use super::RenderError;
 use crate::graph::Graph;
 use crate::layout::Layout;
 
@@ -40,23 +39,26 @@ pub(super) struct Canvas {
     pub(super) row_height: Vec<usize>,
     /// Unshifted start line of each band (prefix of `row_height`),
     /// before the group-frame margin shift.
-    band_tops: Vec<usize>,
+    pub(super) band_tops: Vec<usize>,
     /// Start char offset of each grid column (`offsets[c]`; length width+1).
     pub(super) offsets: Vec<usize>,
     /// Char width of each grid column.
     pub(super) col_width: Vec<usize>,
     /// Resolved label lines per node, in model order (gently-527/y7i).
-    node_lines: Vec<Vec<LabelLine>>,
+    pub(super) node_lines: Vec<Vec<LabelLine>>,
     /// Aligned label lines per edge, in model order — `Some` only for a
     /// straight horizontal labelled edge (the full-gap label cell);
     /// bent and vertical edges keep their single-line surface.
-    edge_lines: Vec<Option<Vec<LabelLine>>>,
+    pub(super) edge_lines: Vec<Option<Vec<LabelLine>>>,
     /// Resolved render data per node, in model order.
-    node_style: Vec<(String, Shape)>,
+    pub(super) node_style: Vec<(String, Shape)>,
     /// Resolved edge style per edge, in model order.
     pub(super) edge_style: Vec<String>,
     /// Target-side arrowhead presence per edge, in model order.
     pub(super) edge_arrow_end: Vec<bool>,
+    /// Source-side arrowhead presence per edge, in model order (gently-cbk:
+    /// the undirected test for the shape:edge flag stripping).
+    pub(super) edge_start_arrow: Vec<bool>,
     /// Bidirectionality (arrowheads at BOTH ends) per edge, in model order.
     pub(super) edge_bidir: Vec<bool>,
     /// Group frames in unshifted coordinates, stamped after the edges.
@@ -93,9 +95,14 @@ pub(super) fn centered(text: &str, width: usize) -> String {
 /// render — the oracle's as_ascii ends at the last drawn line (the port-*
 /// dip-below fixtures end at their gap-row run), while a trailing blank
 /// WITHIN the last band still renders (the border:none node pins
-/// `\n x\n\n`).
+/// `\n x\n\n`). An anonymous node's cell renders only blanks (borderstyle
+/// none over a blank label), so it does not hold the floor open: the
+/// oracle's output ends at the last drawn line even when a blank anon
+/// band trails the art (gently-cbk, bg-edge-node.observed ends at the buy
+/// edge's run).
 fn last_band_floor(
     layout: &Layout,
+    draws: &[bool],
     row_height: &[usize],
     band_tops: &[usize],
     grid_len: usize,
@@ -104,7 +111,9 @@ fn last_band_floor(
     layout
         .node_cells
         .iter()
-        .map(|&(_, r)| band_tops[r] + row_height[r] - 1 + mt)
+        .zip(draws)
+        .filter(|&(_, &draws_something)| draws_something)
+        .map(|(&(_, r), _)| band_tops[r] + row_height[r] - 1 + mt)
         .max()
         .map(|line| line.min(grid_len.saturating_sub(1)))
         .unwrap_or(0)
@@ -144,16 +153,20 @@ fn frame_grid(
     let total_lines = band_tops[layout.height];
     let (grid, offsets) =
         shifted_grid(offsets.to_vec(), layout.width, ml, mr, mt, mb, total_lines);
-    let last_band_floor = last_band_floor(layout, row_height, band_tops, grid.len(), mt);
+    let draws: Vec<bool> = (0..graph.nodes.len())
+        .map(|i| !is_anon(&graph.nodes[i].name))
+        .collect();
+    let last_band_floor = last_band_floor(layout, &draws, row_height, band_tops, grid.len(), mt);
     (grid, offsets, frames, ml, mt, last_band_floor)
 }
 
-/// Target-side arrowhead presence and bidirectionality per edge, in
-/// model order.
-fn edge_arrow_flags(graph: &Graph) -> (Vec<bool>, Vec<bool>) {
+/// Target-side arrowhead presence, source-side arrowhead presence, and
+/// bidirectionality per edge, in model order.
+fn edge_arrow_flags(graph: &Graph) -> (Vec<bool>, Vec<bool>, Vec<bool>) {
     let end = graph.edges.iter().map(|e| e.arrows.end).collect();
+    let start = graph.edges.iter().map(|e| e.arrows.start).collect();
     let bidir = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
-    (end, bidir)
+    (end, start, bidir)
 }
 
 impl Canvas {
@@ -178,7 +191,7 @@ impl Canvas {
         let (row_height, band_tops) = band_layout(graph, layout, &node_lines, &edge_lines);
         let (grid, offsets, frames, ml, mt, last_band_floor) =
             frame_grid(graph, layout, &col_width, &offsets, &band_tops, &row_height);
-        let (edge_arrow_end, edge_bidir) = edge_arrow_flags(graph);
+        let (edge_arrow_end, edge_start_arrow, edge_bidir) = edge_arrow_flags(graph);
         Canvas {
             grid,
             row_height,
@@ -190,6 +203,7 @@ impl Canvas {
             node_style,
             edge_style,
             edge_arrow_end,
+            edge_start_arrow,
             edge_bidir,
             frames,
             margin_left: ml,
@@ -199,7 +213,8 @@ impl Canvas {
     }
 
     /// Stamp every node's box per its resolved shape: bordered box,
-    /// rounded box (blank corners), point (`*`), or invisible (nothing).
+    /// rounded box (blank corners), point (`*`), edge cell, or invisible
+    /// (nothing).
     pub(super) fn draw_nodes(&mut self, _graph: &Graph, layout: &Layout) {
         for (idx, &(cx, cy)) in layout.node_cells.iter().enumerate() {
             let lines = self.node_lines[idx].clone();
@@ -209,6 +224,7 @@ impl Canvas {
                 Shape::Invisible => {}
                 Shape::Point => self.draw_point(cy, cx),
                 Shape::Rounded => self.draw_box(cy, cx, &lines, blank_corners(b), false),
+                Shape::Edge => self.draw_edge_cell(cy, cx, &lines),
                 Shape::Box => self.draw_box(cy, cx, &lines, b, style == "none"),
             }
         }
@@ -270,40 +286,9 @@ impl Canvas {
         self.stamp(self.mid(cy), cx, &mid);
     }
 
-    /// Stamp the straight run of one edge (see `edges::draw_straight`).
-    /// Draw one edge: selfloop elbow, straight gap arrow, or polyline.
-    pub(super) fn draw_edge(
-        &mut self,
-        graph: &Graph,
-        layout: &Layout,
-        edge_index: usize,
-    ) -> Result<(), RenderError> {
-        let edge = &graph.edges[edge_index];
-        let (sc, sr) = layout.node_cells[edge.from];
-        let (tc, tr) = layout.node_cells[edge.to];
-        let path = &layout.edge_paths[edge_index];
-
-        if sc == tc && sr == tr {
-            self.draw_selfloop((sc, sr));
-            return Ok(());
-        }
-        if sr == tr && path.len() == 1 && sc.abs_diff(tc) == 2 {
-            // Straight through the single gap column: centered run —
-            // arrow-less or style-headed (c2), widened to a pattern fill
-            // plus head when the edge carries a label (oracle bytes:
-            // ` ----> ` under `  go  `); the label rides as its aligned
-            // lines (gently-527/y7i).
-            let lines = self.edge_lines[edge_index].clone().unwrap_or_default();
-            super::edges::draw_straight(self, sr, path[0].0, tc < sc, edge_index, &lines);
-            return Ok(());
-        }
-
-        polyline::draw(self, layout, edge_index, (sc, sr), (tc, tr), edge.arrows.start)
-    }
-
     /// Draw a selfloop: a small elbow over the box, departing through the
     /// east corner and arriving through the west one with a `v` arrowhead.
-    fn draw_selfloop(&mut self, (c, r): (usize, usize)) {
+    pub(super) fn draw_selfloop(&mut self, (c, r): (usize, usize)) {
         let x0 = self.offsets[c];
         let w = self.col_width[c];
         let y_mid = self.mid(r - 1);
