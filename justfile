@@ -216,6 +216,7 @@ gallery-verify:
     command -v dot >/dev/null || { echo "gallery-verify: dot not found — spec ge.graphviz_render pipeline needs graphviz (remediation: install graphviz)"; exit 1; }
     ls docs/gallery/*.svg >/dev/null 2>&1 || { echo "gallery-verify: no committed SVGs under docs/gallery/"; exit 1; }
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+    cargo build -q --example gallery -p gently-core || { echo "gallery-verify: failed to build the gallery generator"; exit 1; }
     for svg in docs/gallery/*.svg; do
         name=$(basename "$svg" .svg)
         input="examples/$name/input.gv"
