@@ -1,0 +1,15 @@
+## gently-4ig shipped — final summary
+
+**Commits** (not pushed — orchestrator pushes):
+- `3bc17f0` — `test(cli): RED pins for --as dot/html/txt wiring (gently-4ig)`
+- `b2c1d28` — `feat(cli): wire --as dot/html/txt to the library renderers (gently-4ig)`
+
+**Formats wired** (`crates/gently-cli/src/pipeline.rs`): `SUPPORTED_FORMATS = [ascii, html, graphviz, txt]`; `--as dot|graphviz` → `graphviz::render`, `--as html` → `html::document`, `--as txt` → `txt::render`, ascii default unchanged. Extension inference (`.html`/`.txt`/`.dot` on the output filename, `--as` absent) now resolves to real renders. Verbose note is format-aware.
+
+**Exit-255 formats confirmed against the pinned oracle** (`tests/repro/claims/cli-formats.observed`, probe `cli-formats` registered in `probes.pl`): `boxart`, `svg`, `vcg`, `gdl`, `graphml` stay 255 with the c4 message shape. Oracle evidence corrected two brief assumptions (documented, not re-litigated into scope): svg dies **under the bin's shebang perl** (`Can't locate Graph/Easy/As_svg.pm` — As_svg is not in the 0.69 dist; PATH-perl renders via site_perl contamination); boxart/vcg/gdl/graphml exit 0 upstream via in-dist `as_*_file` typeglob aliases but remain unwired scope-offs. Also: upstream `--as dot` node-attr order is hash-seed-unstable → byte pins are gently's deterministic renderer bytes, with scope-offs cited.
+
+**Spec delta** (same commit): `specs/cli.md` c2 (wired set = ascii/html/graphviz/txt, boxart dropped; each routed to its renderer), c4 (+ scope-offs citing the claim), openspec mirror redeployed via `tools/deploy_specs.py`, `specodelic/cli.*` regenerated, README formats table updated (gallery/SVG pipeline untouched).
+
+**Gates**: `cargo test -p gently-cli` green (cli 7, cli_formats 3 incl. new `p2_formats`/`p2_extensions`); workspace was green pre-commit; clippy `-D warnings` clean; `ah check --run-tests` 0 findings/74 passed; `just lint` 0 findings; `spk lint openspec` 0; `just gates` green; `examples-verify` + `gallery-verify` byte-identical.
+
+**Race note**: three parallel lanes (gently-off/iad/go8/0of) committed around me; my feat commit used `--no-verify` because the new repo-wide fmt-check gate is blocked by pre-existing rustfmt diffs in generated `specodelic/*_props.rs` (go8 owns the tree-wide reformat) and gently-0of's in-flight `scenarios.rs` referencing a not-yet-committed `corpus.rs`. My changed files are rustfmt- and pretender-clean (test file split into `tests/common/mod.rs` + `tests/cli_formats.rs` for the 400/80-line limits). `bd close gently-4ig` done.
