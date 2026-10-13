@@ -66,6 +66,43 @@ enum Route {
     /// edge: straight when adjacent, otherwise east/west along the source
     /// band, then vertically through the gap rows at the target column.
     Around,
+    /// A `start:`/`end:` port names a south side (gently-89r): the edge
+    /// dips through the gap row below the band — exits the source's south,
+    /// runs along the gap, enters the target's south (`^`)
+    /// (tests/repro/claims/port-side-minimal.observed; the port-* fixtures).
+    PortBelow,
+    /// A port names a north side: the edge bends through the gap row above
+    /// the band, entering the target's north (`v`).
+    PortAbove,
+}
+
+/// Which way a port-constrained edge must dip (gently-89r). Upstream
+/// Attributes.pm `_flow_as_side` maps the flow-relative spellings onto
+/// sides: right = inflow+90 = south, left = north, front/forward = the
+/// flow direction itself (the default attachment), back = the opposite;
+/// absolute spellings (south/north/east/west, down/up, degrees) map
+/// through `_direction_as_side`. Only the east pipeline honors ports (the
+/// non-east flows realize a transformed canonical layout — no tier-1
+/// fixture pins ports there), so the sides are read in flow space and
+/// matched against the canonical east axes. Indexed forms (`front,N`)
+/// select a numbered slot on the side — variable node heights, out of
+/// scope (gently-byq). Conflicting sides on the two ends fall back to the
+/// unported route (no recorded shape pins one).
+fn port_dip(graph: &Graph, ei: usize) -> Option<Route> {
+    let side = |v: Option<&str>| match v?.split(',').next()? {
+        "right" | "south" | "down" | "180" => Some(Route::PortBelow),
+        "left" | "north" | "up" | "0" => Some(Route::PortAbove),
+        // front/forward/east and back/west keep the default attachment;
+        // anything else (unknown spelling) is ignored.
+        _ => None,
+    };
+    let start = side(graph.get_attr(Scope::Edge(ei), "start"));
+    let end = side(graph.get_attr(Scope::Edge(ei), "end"));
+    match (start, end) {
+        (Some(s), None) | (None, Some(s)) => Some(s),
+        (Some(s), Some(e)) if s == e => Some(s),
+        _ => None,
+    }
 }
 
 /// Where every node sits and how every edge travels.
@@ -176,6 +213,10 @@ fn raise(slot: &mut [usize], boundary: usize, count: usize) {
 fn mark_slot(slot: &mut [usize], route: Route, pu: Cell, pv: Cell) {
     match route {
         Route::Selfloop => raise(slot, pu.1, 1),
+        // A south-port dip takes the first gap row below the band; a
+        // north-port bend the first gap row above it.
+        Route::PortBelow => raise(slot, pu.1 + 1, 1),
+        Route::PortAbove => raise(slot, pu.1, 1),
         Route::Parallel(prior) => {
             let (boundary, k) = parallel_channel(prior, pu.1);
             raise(slot, boundary, k + 1);
@@ -272,6 +313,18 @@ fn edge_path(route: Route, su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows) 
     match route {
         Route::Selfloop => selfloop_path(su, gu, rows),
         Route::Parallel(_) => bend_path(gu, gv, bend_gap_row(route, su.1, rows, gu.1)),
+        // The port dips run one gap row, all the way between the two node
+        // columns — straight through under (or over) everything between.
+        Route::PortBelow | Route::PortAbove => {
+            let boundary = if route == Route::PortBelow { su.1 + 1 } else { su.1 };
+            let g = rows
+                .gap_rows
+                .get(boundary)
+                .and_then(|v| v.first())
+                .copied()
+                .unwrap_or(gu.1);
+            bend_path(gu, gv, g)
+        }
         Route::Grew | Route::Around => {
             if gu.1 == gv.1 && gu.0.abs_diff(gv.0) == 2 {
                 vec![(gu.0.min(gv.0) + 1, gu.1)]

@@ -125,6 +125,7 @@ pub(super) fn place(graph: &Graph) -> Option<Placement> {
                 placer.place_edge(ei, e.from, e.to);
             }
         }
+        placer.apply_ports(graph);
         placer.place_isolated();
     }
     Some(Placement {
@@ -237,6 +238,33 @@ impl Placer {
             (pv.0, band)
         };
         self.claim(node, spot);
+    }
+
+    /// Port-constrained same-band edges (gently-89r): a `start:`/`end:`
+    /// port naming a south/north side forces the edge to dip below / bend
+    /// above the band, whatever its unported travel — placement is never
+    /// changed (tests/repro/claims/port-side-minimal.observed: the
+    /// no-port chain lays Trier inline exactly like the ported one).
+    /// Parallel channels, self-loops, and cross-band routes keep their
+    /// recorded shapes (no recorded shape ports them).
+    fn apply_ports(&mut self, graph: &Graph) {
+        for (ei, e) in graph.edges.iter().enumerate() {
+            if e.from == e.to {
+                continue;
+            }
+            let (pu, pv) = match (self.cell[e.from], self.cell[e.to]) {
+                (Some(pu), Some(pv)) => (pu, pv),
+                _ => continue,
+            };
+            if pu.1 != pv.1 {
+                continue;
+            }
+            if let Some(port) = super::port_dip(graph, ei) {
+                if matches!(self.route[ei], Route::Grew | Route::Around) {
+                    self.route[ei] = port;
+                }
+            }
+        }
     }
 
     /// Isolated nodes (no incident edges) each take the next free band,

@@ -45,6 +45,10 @@ pub(super) struct Canvas {
     /// Left/top canvas margins the frames demanded.
     pub(super) margin_left: usize,
     pub(super) margin_top: usize,
+    /// Last drawn line any node box can reach (its box-bottom border line
+    /// or the border:none blank beneath the label) — trailing blank lines
+    /// beyond it are dropped (see `new`).
+    last_band_floor: usize,
 }
 
 /// The point node's label row: blank sides with a centered `*`.
@@ -64,6 +68,21 @@ pub(super) fn centered(text: &str, width: usize) -> String {
     let len = display_width(text);
     let left = (width - len) / 2;
     format!("{}{}{}", " ".repeat(left), text, " ".repeat(width - len - left))
+}
+
+/// The last band's box-bottom line: trailing blank lines beyond it never
+/// render — the oracle's as_ascii ends at the last drawn line (the port-*
+/// dip-below fixtures end at their gap-row run), while a trailing blank
+/// WITHIN the last band still renders (the border:none node pins
+/// `\n x\n\n`).
+fn last_band_floor(layout: &Layout, grid: &[Vec<char>], mt: usize) -> usize {
+    layout
+        .node_cells
+        .iter()
+        .map(|&(_, r)| r * BAND_HEIGHT + mt + 2)
+        .max()
+        .map(|line| line.min(grid.len().saturating_sub(1)))
+        .unwrap_or(0)
 }
 
 impl Canvas {
@@ -91,6 +110,7 @@ impl Canvas {
         let offsets: Vec<usize> = offsets.into_iter().map(|o| o + ml).collect();
         let total_width = offsets[layout.width] + mr;
         let grid = vec![vec![' '; total_width]; layout.height * BAND_HEIGHT + mt + mb];
+        let last_band_floor = last_band_floor(layout, &grid, mt);
         let edge_arrow_end: Vec<bool> = graph.edges.iter().map(|e| e.arrows.end).collect();
         let edge_bidir: Vec<bool> = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
         Canvas {
@@ -104,6 +124,7 @@ impl Canvas {
             frames,
             margin_left: ml,
             margin_top: mt,
+            last_band_floor,
         }
     }
 
@@ -248,8 +269,20 @@ impl Canvas {
     /// out to the canvas width (the isolated node's box row is just
     /// `+---+`).
     pub(super) fn into_string(self) -> String {
+        // Trailing blank lines never render: the oracle's as_ascii ends at
+        // the last drawn line, so a trailing gap row's unused lines are
+        // dropped (the port-* fixtures' dip-below runs end the output).
+        let mut lines: &[Vec<char>] = &self.grid;
+        while lines.len() > self.last_band_floor + 1 {
+            match lines.last() {
+                Some(last) if last.iter().all(|&c| c == ' ') => {
+                    lines = &lines[..lines.len() - 1];
+                }
+                _ => break,
+            }
+        }
         let mut out = String::new();
-        for line in &self.grid {
+        for line in lines {
             let text: String = line.iter().collect();
             out.push_str(text.trim_end_matches(' '));
             out.push('\n');
