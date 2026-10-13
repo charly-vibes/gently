@@ -141,7 +141,7 @@ fn exit_attachment(
         Dir::East => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
         Dir::West => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
         Dir::North => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::South => (Some(canvas.vert_x(c)), Some(canvas.band_top(r) + 3)),
+        Dir::South => (Some(canvas.vert_x(c)), Some(canvas.band_below(r))),
     };
     attachment(canvas, pt, ei, "leaves")
 }
@@ -160,7 +160,7 @@ fn entry_attachment(
         Dir::East => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
         Dir::West => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
         Dir::South => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::North => (Some(canvas.vert_x(c)), Some(canvas.band_top(r) + 3)),
+        Dir::North => (Some(canvas.vert_x(c)), Some(canvas.band_below(r))),
     };
     attachment(canvas, pt, ei, "enters")
 }
@@ -251,11 +251,11 @@ fn draw_runs(canvas: &mut Canvas, wps: &[Pt], a0: Pt, a_end: Pt, arrow: char, st
         draw_run(canvas, w[0], w[1], a0, a_end);
     }
     for &corner in &wps[1..wps.len() - 1] {
-        canvas.grid[corner.1][corner.0] = '+';
+        canvas.grid[corner.1][corner.0] = b'+';
     }
-    canvas.grid[a_end.1][a_end.0] = arrow;
+    canvas.grid[a_end.1][a_end.0] = arrow as u8;
     if let Some(s) = start {
-        canvas.grid[a0.1][a0.0] = s;
+        canvas.grid[a0.1][a0.0] = s as u8;
     }
 }
 
@@ -273,12 +273,12 @@ fn draw_run(canvas: &mut Canvas, p: Pt, q: Pt, a0: Pt, a_end: Pt) {
             hi = hi.saturating_sub(1);
         }
         for x in lo..=hi {
-            canvas.grid[p.1][x] = '-';
+            canvas.grid[p.1][x] = b'-';
         }
     } else {
         let (y1, y2) = ordered(p.1, q.1);
         for y in y1..=y2 {
-            canvas.grid[y][p.0] = '|';
+            canvas.grid[y][p.0] = b'|';
         }
     }
 }

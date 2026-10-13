@@ -184,6 +184,16 @@ pub(in crate::render) fn display_width(s: &str) -> usize {
     s.chars().map(|c| if is_wide(c) { 2 } else { 1 }).sum()
 }
 
+/// Width of `s` in UTF-8 BYTES — the ascii renderer's label arithmetic
+/// follows upstream's byte-string `length()` (gently-bvb: the oracle
+/// draws `[ Köln ]` as a 7-dash box because `Köln` is 5 bytes; probed
+/// byte rule, re-derived from the display-width letter — gently-527).
+/// The boxart and html renderers keep `display_width` (their contracts
+/// pin display-width columns).
+pub(in crate::render) fn byte_width(s: &str) -> usize {
+    s.len()
+}
+
 /// East Asian Wide/Fullwidth ranges (the double-width classes the
 /// display-width contract covers).
 fn is_wide(c: char) -> bool {

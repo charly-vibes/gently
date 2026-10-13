@@ -13,6 +13,7 @@
 mod canvas;
 mod edges;
 mod geometry;
+mod labels;
 mod groups;
 mod polyline;
 mod styles;

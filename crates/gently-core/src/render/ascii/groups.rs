@@ -15,7 +15,7 @@
 //! member's column: `Cities:` → 9 columns, `Verylonggroupname:` → 20).
 
 use super::canvas::Canvas;
-use super::styles::{border, display_width, h_run};
+use super::styles::{border, byte_width, h_run};
 use crate::graph::Graph;
 use crate::layout::Layout;
 
@@ -55,7 +55,7 @@ pub(super) fn title_widths(graph: &Graph, layout: &Layout) -> Vec<(usize, usize)
             .map(|&m| layout.node_cells[m].0)
             .min()
             .expect("non-empty member list");
-        let w = display_width(&title_text(&group.name)) + 2;
+        let w = byte_width(&title_text(&group.name)) + 2;
         out.push((leftmost, w));
     }
     out
@@ -70,6 +70,8 @@ pub(super) fn frames(
     layout: &Layout,
     col_width: &[usize],
     offsets: &[usize],
+    band_tops: &[usize],
+    row_height: &[usize],
 ) -> Vec<Frame> {
     let mut out = Vec::new();
     for group in &graph.groups {
@@ -84,8 +86,8 @@ pub(super) fn frames(
             let (cx, cy) = layout.node_cells[m];
             left = left.min(offsets[cx] as isize);
             right = right.max((offsets[cx] + col_width[cx]) as isize - 1);
-            top = top.min((cy * super::canvas::BAND_HEIGHT) as isize);
-            bottom = bottom.max((cy * super::canvas::BAND_HEIGHT + 2) as isize);
+            top = top.min(band_tops[cy] as isize);
+            bottom = bottom.max((band_tops[cy] + row_height[cy] - 1) as isize);
         }
         out.push(Frame {
             left: left - 2,
@@ -97,6 +99,22 @@ pub(super) fn frames(
         });
     }
     out
+}
+
+/// Each named group's frame plus the canvas margins those frames demand
+/// over the unshifted grid of `width` bytes by `total_lines` lines
+/// (c8) — the composite the canvas builds its blank grid from.
+pub(super) fn frame_margins(
+    graph: &Graph,
+    layout: &Layout,
+    col_width: &[usize],
+    offsets: &[usize],
+    band_tops: &[usize],
+    row_height: &[usize],
+) -> (Vec<Frame>, (usize, usize, usize, usize)) {
+    let frames = frames(graph, layout, col_width, offsets, band_tops, row_height);
+    let margins = margins(&frames, offsets[layout.width], band_tops[layout.height]);
+    (frames, margins)
 }
 
 /// The canvas margins (left, top, right, bottom) the frames demand over

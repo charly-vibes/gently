@@ -8,9 +8,84 @@
 //! Rationale: split from canvas.rs past the tidy file limit (gently-b0z).
 
 use super::canvas::GAP_WIDTH;
-use super::styles::{display_width, edge_gap_width, shape, Shape};
+use super::labels::{aligned_label, default_align, max_line_width, Align, LabelLine};
+use super::styles::{edge_gap_width, shape, Shape};
 use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::{Cell, Layout};
+
+/// The minimum row-band height: a standard band is border, label, border.
+pub(super) use super::canvas::BAND_HEIGHT;
+
+/// Aligned label lines per node and per straight horizontal labelled
+/// edge, in model order (gently-527/gently-y7i: upstream
+/// `_aligned_label` splits at `\n`/`\r`/`\l`/`\c`). Only a straight
+/// single-gap horizontal edge renders a label CELL (upstream's full-gap
+/// `EDGE_HOR` label cell); bent and vertical edges keep their
+/// single-line surface.
+pub(super) fn label_lines(
+    graph: &Graph,
+    layout: &Layout,
+) -> (Vec<Vec<LabelLine>>, Vec<Option<Vec<LabelLine>>>) {
+    let node_lines: Vec<Vec<LabelLine>> = (0..graph.nodes.len())
+        .map(|i| {
+            let label = node_label(graph, i).to_string();
+            aligned_label(&label, default_align(graph, Scope::Node(i), ObjectKind::Node))
+        })
+        .collect();
+    let edge_lines: Vec<Option<Vec<LabelLine>>> = (0..graph.edges.len())
+        .map(|ei| straight_label_lines(graph, layout, ei))
+        .collect();
+    (node_lines, edge_lines)
+}
+
+/// Row band heights and their unshifted prefix start lines: every cell
+/// is grown to the tallest cell of its row (upstream
+/// `_prepare_layout` rewrites each cell's h to the row height) — node
+/// boxes carry lines+2, a straight horizontal edge's label cell carries
+/// lines+2 (gently-527).
+pub(super) fn band_layout(
+    graph: &Graph,
+    layout: &Layout,
+    node_lines: &[Vec<LabelLine>],
+    edge_lines: &[Option<Vec<LabelLine>>],
+) -> (Vec<usize>, Vec<usize>) {
+    let mut row_height = vec![BAND_HEIGHT; layout.height];
+    for (idx, &(_, r)) in layout.node_cells.iter().enumerate() {
+        let h = node_lines[idx].len() + 2;
+        row_height[r] = row_height[r].max(h);
+    }
+    for (ei, lines) in edge_lines.iter().enumerate() {
+        if let Some(lines) = lines {
+            let r = layout.node_cells[graph.edges[ei].from].1;
+            row_height[r] = row_height[r].max(lines.len() + 2);
+        }
+    }
+    let mut band_tops = Vec::with_capacity(layout.height + 1);
+    let mut acc = 0usize;
+    for &h in &row_height {
+        band_tops.push(acc);
+        acc += h;
+    }
+    band_tops.push(acc);
+    (row_height, band_tops)
+}
+
+/// Whether edge `ei` is a straight single-gap horizontal edge (the shape
+/// whose label cell is a full-gap `EDGE_HOR` label cell) and carries a
+/// label — such a label cell sizes its row band (gently-527).
+fn straight_label_lines(graph: &Graph, layout: &Layout, ei: usize) -> Option<Vec<LabelLine>> {
+    let edge = &graph.edges[ei];
+    let (sc, sr) = layout.node_cells[edge.from];
+    let (tc, tr) = layout.node_cells[edge.to];
+    if sr != tr || layout.edge_paths[ei].len() != 1 || sc.abs_diff(tc) != 2 {
+        return None;
+    }
+    let label = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label")?;
+    Some(aligned_label(
+        label,
+        default_align(graph, Scope::Edge(ei), ObjectKind::Edge),
+    ))
+}
 
 /// Minimum box width for a selfloop node: the loop elbow spans the box,
 /// so the cell widens to fit both corners (oracle: `+------+` over `a`).
@@ -42,13 +117,15 @@ pub(super) fn node_label(graph: &Graph, idx: usize) -> &str {
     }
 }
 
-/// Box width of a node: display width of the label (double-width glyphs
-/// count two columns, ge.ascii_render.c5) plus two border chars per side
-/// — or one per side for a `none` border — widened for selfloop nodes so
-/// the loop elbow fits above the box.
+/// Box width of a node: the widest aligned-label line's UTF-8 byte
+/// width (ge.ascii_render.c5 re-derived, gently-bvb: upstream
+/// `dimensions()` byte-lengths the label — `[ Köln ]` is a 7-dash box)
+/// plus two border chars per side — or one per side for a `none`
+/// border — widened for selfloop nodes so the loop elbow fits above
+/// the box.
 fn box_width(name: &str, style: &str, selfloop: bool) -> usize {
     let pad = if style == "none" { 1 } else { 2 };
-    let w = display_width(name) + 2 * pad;
+    let w = max_line_width(&aligned_label(name, Align::Center)) + 2 * pad;
     if selfloop {
         w.max(SELFLOOP_MIN_WIDTH)
     } else {
@@ -102,21 +179,27 @@ pub(super) fn edge_styles(graph: &Graph) -> Vec<String> {
 /// Column widths per the char-grid mapping and their prefix offsets:
 /// node columns take exactly their boxes' width (a `none`-border box is
 /// narrower than the gap floor — oracle: ` x`), gap columns keep
-/// GAP_WIDTH, and labelled straight edges widen their gap column (the
-/// label hosts on the box-top row — oracle: `+---+  go   +---+` over
-/// ` ----> `).
+/// GAP_WIDTH, labelled straight edges widen their gap column (the label
+/// hosts on the box-top row — oracle: `+---+  go   +---+` over
+/// ` ----> `), and group titles widen their leftmost member's column
+/// (c8).
 pub(super) fn column_geometry(
     graph: &Graph,
     layout: &Layout,
     node_style: &[(String, Shape)],
     selfloop_node: &[bool],
     edge_style: &[String],
-) -> (Vec<usize>, Vec<(usize, usize)>) {
+) -> Vec<usize> {
     let mut node_width = vec![0usize; layout.width];
     let mut node_col = vec![false; layout.width];
     for (idx, &(cx, _)) in layout.node_cells.iter().enumerate() {
         let (style, _) = &node_style[idx];
-        let w = box_width(node_label(graph, idx), style, selfloop_node[idx]);
+        let mut w = box_width(node_label(graph, idx), style, selfloop_node[idx]);
+        // an anonymous node's cell is upstream-FIXED at 3×3
+        // (`Node::Anon::_correct_size`), independent of its blank label
+        if is_anon(&graph.nodes[idx].name) {
+            w = w.max(3);
+        }
         node_width[cx] = node_width[cx].max(w);
         node_col[cx] = true;
     }
@@ -131,7 +214,12 @@ pub(super) fn column_geometry(
             widen_edge_column(graph, layout, edge_style, &mut col_width, ei, path);
         }
     }
-    (col_width, super::groups::title_widths(graph, layout))
+    for (c, w) in super::groups::title_widths(graph, layout) {
+        if c < col_width.len() {
+            col_width[c] = col_width[c].max(w);
+        }
+    }
+    col_width
 }
 
 /// Prefix offsets of the column widths.
@@ -177,7 +265,11 @@ fn widen_edge_column(
         }
     }
     if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
-        col_width[c] = col_width[c].max(display_width(label) + 5 + extra);
+        // the label cell's width is its widest LINE (gently-527: upstream
+        // `dimensions()` measures the aligned label's lines), not the
+        // raw label
+        let lines = aligned_label(label, Align::Left);
+        col_width[c] = col_width[c].max(max_line_width(&lines) + 5 + extra);
     }
     col_width[c] = col_width[c].max(edge_gap_width(&edge_style[ei]) + extra);
 }

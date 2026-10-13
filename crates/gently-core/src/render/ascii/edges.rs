@@ -10,7 +10,8 @@
 //! (pod-bidir*.observed, pod-label-attr.observed).
 
 use super::canvas::{centered, Canvas};
-use super::styles::{self, edge_fill, edge_run_at};
+use super::labels::{Align, LabelLine};
+use super::styles::{self, byte_width, edge_fill, edge_run_at};
 
 /// The run mirrored for a westward edge: reversed, head flipped.
 fn mirror_run(run: &str) -> String {
@@ -26,7 +27,7 @@ fn mirror_run(run: &str) -> String {
 /// undirected run — the oracle draws none, gently-bpq), with the label
 /// centered on the box-top row (oracle bytes). A bidirectional edge
 /// (gently-7qz) renders the BD run ` <fill> ` — both arrowheads, one
-/// column wider — with the label centered in [2, w-3) of the widened cell
+/// column wider — with the label in [2, w-3) of the widened cell
 /// (upstream _insert_label's field).
 pub(super) fn draw_straight(
     canvas: &mut Canvas,
@@ -34,61 +35,69 @@ pub(super) fn draw_straight(
     c: usize,
     westward: bool,
     edge_index: usize,
-    label: Option<String>,
+    lines: &[LabelLine],
 ) {
     let style = canvas.edge_style[edge_index].clone();
     let width = canvas.col_width[c];
     let arrowed = canvas.edge_arrow_end[edge_index];
-    let run = if canvas.edge_bidir[edge_index] {
-        if let Some(label) = &label {
-            canvas.stamp(
-                canvas.band_top(sr),
-                c,
-                &format!("  {}", centered(label, width - 5)),
-            );
-        }
+    let bidir = canvas.edge_bidir[edge_index];
+    let run = if bidir {
         styles::bd_run_at(&style, width, canvas.offsets[c])
+    } else if lines.is_empty() {
+        edge_run_at(&style, arrowed, width, canvas.offsets[c])
     } else {
-        plain_straight_run(canvas, sr, c, &style, width, arrowed, label.as_deref())
+        labelled_straight_run(&style, width, arrowed)
     };
-    let run = if westward && !canvas.edge_bidir[edge_index] {
+    let run = if westward && !bidir {
         mirror_run(&run)
     } else {
         run
     };
-    canvas.stamp(canvas.band_top(sr) + 1, c, &centered(&run, width));
+    canvas.stamp(canvas.band_top(sr) + canvas.row_height[sr] - 2, c, &centered(&run, width));
+    stamp_label(canvas, sr, c, westward, lines);
 }
 
-/// The plain (non-bidirectional) straight run of one edge: the style's
-/// minimum run (arrowed or not), or — when the edge carries a label — the
-/// fill pattern widened to the gap, with a `>` head only when the target
-/// end carries an arrowhead (gently-bpq: the oracle draws no head on an
-/// undirected labeled run). The label stamps centered on the box-top row
-/// (oracle bytes).
-fn plain_straight_run(
-    canvas: &mut Canvas,
-    sr: usize,
-    c: usize,
-    style: &str,
-    width: usize,
-    arrowed: bool,
-    label: Option<&str>,
-) -> String {
-    match label {
-        Some(label) => {
-            let run_len = width - 2;
-            let fill = edge_fill(style);
-            let chars: Vec<char> = fill.chars().collect();
-            let head = if arrowed { 1 } else { 0 };
-            let mut s: String = (0..run_len - head)
-                .map(|i| chars[i % chars.len()])
-                .collect();
-            if head == 1 {
-                s.push('>');
-            }
-            canvas.stamp(canvas.band_top(sr), c, &centered(label, width));
-            s
-        }
-        None => edge_run_at(style, arrowed, width, canvas.offsets[c]),
+
+/// Place a straight edge's aligned label lines in its gap column
+/// (gently-527/gently-y7i): the field starts at byte offset 2 (upstream
+/// `_draw_hor`'s `xs = 2`), is `width-5` bytes wide eastward (`ws =
+/// xs + xr = 3`, the east arrowhead reserving the last byte) and
+/// `width-4` westward (`ws = 2`, the west head reserving byte 1), and
+/// the rows sit bottom-aligned in the band's `H-2` field lines
+/// (upstream `align_ver => 'bottom'`) — a single line rides the band's
+/// top row, two lines ride the top two rows. Widths count UTF-8 bytes
+/// (gently-bvb).
+fn stamp_label(canvas: &mut Canvas, sr: usize, c: usize, westward: bool, lines: &[LabelLine]) {
+    if lines.is_empty() {
+        return;
     }
+    let field_w = canvas.col_width[c] - 5 + usize::from(westward);
+    let start = canvas.band_top(sr) + canvas.row_height[sr].saturating_sub(2 + lines.len());
+    for (i, line) in lines.iter().enumerate() {
+        let len = byte_width(&line.text);
+        let x = 2
+            + match line.align {
+                Align::Left => 0,
+                Align::Center => (field_w.saturating_sub(len)) / 2,
+                Align::Right => field_w.saturating_sub(len),
+            };
+        canvas.stamp_at(start + i, canvas.offsets[c] + x, &line.text);
+    }
+}
+
+/// The labelled straight run: the style's fill pattern widened to the
+/// gap, with a `>` head only when the target end carries an arrowhead
+/// (gently-bpq: the oracle draws no head on an undirected labeled run).
+fn labelled_straight_run(style: &str, width: usize, arrowed: bool) -> String {
+    let run_len = width - 2;
+    let fill = edge_fill(style);
+    let chars: Vec<char> = fill.chars().collect();
+    let head = usize::from(arrowed);
+    let mut s: String = (0..run_len - head)
+        .map(|i| chars[i % chars.len()])
+        .collect();
+    if head == 1 {
+        s.push('>');
+    }
+    s
 }
