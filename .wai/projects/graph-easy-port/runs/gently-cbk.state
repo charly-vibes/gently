@@ -11,3 +11,4 @@ spawn (c701b76)
 verify (5f35aaf)
 ship (5f35aaf)
 stop (5f35aaf) — run complete; cbk handoff: next run re-authors scenario from bg-edge-node.observed, implements Edge::Cell node placement + renderer shape class
+claim-continuation (b206bdb)
