@@ -1,5 +1,5 @@
 //! Purpose: the placement phase of the deterministic grid layout
-//! (gently-0of) — one insertion-order pass over the edges that assigns
+//! (gently-0of) — one chain-order pass over the edges that assigns
 //! every node a `(column-rank, band)` slot and classifies every edge's
 //! travel.
 //! Responsibilities: extend east on the source's band else attach below;
@@ -12,6 +12,7 @@
 
 use std::collections::HashMap;
 
+use super::chains::chain_order;
 use super::{Placement, Route};
 use crate::graph::Graph;
 
@@ -102,7 +103,7 @@ fn classify(graph: &Graph, cell: &[Option<(usize, usize)>]) -> Vec<Route> {
         .collect()
 }
 
-/// Place every node: one insertion-order pass over the edges, then the
+/// Place every node: one chain-order pass over the edges, then the
 /// isolated nodes. `None` for the empty graph.
 pub(super) fn place(graph: &Graph) -> Option<Placement> {
     let n = graph.nodes.len();
@@ -119,7 +120,8 @@ pub(super) fn place(graph: &Graph) -> Option<Placement> {
         }
         placer.next_band = 1;
     } else {
-        for (ei, e) in graph.edges.iter().enumerate() {
+        for ei in chain_order(graph) {
+            let e = &graph.edges[ei];
             if e.from == e.to {
                 placer.place_selfloop(ei, e.from);
             } else {

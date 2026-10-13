@@ -34,19 +34,58 @@ fn edge_node_graph() -> gently_core::graph::Graph {
     .expect("edge-node graph must parse")
 }
 
-/// ge.ascii_render.p2 (gently-cbk, RED state): the current renderer typed
-/// error — the edge-node's cell merges into the edge path and the path
-/// skips a row, so the orthogonality check rejects it. This test pins the
-/// error's existence and shape so the GREEN run must REPLACE it with the
-/// oracle render (fix the geometry, never suppress the error).
+/// ge.ascii_render.p2 (gently-cbk, RED state amended by gently-pua): the
+/// ranking fix (gently-pua) removed the orthogonality geometry error —
+/// the layout now ranks the box chain inline (Bonn west, Ulm east of the
+/// edge cell on one row) and the buy leaf one band below, so the render
+/// completes. The bytes still diverge from the oracle (the Edge::Cell
+/// render — dash continuation through the cell, label above, flag
+/// stripping — stays cbk's GREEN target), so this pin asserts the render
+/// succeeds and the placement-level ranks match the oracle dump, while
+/// the byte-identical render remains RED.
 #[test]
-fn p2_edge_node_currently_errors_on_path_orthogonality() {
+fn p2_edge_node_renders_after_ranking_fix_but_bytes_diverge() {
     let g = edge_node_graph();
-    let err = ascii::render(&g, &layout::layout(&g))
-        .expect_err("shape:edge nodes are not implemented yet — RED state");
-    assert!(
-        err.to_string().contains("not orthogonally adjacent"),
-        "the RED-state error must stay the orthogonality geometry error, got: {err}"
+    let l = layout::layout(&g);
+    let art = ascii::render(&g, &l).expect("the ranked layout must render — no geometry error");
+    assert_ne!(
+        art,
+        concat!(
+            "          rent    car          +-----+\n",
+            "         ------> ------------> | Hof |\n",
+            "                               +-----+\n",
+            "\n",
+            "                 ----------------+\n",
+            "                                 |\n",
+            "+------+          train        +-----+\n",
+            "| Bonn | --------------------> | Ulm |\n",
+            "+------+                       +-----+\n",
+            "                   ^\n",
+            "                   | buy\n",
+            "                   |\n",
+        ),
+        "cbk GREEN replaces this pin with the oracle bytes"
+    );
+    // placement truth (gently-pua's oracle re-derivation): the chain
+    // Bonn–train–Ulm inline, the buy leaf one band below train.
+    let by_name: Vec<(String, (usize, usize))> = g
+        .nodes()
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| !n.name.starts_with('#'))
+        .map(|(i, n)| (n.name.clone(), l.node_cells[i]))
+        .collect();
+    // the ge_layout oracle pin asserts in name order
+    let by_name = { let mut v = by_name; v.sort(); v };
+    assert_eq!(
+        by_name,
+        vec![
+            ("Bonn".to_string(), (0, 2)),
+            ("Hof".to_string(), (4, 0)),
+            ("Ulm".to_string(), (4, 2)),
+            ("car".to_string(), (2, 0)),
+            ("train".to_string(), (2, 2)),
+        ]
     );
 }
 

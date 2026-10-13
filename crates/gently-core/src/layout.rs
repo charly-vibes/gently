@@ -2,7 +2,7 @@
 //! corpus (gently-0of) — chain rows, below-attachments, parallel bends,
 //! selfloops, and multi-band routes.
 //! Responsibilities: place every node on a `(column-rank, band)` slot in
-//! one insertion-order pass over the edges (extend east on the source's
+//! one chain-order pass over the edges (extend east on the source's
 //! band, else attach below; attach an unplaced endpoint to a placed one
 //! west-then-east; a fresh chain starts its own band; edgeless graphs line
 //! up on band 0), insert 3-line gap rows exactly where edges route
@@ -16,6 +16,7 @@
 //! c2 (no node-cell overlap, grid containment) hold; the full property
 //! contracts stay with gently-4nx (ge.layout pN).
 
+mod chains;
 mod flow;
 mod placement;
 
