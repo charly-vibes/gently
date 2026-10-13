@@ -11,10 +11,10 @@
 //! (tests/repro/claims/ascii-render-tables.observed — gently-0cq).
 
 use super::polyline;
-use super::styles::{self, border, display_width, edge_fill, edge_gap_width, edge_run_at, h_run, shape, Shape};
+use super::styles::{self, border, display_width, edge_gap_width, h_run, shape, Shape};
 use super::RenderError;
 use crate::graph::{Graph, ObjectKind, Scope};
-use crate::layout::Layout;
+use crate::layout::{Cell, Layout};
 
 /// Width in chars of a gap (edge-routing) grid column.
 pub(super) const GAP_WIDTH: usize = 5;
@@ -30,13 +30,15 @@ pub(super) struct Canvas {
     /// Start char offset of each grid column (`offsets[c]`; length width+1).
     pub(super) offsets: Vec<usize>,
     /// Char width of each grid column.
-    col_width: Vec<usize>,
+    pub(super) col_width: Vec<usize>,
     /// Resolved render data per node, in model order.
     node_style: Vec<(String, Shape)>,
     /// Resolved edge style per edge, in model order.
-    edge_style: Vec<String>,
+    pub(super) edge_style: Vec<String>,
     /// Target-side arrowhead presence per edge, in model order.
-    edge_arrow_end: Vec<bool>,
+    pub(super) edge_arrow_end: Vec<bool>,
+    /// Bidirectionality (arrowheads at BOTH ends) per edge, in model order.
+    pub(super) edge_bidir: Vec<bool>,
 }
 
 /// The point node's label row: blank sides with a centered `*`.
@@ -52,18 +54,10 @@ fn blank_corners(b: styles::Border) -> styles::Border {
 }
 
 /// `text` centered in a span of `width` chars.
-fn centered(text: &str, width: usize) -> String {
+pub(super) fn centered(text: &str, width: usize) -> String {
     let len = display_width(text);
     let left = (width - len) / 2;
     format!("{}{}{}", " ".repeat(left), text, " ".repeat(width - len - left))
-}
-
-/// The run mirrored for a westward edge: reversed, head flipped.
-fn mirror_run(run: &str) -> String {
-    run.chars()
-        .rev()
-        .map(|c| if c == '>' { '<' } else { c })
-        .collect()
 }
 
 /// Box width of a node: display width of the label (double-width glyphs
@@ -148,15 +142,7 @@ fn column_geometry(
     }
     for (ei, path) in layout.edge_paths.iter().enumerate() {
         if path.len() == 1 {
-            if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
-                let c = path[0].0;
-                col_width[c] = col_width[c].max(display_width(label) + 5);
-            }
-            // The style's minimum gap width (gently-oy2: upstream
-            // `_correct_size` widens the cell for dot-dot-dash — the
-            // ` ..-> ` gap; the other styles keep the 5-column floor).
-            let c = path[0].0;
-            col_width[c] = col_width[c].max(edge_gap_width(&edge_style[ei]));
+            widen_edge_column(graph, layout, edge_style, &mut col_width, ei, path);
         }
     }
     let mut offsets = vec![0usize; layout.width + 1];
@@ -164,6 +150,33 @@ fn column_geometry(
         offsets[c + 1] = offsets[c] + col_width[c];
     }
     (col_width, offsets)
+}
+
+/// Widen the gap column of one straight single-gap edge (gently-7qz): the
+/// label's width plus the 5-char label padding, the style's minimum gap
+/// width (gently-oy2: upstream `_correct_size` widens the cell for
+/// dot-dot-dash — the ` ..-> ` gap; the other styles keep the 5-column
+/// floor), and the BD short-cell's +1 (upstream `_correct_size` w++ for a
+/// bidirectional EDGE_HOR cell with arrows — the ` <--> ` gap), the last
+/// only for the horizontal straight edge through the gap column.
+fn widen_edge_column(
+    graph: &Graph,
+    layout: &Layout,
+    edge_style: &[String],
+    col_width: &mut [usize],
+    ei: usize,
+    path: &[Cell],
+) {
+    let c = path[0].0;
+    let e = &graph.edges[ei];
+    let bd_hor = e.arrows.start
+        && e.arrows.end
+        && layout.node_cells[e.from].1 == layout.node_cells[e.to].1;
+    let extra = if bd_hor { 1 } else { 0 };
+    if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
+        col_width[c] = col_width[c].max(display_width(label) + 5 + extra);
+    }
+    col_width[c] = col_width[c].max(edge_gap_width(&edge_style[ei]) + extra);
 }
 
 impl Canvas {
@@ -180,6 +193,7 @@ impl Canvas {
         let total_width = offsets[layout.width];
         let grid = vec![vec![' '; total_width]; layout.height * BAND_HEIGHT];
         let edge_arrow_end: Vec<bool> = graph.edges.iter().map(|e| e.arrows.end).collect();
+        let edge_bidir: Vec<bool> = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
         Canvas {
             grid,
             offsets,
@@ -187,6 +201,7 @@ impl Canvas {
             node_style,
             edge_style,
             edge_arrow_end,
+            edge_bidir,
         }
     }
 
@@ -236,44 +251,7 @@ impl Canvas {
         self.stamp(top_line + 1, cx, &mid);
     }
 
-    /// Stamp the straight run of one edge: the style run centered in the
-    /// gap column, mirrored when the target lies west; a labelled run is
-    /// the style's fill pattern widened to the gap plus a `>` head, with
-    /// the label centered on the box-top row (oracle bytes).
-    fn draw_straight(
-        &mut self,
-        sr: usize,
-        c: usize,
-        westward: bool,
-        edge_index: usize,
-        label: Option<String>,
-    ) {
-        let style = self.edge_style[edge_index].clone();
-        let width = self.col_width[c];
-        let arrowed = self.arrowed(edge_index);
-        let run = match label {
-            Some(label) => {
-                let run_len = width - 2;
-                let fill = edge_fill(&style);
-                let chars: Vec<char> = fill.chars().collect();
-                let mut s: String = (0..run_len - 1)
-                    .map(|i| chars[i % chars.len()])
-                    .collect();
-                s.push('>');
-                self.stamp(sr * BAND_HEIGHT, c, &centered(&label, width));
-                s
-            }
-            None => edge_run_at(&style, arrowed, width, self.offsets[c]),
-        };
-        let run = if westward { mirror_run(&run) } else { run };
-        self.stamp(sr * BAND_HEIGHT + 1, c, &centered(&run, width));
-    }
-
-    /// Whether the edge's far (target-side) end carries an arrowhead.
-    fn arrowed(&self, edge_index: usize) -> bool {
-        self.edge_arrow_end[edge_index]
-    }
-
+    /// Stamp the straight run of one edge (see `edges::draw_straight`).
     /// Draw one edge: selfloop elbow, straight gap arrow, or polyline.
     pub(super) fn draw_edge(
         &mut self,
@@ -297,11 +275,11 @@ impl Canvas {
             // ` ----> ` under `  go  `).
             let label = object_attr(graph, Scope::Edge(edge_index), ObjectKind::Edge, "label")
                 .map(str::to_string);
-            self.draw_straight(sr, path[0].0, tc < sc, edge_index, label);
+            super::edges::draw_straight(self, sr, path[0].0, tc < sc, edge_index, label);
             return Ok(());
         }
 
-        polyline::draw(self, layout, edge_index, sc, sr, tc, tr)
+        polyline::draw(self, layout, edge_index, (sc, sr), (tc, tr), edge.arrows.start)
     }
 
     /// Draw a selfloop: a small elbow over the box, departing through the
@@ -332,7 +310,7 @@ impl Canvas {
     }
 
     /// Write `text` starting at grid column `cx`'s char offset on `line`.
-    fn stamp(&mut self, line: usize, cx: usize, text: &str) {
+    pub(super) fn stamp(&mut self, line: usize, cx: usize, text: &str) {
         let x0 = self.offsets[cx];
         for (k, ch) in text.chars().enumerate() {
             self.grid[line][x0 + k] = ch;

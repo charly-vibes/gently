@@ -11,6 +11,7 @@
 //! the probed tables (tests/repro/claims/ascii-render-tables.observed).
 
 mod canvas;
+mod edges;
 mod polyline;
 mod styles;
 

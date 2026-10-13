@@ -35,15 +35,18 @@ struct Ctx<'a> {
 }
 
 /// Draw one bent or multi-band edge as a char polyline through its routed
-/// path cells.
+/// path cells. `start_arrow` requests the source-side arrowhead (the edge
+/// starts with an arrow — the `<` of `<-->`): the glyph points INTO the
+/// source box, mirroring the entry rule at the target (gently-7qz, pinned
+/// by tests/repro/claims/pod-bidir-parallel.observed — the bent
+/// bidirectional edge draws `v` at the source's north attachment).
 pub(super) fn draw(
     canvas: &mut Canvas,
     layout: &Layout,
     edge_index: usize,
-    sc: usize,
-    sr: usize,
-    tc: usize,
-    tr: usize,
+    (sc, sr): Cell,
+    (tc, tr): Cell,
+    start_arrow: bool,
 ) -> Result<(), RenderError> {
     let ctx = Ctx {
         path: &layout.edge_paths[edge_index],
@@ -62,8 +65,25 @@ pub(super) fn draw(
     let a0 = exit_attachment(canvas, exit, sc, sr, edge_index)?;
     let a_end = entry_attachment(canvas, entry, tc, tr, edge_index)?;
     let waypoints = waypoints(canvas, &ctx, exit, entry, a0, a_end)?;
-    draw_runs(canvas, &waypoints, a0, a_end, arrow);
+    // The start arrowhead points into the source box — opposite the exit
+    // travel direction, the same glyph an end arrowhead arriving through
+    // that side would carry.
+    let start = if start_arrow { Some(start_glyph(exit)) } else { None };
+    draw_runs(canvas, &waypoints, a0, a_end, arrow, start);
     Ok(())
+}
+
+/// The start arrowhead glyph for an edge leaving its source box through
+/// `dir`: the arrow points INTO the box (gently-7qz, pinned by
+/// tests/repro/claims/pod-bidir-parallel.observed — the bent bidirectional
+/// edge leaves north and draws `v` at the source's north attachment).
+fn start_glyph(exit: Dir) -> char {
+    match exit {
+        Dir::East => '<',
+        Dir::West => '>',
+        Dir::North => 'v',
+        Dir::South => '^',
+    }
 }
 
 /// How the path leaves the source box, judged from the first path cell's
@@ -223,9 +243,10 @@ fn push_corner(
     Ok(())
 }
 
-/// Draw the runs between consecutive waypoints, then the corners, then the
-/// arrowhead at the final approach.
-fn draw_runs(canvas: &mut Canvas, wps: &[Pt], a0: Pt, a_end: Pt, arrow: char) {
+/// Draw the runs between consecutive waypoints, then the corners, then
+/// the arrowhead at the final approach — and the start arrowhead at the
+/// source attachment when the edge carries one (gently-7qz).
+fn draw_runs(canvas: &mut Canvas, wps: &[Pt], a0: Pt, a_end: Pt, arrow: char, start: Option<char>) {
     for w in wps.windows(2) {
         draw_run(canvas, w[0], w[1], a0, a_end);
     }
@@ -233,6 +254,9 @@ fn draw_runs(canvas: &mut Canvas, wps: &[Pt], a0: Pt, a_end: Pt, arrow: char) {
         canvas.grid[corner.1][corner.0] = '+';
     }
     canvas.grid[a_end.1][a_end.0] = arrow;
+    if let Some(s) = start {
+        canvas.grid[a0.1][a0.0] = s;
+    }
 }
 
 /// One run between two waypoints: dashes on a shared line (padded where it

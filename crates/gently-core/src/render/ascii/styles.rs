@@ -119,6 +119,32 @@ pub(super) fn edge_run_at(style: &str, arrowed: bool, w: usize, rx: usize) -> St
     line
 }
 
+/// The straight short-edge run of a BIDIRECTIONAL edge over a gap cell of
+/// width `w` whose left edge sits at absolute column `rx` — the upstream
+/// `_draw_hor` rule for an EDGE_SHORT_BD_EW cell (gently-7qz, pinned by
+/// tests/repro/claims/pod-bidir.observed and pod-bidir-label-straight
+/// .observed): the undirected ofs shift applies (the BD type is neither
+/// EDGE_SHORT_E nor EDGE_SHORT_W), then END_E chops the last char and
+/// replaces the new last char with `>`, and END_W replaces the first two
+/// chars with ` <` — the run is `w-1` chars drawn at cell-x 0: ` <` + fill
+/// plus a closing `>`. Upstream `_correct_size` widens the BD cell by one
+/// column (column_geometry applies that; both arrowheads point outward).
+pub(super) fn bd_run_at(style: &str, w: usize, rx: usize) -> String {
+    let pat = edge_pattern(style);
+    let len = pat.len();
+    let mut line = pat.repeat(2 + w / len);
+    let ofs = rx % len;
+    if ofs != 0 {
+        line.replace_range(..ofs, "");
+    }
+    line.truncate(w);
+    line.pop(); // END_E chop
+    line.pop(); // END_E: the char the head takes over
+    line.push('>');
+    line.replace_range(..2, " <"); // END_W: substr(0,2) = ' <'
+    line
+}
+
 /// The minimum straight-edge gap width of a style: upstream's default 5
 /// cell columns, widened by one for dot-dot-dash (`_correct_size`'s
 /// `w++ if $style eq 'dot-dot-dash'` — the ` ..-> ` gap; probed).
