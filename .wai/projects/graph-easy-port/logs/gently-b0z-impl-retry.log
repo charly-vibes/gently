@@ -1,0 +1,29 @@
+# Report — gently-b0z (+ bonus gently-7rx) complete, pushed
+
+## Commits (all on `origin/main`, working tree clean)
+
+| sha | one-line |
+|---|---|
+| `26f32fb` | test(ascii_render): pin anon-node boxless bytes and the group dashed frame (gently-b0z, gently-7rx) |
+| `f83ab88` | feat(ascii_render): anonymous nodes render boxless; node groups get the dashed border frame |
+| `083a520` | docs(spec): re-derive ge-ascii_render c7/c8 (openspec mirror + specodelic artifacts + contracts in the SAME commit) |
+
+## What was derived (oracle-probed, not guessed)
+
+- **c7 / anon nodes** — upstream `Node::Anon` class carries `borderstyle: none` + label `' '` (`_correct_size` fixes 3×3), so the cell renders blank; detection = empty-name (model API) or parser-generated `#N` (upstream's parser rejects literal `#` names). Bytes pinned from `pod-anon-nodes.observed`.
+- **c8 / group frame** — dashed-style border glyphs (`+` corners, `'` sides, shifted `- ` run) overlaid around the member bounding box (1 char/row padding, 3-row title band above, blank+border below); the **title is the group's stored name verbatim** (probed: upstream's parser keeps the `Cities:` colon in `$grp->{name}`), and the title cell widens the leftmost member's column by `title+2`, re-centering its label (verified byte-identical against 4 extra oracle probes: single member, stacked members, `Cities:`/`Verylonggroupname:` titles).
+- Renderer-side overlay (no layout changes — layout stayed in scope-guard); frame-crossing edges and disconnected-member groups recorded in the spec as unpinned divergences.
+
+## Gates (all exit 0)
+
+`cargo test -p gently-core` (157 passed) · `cargo clippy --workspace --all-targets -D warnings` · `ah check --run-tests` (74 passed) · `just gates` · `just examples-verify` · `just oracle-verify` · `spk lint openspec` · `git status` clean (only `.wai` session files) · `git log origin/main..HEAD` empty · pretender ratchet green (canvas.rs split: 253 lines; new `geometry.rs`/`groups.rs`)
+
+## Tickets
+
+- `bd close gently-b0z` ✓ · `bd close gently-7rx` ✓ (bonus, verified against its evidence) · `bd export` ✓ (`.beads/` is gitignored here, so the export stays local)
+
+## Deviations
+
+- `ah sync` (v0.11.0) refused to author contracts (single-file `total_refs` refusals even though `spk lint` is clean corpus-wide) — authored `p7.toml`/`p8.toml` by hand per the m4i pattern instead (brief's allowed-exception).
+- Skipped a `bg-anon-chain` scenario: its layout geometry isn't safely reproducible from gently's groupless layout; the pinned POD bytes carry the rule.
+- Edgeless-anon output (3 blank lines vs oracle's empty string) noted in c8's divergence wording, unpinned, no scenario.
