@@ -57,3 +57,36 @@ fn p2_minlen_stretches_the_straight_gap_one_column() {
     );
 }
 
+/// ge.ascii_render.p2 (gently-jrr): the shared-middle bypass — for
+/// Bonn -> Koblenz -> {skip} Frankfurt -> Dresden plus Koblenz -> Trier
+/// -> Frankfurt, the oracle ranks Trier INLINE on the row (Bonn,
+/// Koblenz, Trier, Frankfurt, Dresden) and routes the skip-edge over
+/// the top; gently used to attach Trier below on a fresh band. The
+/// oracle render is byte-identical WITHOUT `minlen: 3` (re-derived by
+/// the gently-klf run: minlen is incidental — the divergence is the
+/// longest-path ranking of the east placement pass). Expected bytes:
+/// tests/repro/claims/bg-minlen-bypass.observed (seed 0, hash-stable).
+#[test]
+fn p2_shared_middle_bypass_ranks_the_middle_inline() {
+    let g = text::parse(concat!(
+        "[ Bonn ] --> [ Koblenz ]\n",
+        "[ Koblenz ] --> { minlen: 3; } [ Frankfurt ]\n",
+        "[ Koblenz ] --> [ Trier ]\n",
+        "[ Frankfurt ] --> [ Dresden ]\n",
+        "[ Trier ] --> [ Frankfurt ]\n",
+    ))
+    .expect("bypass graph must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).expect("bypass graph must render");
+    assert_eq!(
+        art,
+        concat!(
+            "\n",
+            "               +-----------------------------+\n",
+            "               |                             v\n",
+            "+------+     +---------+     +-------+     +-----------+     +---------+\n",
+            "| Bonn | --> | Koblenz | --> | Trier | --> | Frankfurt | --> | Dresden |\n",
+            "+------+     +---------+     +-------+     +-----------+     +---------+\n",
+        ),
+        "the shared-middle bypass ranks its middle node inline and bends the skip-edge over the band"
+    );
+}
