@@ -8,7 +8,9 @@
 //! Rationale: split from canvas.rs past the tidy file limit (gently-b0z).
 
 use super::canvas::GAP_WIDTH;
-use super::labels::{aligned_label, default_align, max_line_width, Align, LabelLine};
+use super::labels::{
+    default_align, max_line_width, object_label_lines, Align, LabelLine,
+};
 use super::styles::{edge_gap_width, shape, Shape};
 use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::{Cell, Layout};
@@ -28,8 +30,14 @@ pub(super) fn label_lines(
 ) -> (Vec<Vec<LabelLine>>, Vec<Option<Vec<LabelLine>>>) {
     let node_lines: Vec<Vec<LabelLine>> = (0..graph.nodes.len())
         .map(|i| {
-            let label = node_label(graph, i).to_string();
-            aligned_label(&label, default_align(graph, Scope::Node(i), ObjectKind::Node))
+            let label = node_label(graph, i);
+            object_label_lines(
+                graph,
+                Scope::Node(i),
+                ObjectKind::Node,
+                label,
+                default_align(graph, Scope::Node(i), ObjectKind::Node),
+            )
         })
         .collect();
     let edge_lines: Vec<Option<Vec<LabelLine>>> = (0..graph.edges.len())
@@ -81,7 +89,10 @@ fn straight_label_lines(graph: &Graph, layout: &Layout, ei: usize) -> Option<Vec
         return None;
     }
     let label = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label")?;
-    Some(aligned_label(
+    Some(object_label_lines(
+        graph,
+        Scope::Edge(ei),
+        ObjectKind::Edge,
         label,
         default_align(graph, Scope::Edge(ei), ObjectKind::Edge),
     ))
@@ -117,15 +128,16 @@ pub(super) fn node_label(graph: &Graph, idx: usize) -> &str {
     }
 }
 
-/// Box width of a node: the widest aligned-label line's UTF-8 byte
+/// Box width of a node: the widest resolved label line's UTF-8 byte
 /// width (ge.ascii_render.c5 re-derived, gently-bvb: upstream
-/// `dimensions()` byte-lengths the label — `[ Köln ]` is a 7-dash box)
+/// `dimensions()` byte-lengths the label — `[ Köln ]` is a 7-dash box;
+/// gently-emd: the lines are the WRAPPED ones when textwrap is set)
 /// plus two border chars per side — or one per side for a `none`
 /// border — widened for selfloop nodes so the loop elbow fits above
 /// the box.
-fn box_width(name: &str, style: &str, selfloop: bool) -> usize {
+fn box_width(lines: &[LabelLine], style: &str, selfloop: bool) -> usize {
     let pad = if style == "none" { 1 } else { 2 };
-    let w = max_line_width(&aligned_label(name, Align::Center)) + 2 * pad;
+    let w = max_line_width(lines) + 2 * pad;
     if selfloop {
         w.max(SELFLOOP_MIN_WIDTH)
     } else {
@@ -189,12 +201,13 @@ pub(super) fn column_geometry(
     node_style: &[(String, Shape)],
     selfloop_node: &[bool],
     edge_style: &[String],
+    node_lines: &[Vec<LabelLine>],
 ) -> Vec<usize> {
     let mut node_width = vec![0usize; layout.width];
     let mut node_col = vec![false; layout.width];
     for (idx, &(cx, _)) in layout.node_cells.iter().enumerate() {
         let (style, _) = &node_style[idx];
-        let mut w = box_width(node_label(graph, idx), style, selfloop_node[idx]);
+        let mut w = box_width(&node_lines[idx], style, selfloop_node[idx]);
         // an anonymous node's cell is upstream-FIXED at 3×3
         // (`Node::Anon::_correct_size`), independent of its blank label
         if is_anon(&graph.nodes[idx].name) {
@@ -265,12 +278,23 @@ fn widen_edge_column(
         }
     }
     if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
-        // the label cell's width is its widest LINE (gently-527: upstream
-        // `dimensions()` measures the aligned label's lines), not the
-        // raw label
-        let lines = aligned_label(label, Align::Left);
-        col_width[c] = col_width[c].max(max_line_width(&lines) + 5 + extra);
+        col_width[c] = col_width[c].max(label_cell_width(graph, ei, label) + extra);
     }
     col_width[c] = col_width[c].max(edge_gap_width(&edge_style[ei]) + extra);
+}
+
+/// The width a straight edge's label demands of its gap column: the
+/// widest resolved LINE (gently-527: upstream `dimensions()` measures
+/// the aligned label's lines, gently-emd: the WRAPPED ones when
+/// textwrap is set) plus the 5-char label padding.
+fn label_cell_width(graph: &Graph, ei: usize, label: &str) -> usize {
+    let lines = object_label_lines(
+        graph,
+        Scope::Edge(ei),
+        ObjectKind::Edge,
+        label,
+        Align::Left,
+    );
+    max_line_width(&lines) + 5
 }
 

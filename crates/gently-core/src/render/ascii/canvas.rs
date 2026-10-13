@@ -127,6 +127,35 @@ fn shifted_grid(
     (grid, offsets)
 }
 
+/// The group-frame margins (c8), the blank byte grid padded by them,
+/// the offsets shifted by the left margin, and the last drawable line.
+#[allow(clippy::type_complexity)]
+fn frame_grid(
+    graph: &Graph,
+    layout: &Layout,
+    col_width: &[usize],
+    offsets: &[usize],
+    band_tops: &[usize],
+    row_height: &[usize],
+) -> (Vec<Vec<u8>>, Vec<usize>, Vec<Frame>, usize, usize, usize) {
+    let (frames, margins) =
+        groups::frame_margins(graph, layout, col_width, offsets, band_tops, row_height);
+    let (ml, mt, mr, mb) = margins;
+    let total_lines = band_tops[layout.height];
+    let (grid, offsets) =
+        shifted_grid(offsets.to_vec(), layout.width, ml, mr, mt, mb, total_lines);
+    let last_band_floor = last_band_floor(layout, row_height, band_tops, grid.len(), mt);
+    (grid, offsets, frames, ml, mt, last_band_floor)
+}
+
+/// Target-side arrowhead presence and bidirectionality per edge, in
+/// model order.
+fn edge_arrow_flags(graph: &Graph) -> (Vec<bool>, Vec<bool>) {
+    let end = graph.edges.iter().map(|e| e.arrows.end).collect();
+    let bidir = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
+    (end, bidir)
+}
+
 impl Canvas {
     /// Build the blank grid: column widths per the byte-grid mapping
     /// (widened for labelled straight edges, whose gap hosts the label
@@ -137,24 +166,19 @@ impl Canvas {
         let selfloop_node = selfloops(graph);
         let node_style = node_styles(graph);
         let edge_style = edge_styles(graph);
-        let col_width = column_geometry(graph, layout, &node_style, &selfloop_node, &edge_style);
-        let offsets = column_offsets(&col_width);
+        // label lines resolve FIRST (gently-emd: the wrapped lines drive
+        // the box widths), then the column geometry consumes them
         let (node_lines, edge_lines) = label_lines(graph, layout);
+        let col_width =
+            column_geometry(graph, layout, &node_style, &selfloop_node, &edge_style, &node_lines);
+        let offsets = column_offsets(&col_width);
         // Row band heights + their unshifted start lines: every cell is
         // grown to the tallest cell of its row (upstream
         // `_prepare_layout` rewrites each cell's h to the row height).
         let (row_height, band_tops) = band_layout(graph, layout, &node_lines, &edge_lines);
-        // group frames demand canvas margins (c8)
-        let (frames, margins) = groups::frame_margins(
-            graph, layout, &col_width, &offsets, &band_tops, &row_height,
-        );
-        let (ml, mt, mr, mb) = margins;
-        let total_lines = band_tops[layout.height];
-        let (grid, offsets) =
-            shifted_grid(offsets, layout.width, ml, mr, mt, mb, total_lines);
-        let last_band_floor = last_band_floor(layout, &row_height, &band_tops, grid.len(), mt);
-        let edge_arrow_end: Vec<bool> = graph.edges.iter().map(|e| e.arrows.end).collect();
-        let edge_bidir: Vec<bool> = graph.edges.iter().map(|e| e.arrows.start && e.arrows.end).collect();
+        let (grid, offsets, frames, ml, mt, last_band_floor) =
+            frame_grid(graph, layout, &col_width, &offsets, &band_tops, &row_height);
+        let (edge_arrow_end, edge_bidir) = edge_arrow_flags(graph);
         Canvas {
             grid,
             row_height,

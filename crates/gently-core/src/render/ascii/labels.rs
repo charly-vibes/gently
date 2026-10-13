@@ -10,9 +10,12 @@
 //! Rationale: upstream splits labels once, in `_aligned_label`, and both
 //! node cells (`_draw_label`) and edge label cells (`_insert_label`)
 //! place the resulting (line, alignment) rows through `_printfb_aligned`
-//! — gently mirrors that shape so the two surfaces can't diverge. Text
-//! WRAPPING (`textwrap: auto`/width, upstream `_wrapped_label`) is NOT
-//! here — that is gently-emd's surface and stays out of this slice.
+//! — gently mirrors that shape so the two surfaces can't diverge. When a
+//! `textwrap` attribute is set (gently-emd), upstream `_aligned_label`
+//! dispatches to `_wrapped_label` instead: wrapping REPLACES the escape
+//! split (each `\n`/`\r`/`\l`/`\c` becomes a space, whitespace
+//! collapses, lines break at word boundaries), so both surfaces wrap
+//! through the same entry point here too.
 
 use super::styles::byte_width;
 use crate::graph::{Graph, ObjectKind, Scope};
@@ -107,6 +110,166 @@ pub(super) fn aligned_label(label: &str, default: Align) -> Vec<LabelLine> {
 fn finish(part: String) -> String {
     let unescaped = part.replace("\\|", "|").replace("\\\\", "\\");
     unescaped.trim().to_string()
+}
+
+/// The textwrap mode of an object (upstream Attributes.pm `textwrap`:
+/// object default `inherit`, graph default `none` — so the effective
+/// mode is the object's own attribute, else its class's, else the
+/// graph's). `auto` picks the width from the label's byte length; a
+/// number wraps after that many characters; anything else (the `none`
+/// default) leaves the escape-split surface alone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum TextWrap {
+    None,
+    Auto,
+    At(usize),
+}
+
+/// The effective textwrap mode of the object at `scope` (gently-emd):
+/// per-object attribute over class attribute over the graph attribute
+/// (upstream's `inherit` chain), falling back to `None`.
+pub(super) fn textwrap_of(graph: &Graph, scope: Scope, kind: ObjectKind) -> TextWrap {
+    let value = object_attr(graph, scope, kind, "textwrap")
+        .or_else(|| graph.get_attr(Scope::Graph, "textwrap"));
+    match value {
+        Some("auto") => TextWrap::Auto,
+        Some(v) if !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit()) => {
+            TextWrap::At(v.parse().unwrap_or(0))
+        }
+        _ => TextWrap::None,
+    }
+}
+
+/// The label lines of the object at `scope`: the escape split when its
+/// effective textwrap mode is `none` (the 527 surface), upstream
+/// `_wrapped_label` otherwise (gently-emd).
+pub(super) fn object_label_lines(
+    graph: &Graph,
+    scope: Scope,
+    kind: ObjectKind,
+    label: &str,
+    default: Align,
+) -> Vec<LabelLine> {
+    match textwrap_of(graph, scope, kind) {
+        TextWrap::None => aligned_label(label, default),
+        wrap => wrapped_label(label, default, wrap),
+    }
+}
+
+/// Upstream `Node::_wrapped_label` (gently-emd): wrapping REPLACES the
+/// escape split — every `\n`/`\r`/`\l`/`\c` becomes a space and
+/// whitespace collapses to single spaces — then the text wraps once a
+/// line reaches `wrap` columns, at the LAST space (dropped) or the last
+/// hyphen (kept on the line) whichever comes later; `auto` picks
+/// `int(sqrt(byte_length) * 1.4)`, floored at 2. A line with no break
+/// point never wraps (the overflow stays on one row, upstream's
+/// `last_space != 0 || last_hyphen != 0` guard), and every row carries
+/// the object's default alignment — the escapes' alignments are lost.
+pub(super) fn wrapped_label(label: &str, default: Align, wrap: TextWrap) -> Vec<LabelLine> {
+    let collapsed = collapse_spaces(flatten_escapes(label));
+    let lines = wrap_lines(&collapsed, wrap_width(collapsed.len(), wrap));
+    lines
+        .into_iter()
+        .map(|text| LabelLine { text, align: default })
+        .collect()
+}
+
+/// The wrap width of a mode (upstream `_wrapped_label`'s head): a
+/// number is taken literally, `auto` picks `int(sqrt(byte_length) *
+/// 1.4)`, and both are floored at 2.
+fn wrap_width(byte_len: usize, wrap: TextWrap) -> usize {
+    let w = match wrap {
+        TextWrap::At(n) => n,
+        TextWrap::Auto => ((byte_len as f64).sqrt() * 1.4).floor() as usize,
+        TextWrap::None => unreachable!("wrap_width is only called for a set mode"),
+    };
+    w.max(2)
+}
+
+/// Every `\n`/`\r`/`\l`/`\c` escape becomes a space; other escapes pass
+/// through (upstream `s/\\(n|r|l|c)/ /g`).
+fn flatten_escapes(label: &str) -> String {
+    let mut flattened = String::with_capacity(label.len());
+    let mut chars = label.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' && matches!(chars.peek(), Some('n' | 'r' | 'l' | 'c')) {
+            chars.next();
+            flattened.push(' ');
+        } else {
+            flattened.push(c);
+        }
+    }
+    flattened
+}
+
+/// Collapse whitespace runs to single spaces, no trimming (upstream
+/// `s/\s+/ /g`).
+fn collapse_spaces(text: String) -> String {
+    let mut collapsed = String::with_capacity(text.len());
+    let mut spaces = 0usize;
+    for c in text.chars() {
+        if c.is_whitespace() {
+            spaces += 1;
+            if spaces == 1 {
+                collapsed.push(' ');
+            }
+        } else {
+            spaces = 0;
+            collapsed.push(c);
+        }
+    }
+    collapsed
+}
+
+/// Wrap `text` once each line reaches `wrap_at` bytes, at the LAST
+/// space (dropped) or last hyphen (kept on the line) whichever comes
+/// later (upstream's loop, in bytes — the break points are ASCII, so
+/// byte splits stay on char boundaries). A line with no break point
+/// never wraps (the overflow stays on one row, upstream's
+/// `last_space != 0 || last_hyphen != 0` guard); the leftover after the
+/// last break is the final line.
+fn wrap_lines(text: &str, wrap_at: usize) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut rest = text;
+    while let Some((w, keep_hyphen)) = wrap_point(rest, wrap_at) {
+        let mut line = rest[..w].to_string();
+        if keep_hyphen {
+            line.push('-');
+        }
+        lines.push(line);
+        rest = &rest[w + 1..];
+    }
+    if !rest.is_empty() {
+        lines.push(rest.to_string());
+    }
+    lines
+}
+
+/// The next wrap point of `text`: the byte offset whose line first
+/// reaches `wrap_at`, split at the last space or hyphen (`true` = keep
+/// the hyphen on the line) — `None` when no line break point exists.
+fn wrap_point(text: &str, wrap_at: usize) -> Option<(usize, bool)> {
+    let bytes = text.as_bytes();
+    let (mut i, mut line_len, mut last_space, mut last_hyphen) = (0usize, 0usize, 0usize, 0usize);
+    while i < bytes.len() {
+        let c = bytes[i];
+        if c == b' ' {
+            last_space = i;
+        }
+        if c == b'-' {
+            last_hyphen = i;
+        }
+        line_len += 1;
+        if line_len >= wrap_at && (last_space != 0 || last_hyphen != 0) {
+            return Some(if last_hyphen > last_space {
+                (last_hyphen, true)
+            } else {
+                (last_space, false)
+            });
+        }
+        i += 1;
+    }
+    None
 }
 
 /// The longest line's width in UTF-8 bytes — the cell-width rule
