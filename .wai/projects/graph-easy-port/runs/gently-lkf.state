@@ -5,3 +5,4 @@ steps:
   - claim c92b1ce
   - gates c92b1ce
   - brief 0be6113
+  - verify/ship/stop 033a0d5

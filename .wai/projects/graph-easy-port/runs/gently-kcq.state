@@ -5,3 +5,4 @@ steps:
   - claim $(git rev-parse --short HEAD)
   - claim+gates e819158
   - brief 369055f
+  - verify/ship/stop 0a8b1ae
