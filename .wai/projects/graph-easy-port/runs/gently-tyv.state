@@ -1,0 +1,9 @@
+ticket: gently-tyv
+branch: main
+brief_path: .wai/projects/graph-easy-port/briefs/gently-tyv.md
+steps:
+steps:
+  - claim 566d8e4
+  - gates 566d8e4
+  - brief a852c7f
+  - spawn a852c7f
