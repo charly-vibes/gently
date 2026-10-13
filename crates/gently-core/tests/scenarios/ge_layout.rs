@@ -75,6 +75,37 @@ fn selfloop_graph() -> Graph {
     g
 }
 
+/// The comma-chain fan (gently-4ga): a -> b, a -> c, a -> d. Placement
+/// stacks c and d below a in one column, so the deeper edge's route must
+/// jog around the shallower node instead of jumping its band row.
+fn fanout_stack_graph() -> Graph {
+    let mut g = Graph::default();
+    let a = g.add_node("a");
+    let b = g.add_node("b");
+    let c = g.add_node("c");
+    let d = g.add_node("d");
+    g.add_edge(a, b, true).expect("live endpoints");
+    g.add_edge(a, c, true).expect("live endpoints");
+    g.add_edge(a, d, true).expect("live endpoints");
+    g
+}
+
+/// The fan-in star (gently-6hh repro class, widened into gently-4ga):
+/// n1..n4 -> hub — the deepest source's route walks a column stacked
+/// with the shallower sources.
+fn fanin_star_graph() -> Graph {
+    let mut g = Graph::default();
+    let n1 = g.add_node("n1");
+    let n2 = g.add_node("n2");
+    let n3 = g.add_node("n3");
+    let n4 = g.add_node("n4");
+    let hub = g.add_node("hub");
+    for src in [n1, n2, n3, n4] {
+        g.add_edge(src, hub, true).expect("live endpoints");
+    }
+    g
+}
+
 /// Edges `i -> i + step` for every i where both endpoints exist.
 fn step_edges(g: &mut Graph, n: usize, step: usize) {
     for i in 0..n.saturating_sub(step) {
@@ -298,6 +329,34 @@ fn p4() {
 
     // four parallel edges: pairwise distinct path cells.
     assert_quad_parallel_distinct();
+}
+
+/// ge.layout.p4 (c4, gently-4ga): fan placements stack nodes in one
+/// column, and the deeper stacked edge's route must jog around the
+/// shallower node through the adjacent gap column — contiguous and
+/// grid-adjacent end to end, never jumping the occupied band row, and
+/// the ascii consumer renders the fans without error.
+#[test]
+fn p4_fan_stack_routes_jog_not_jump() {
+    for g in [&fanout_stack_graph(), &fanin_star_graph()] {
+        let l = layout::layout(g);
+        assert_all_routed(&l, g.edges.len());
+        // Endpoint adjacency too: the render walks source cell -> path ->
+        // target cell, so the first/last path cell must abut its node.
+        for (ei, e) in g.edges.iter().enumerate() {
+            let path = &l.edge_paths[ei];
+            let (su, sv) = (l.node_cells[e.from], l.node_cells[e.to]);
+            assert_adjacent(path[0], su, "edge {ei} first path cell");
+            assert_adjacent(path[path.len() - 1], sv, "edge {ei} last path cell");
+        }
+        gently_core::render::ascii::render(g, &l).expect("fan must render");
+    }
+}
+
+/// The two cells differ by exactly one step on one axis.
+fn assert_adjacent(p: (usize, usize), q: (usize, usize), what: &str) {
+    let dist = (p.0 as isize - q.0 as isize).abs() + (p.1 as isize - q.1 as isize).abs();
+    assert_eq!(dist, 1, "{what} {p:?} not adjacent to {q:?}");
 }
 
 /// The layout publishes a complete grid-output contract: every node
