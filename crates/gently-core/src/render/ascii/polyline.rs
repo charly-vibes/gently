@@ -140,8 +140,8 @@ fn exit_attachment(
     let pt = match dir {
         Dir::East => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
         Dir::West => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
-        Dir::North => (Some(canvas.center(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::South => (Some(canvas.center(c)), Some(canvas.band_top(r) + 3)),
+        Dir::North => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
+        Dir::South => (Some(canvas.vert_x(c)), Some(canvas.band_top(r) + 3)),
     };
     attachment(canvas, pt, ei, "leaves")
 }
@@ -159,8 +159,8 @@ fn entry_attachment(
     let pt = match dir {
         Dir::East => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
         Dir::West => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
-        Dir::South => (Some(canvas.center(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::North => (Some(canvas.center(c)), Some(canvas.band_top(r) + 3)),
+        Dir::South => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
+        Dir::North => (Some(canvas.vert_x(c)), Some(canvas.band_top(r) + 3)),
     };
     attachment(canvas, pt, ei, "enters")
 }
@@ -226,7 +226,7 @@ fn push_corner(
             // Vertical run's column: the next cell's, or the target's when
             // the turn happens at the last cell.
             let col = next_cell.map_or(ctx.tc, |next| next.0);
-            (canvas.center(col), wps.last().expect("seeded").1)
+            (canvas.vert_x(col), wps.last().expect("seeded").1)
         }
         (Dir::North | Dir::South, Dir::East | Dir::West) => {
             let row = next_cell.map_or(ctx.tr, |next| next.1);

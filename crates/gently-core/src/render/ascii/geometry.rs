@@ -164,6 +164,18 @@ fn widen_edge_column(
         && e.arrows.end
         && layout.node_cells[e.from].1 == layout.node_cells[e.to].1;
     let extra = if bd_hor { 1 } else { 0 };
+    // A `minlen >= 2` straight edge stretches one extra empty column
+    // wide (gently-yhg, probed oracle: minlen 2..5 all widen the straight
+    // gap by exactly one GAP_WIDTH, minlen 0/1 stay adjacent) — the
+    // stretch is a gap-column width, not a placement change.
+    let (fu, fv) = (layout.node_cells[e.from], layout.node_cells[e.to]);
+    if fu.1 == fv.1 && fu.0.abs_diff(fv.0) == 2 {
+        if let Some(v) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "minlen") {
+            if v.parse::<u32>().is_ok_and(|m| m >= 2) {
+                col_width[c] += GAP_WIDTH;
+            }
+        }
+    }
     if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
         col_width[c] = col_width[c].max(display_width(label) + 5 + extra);
     }

@@ -211,9 +211,15 @@ impl Canvas {
         self.band_top(r) + 1
     }
 
-    /// Center char of column `c`.
-    pub(super) fn center(&self, c: usize) -> usize {
-        self.offsets[c] + self.col_width[c] / 2
+    /// Char column of a vertical run through grid column `c`: offset +2
+    /// from the cell's left edge — upstream edge cells draw their vertical
+    /// line at fixed offset 2 (`As_ascii::_draw_cross`:
+    /// `_printfb_ver($fb, 2, 0, $line)`), not at the node's center, so a
+    /// wide box's north/south attachment sits 2 chars in from its left
+    /// border (gently-klf: tests/repro/claims/pod-triangle.observed,
+    /// pod-fan.observed).
+    pub(super) fn vert_x(&self, c: usize) -> usize {
+        self.offsets[c] + 2
     }
 
     /// Write `text` starting at grid column `cx`'s char offset on `line`.
