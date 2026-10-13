@@ -1,0 +1,23 @@
+Done. **gently-tyv shipped** — commit `d24de52`, not pushed (orchestrator pushes).
+
+## What changed per row
+
+Each open row in `docs/known-hard-cases.md` now has its prose cell trimmed to ≤2 sentences plus a per-bead evidence block (input snippet + oracle bytes vs gently bytes):
+
+- **`gently-4ga`** — input `[ A ] -> [ B ], [ C ], [ D ]`; gently's real CLI error (`edge 2 path cells (0, 1) -> (0, 3) are not orthogonally adjacent`, reproduced live via `gently --as ascii`) vs the recorded oracle fan (`bg-comma-lists.observed` as_ascii, quoted in full).
+- **`gently-58m`** — input from `pod-anon-group.observed`; oracle as_txt (Berlin omitted) vs gently as_txt — I verified gently's bytes with a throwaway `gently-core` test (`txt::render` of the text-parsed input), then deleted the test: gently emits `( Group \#0 )` / `( Group \#1 … )` and lists `[ Berlin ]` as a plain node.
+- **`gently-fb1`** — no .observed existed, so I added a `dot-bare-scope-in-named` claim to `tests/repro/probes.pl` (serves `gently-fb1`, contrasts top-level bare scope vs bare-scope-in-named) and recorded `tests/repro/claims/dot-bare-scope-in-named.observed` via the probe harness under the pinned oracle: `groups: outer=[x]` + the dashed `outer` group-box as_ascii; gently delta stated as one line (keeps x ungrouped — its dot parser isn't wired into the CLI, so no gently bytes).
+- **`gently-awd`** — input from `so-flowchart-size.observed`; oracle 2x2 size-honoring layout (recorded bytes) vs gently's 1-3-2 flow (captured live from the CLI on the same input).
+- **`gently-byq`** — input from `so-start-port-index.observed`; oracle indexed-port layout with the 10-row stretched Msg Server (recorded) vs gently's default-slot wrap loop (captured live), plus the already-ported unindexed `start: right` block from `port-side-minimal.observed` as contrast.
+
+Tables stay in place and the rest of the page (scope-off section, verification layers) is untouched; closed/resolved rows untouched.
+
+## Gates
+
+- `just gates` — **OK** (lefthook pre-commit also re-ran ah-check, spk lint, specodelic gates: all green)
+- `just examples-verify` — **OK** (byte-identical)
+- `ah check` — **0 findings**
+
+## Commit
+
+`d24de525236cf2c15eb0c1ef429886bcd65f8112` — `docs: visual oracle-vs-gently evidence per known-hard-cases row (gently-tyv)` (3 files: doc, probes.pl, new .observed). Bead `gently-tyv` closed.

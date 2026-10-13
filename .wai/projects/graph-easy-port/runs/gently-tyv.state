@@ -7,3 +7,6 @@ steps:
   - gates 566d8e4
   - brief a852c7f
   - spawn a852c7f
+  - verify e0dca1e
+  - ship e0dca1e
+  - stop e0dca1e
