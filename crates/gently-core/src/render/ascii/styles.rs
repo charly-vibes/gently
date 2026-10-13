@@ -74,7 +74,11 @@ pub(super) fn shape(attr: Option<&str>) -> Shape {
 }
 
 /// The style's repeating unit token (upstream As_ascii `$edge_styles`
-/// row-0 patterns / Parser.pm `_edge_style` classes).
+/// row-0 patterns / Parser.pm `_edge_style` classes). `wide` and `broad`
+/// carry rows byte-identical to `bold` ('##') — they alias it (gently-51d,
+/// pinned by tests/repro/claims/pod-style-family.observed and
+/// edge-style-wide-undirected.observed); upstream `_correct_size` does NOT
+/// widen their gap (only dot-dot-dash).
 pub(super) fn edge_pattern(style: &str) -> &'static str {
     match style {
         "double" => "==",
@@ -84,7 +88,7 @@ pub(super) fn edge_pattern(style: &str) -> &'static str {
         "dot-dot-dash" => "..-",
         "dashed" => "- ",
         "wave" => "~",
-        "bold" => "##",
+        "bold" | "wide" | "broad" => "##",
         _ => "-",
     }
 }
@@ -164,7 +168,7 @@ pub(super) fn edge_fill(style: &str) -> String {
         "dotted" => "..".to_string(),
         "wave" => "~~".to_string(),
         "dashed" => "- ".to_string(),
-        "bold" => "##".to_string(),
+        "bold" | "wide" | "broad" => "##".to_string(),
         "dot-dash" => ".-".to_string(),
         "dot-dot-dash" => "..-".to_string(),
         "double-dash" => "= ".to_string(),
