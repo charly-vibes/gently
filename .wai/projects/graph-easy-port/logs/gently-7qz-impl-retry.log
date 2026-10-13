@@ -1,0 +1,29 @@
+All done. Final report:
+
+## gently-7qz — complete
+
+### Commits (pushed to origin/main)
+| sha | one-line |
+|---|---|
+| `94fd003` | test: pin the bidirectional-arrowhead and undirected-label oracle bytes (gently-7qz, gently-bpq) |
+| `7a38cea` | feat(render): start-point arrowheads for bidirectional edges + oracle label placement (gently-7qz) |
+| `9635d15` | docs(spec): re-derive ge-ascii_render c2/p2 (openspec mirror + specodelic artifacts in same commit) |
+| `5171e89` | docs: move gently-7qz/gently-bpq out of the open-divergence table |
+
+### Oracle rules traced (from `As_ascii.pm` reopened `Edge::Cell`, verified via patched-stash tracing + live probes)
+- **Straight BD run**: BD cells are direction-independent (`EDGE_SHORT_BD_EW`) — run = `w-1` chars at cell-x 0: ` <` + ofs-shifted fill + `>`; upstream `_correct_size` widens the BD_HOR cell +1 (gap 6 unlabeled, gap `L+6` labeled); label centered in `[2, w-3)` (upstream `_insert_label` field `[xs, w-xs-xr)`).
+- **Bent BD start arrowhead**: glyph points INTO the source box (exit N→`v`, S→`^`, E→`<`, W→`>`), stamped at the exit attachment — pinned by the new `pod-bidir-parallel` claim.
+- **Undirected labeled runs draw no head** (gently-bpq root cause: `_draw_hor` heads only on `EDGE_END_*` flags).
+
+### Gates (all exit 0)
+`cargo test -p gently-core` (3×ok, 144 tests), `cargo clippy --workspace --all-targets -- -D warnings`, `ah check --run-tests` (69 passed, 0 findings), `just gates`, `just examples-verify`, `just oracle-verify` (pin v0.69 @ ededa3d7 green), `spk lint openspec` (0 findings), pretender gate green (canvas.rs split: new `edges.rs`; `widen_edge_column`/`plain_straight_run`/`start_glyph` helpers extracted), `git status` clean, `origin/main..HEAD` empty.
+
+### Tickets closed
+- `gently-7qz` (primary) — closed + `bd dolt push`
+- `gently-bpq` (bonus, same `draw_straight` head logic, verified against `pod-label-attr.observed`) — closed + pushed
+- `gently-51d` (`##>` double-line arrowhead): not covered, out of scope — left open
+
+### Deviations
+1. **pod-bidir-label is run-nondeterministic**: the oracle picks which parallel edge routes straight via unseeded perl `rand` — a fresh re-record flipped seed 1's bytes. I did NOT change the harness (a global `PERL_RAND_SEED` pin drifts 12 other committed recordings) and restored the committed `.observed` byte-for-byte. Instead I added two new hash-stable pins (`pod-bidir-label-straight`, `pod-bidir-parallel`) and documented the caveat in the probe comment. Spec/tests anchor on the stable pins; gently's deterministic layout matches the committed seed-1 bytes.
+2. Scenario file lives at `crates/gently-core/tests/scenarios/ge_ascii_render.rs` (brief's `tests/scenarios/…` path is the in-crate alias); no new `.espectacular` flags needed — new tests are named `p2_*` under the existing p2 contract flag.
+3. Vertical BD edges (upstream widens the gap *row* +1, a layout change) are out of pinned scope and untouched.
