@@ -1,0 +1,16 @@
+ticket: gently-cbk (run 3; render continuation)
+branch: main
+brief_path: .wai/projects/graph-easy-port/briefs/gently-cbk2.md
+steps:
+claim (already claimed, in_progress)
+gates (b206bdb)
+brief (b206bdb)
+brief committed (db41f55)
+spawn (db41f55)
+verify (9776390)
+ship (9776390)
+stop (9776390) — run complete
+claim-continuation (0c19166)
+claim (0c19166)
+gates (0c19166)
+brief (0c19166)
