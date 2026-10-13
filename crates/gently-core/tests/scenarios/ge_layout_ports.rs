@@ -59,12 +59,13 @@ fn chain_port_graph() -> Graph {
     g
 }
 
-/// All path cells of `ei` sit on one gap row below the source band, with
-/// the first cell directly below the source column and the last directly
-/// below the target column — the dip-below south-port route.
-fn assert_dips_below(l: &Layout, ei: usize) {
+/// All path cells of `ei` (from node `src` to node `dst`) sit on one gap
+/// row below the source band, with the first cell directly below the
+/// source column and the last directly below the target column — the
+/// dip-below south-port route.
+fn assert_dips_below(l: &Layout, ei: usize, src: usize, dst: usize) {
     let path = &l.edge_paths[ei];
-    let (su, sv) = (l.node_cells[0], l.node_cells[1]);
+    let (su, sv) = (l.node_cells[src], l.node_cells[dst]);
     let row = path[0].1;
     assert!(row > su.1, "edge {ei} must dip below the source band");
     assert!(
@@ -88,7 +89,7 @@ fn p1_start_right_dips_below() {
     let l = layout::layout(&g);
     assert_eq!(l.node_cells[0].1, l.node_cells[1].1, "nodes stay on one band");
     assert_eq!(l.node_cells[1].0 - l.node_cells[0].0, 2, "one rank apart");
-    assert_dips_below(&l, 0);
+    assert_dips_below(&l, 0, 0, 1);
 }
 
 /// p2 — `end: right` routes identically (the record shows one byte shape
@@ -99,7 +100,7 @@ fn p2_end_right_dips_below() {
     g.set_attr(Scope::Edge(0), "end", "right");
     let l = layout::layout(&g);
     assert!(l.edge_paths[0].iter().all(|&c| c.1 > l.node_cells[0].1));
-    assert_dips_below(&l, 0);
+    assert_dips_below(&l, 0, 0, 1);
 }
 
 /// p3 — a `start: left` (north) port bends the route above the band.
@@ -123,7 +124,7 @@ fn p3_start_left_bends_above() {
 fn p4_skip_right_dips_below_chain() {
     let g = skip_port_graph();
     let l = layout::layout(&g);
-    assert_dips_below(&l, 2);
+    assert_dips_below(&l, 2, 0, 2);
     assert_eq!(
         l.edge_paths[0].len(),
         1,
@@ -137,7 +138,7 @@ fn p4_skip_right_dips_below_chain() {
 fn p5_chain_right_dips_one_edge() {
     let g = chain_port_graph();
     let l = layout::layout(&g);
-    assert_dips_below(&l, 0);
+    assert_dips_below(&l, 0, 0, 1);
     assert_eq!(l.edge_paths[1].len(), 1, "b->c stays straight");
 }
 
