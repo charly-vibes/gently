@@ -101,6 +101,16 @@ fn p2() {
         ("dashed", false, "+---+     +---+\n| a |  -  | b |\n+---+     +---+\n"),
         ("bold", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
         ("bold", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
+        // gently-51d: wide/broad alias the bold row — upstream As_ascii
+        // $edge_styles rows 'wide'/'broad' are byte-identical to bold
+        // ('##') and _correct_size does not widen their gap (only
+        // dot-dot-dash). Directed runs render '##>', arrow-less runs
+        // render '###' (pod-style-family.observed,
+        // edge-style-wide-undirected.observed).
+        ("wide", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
+        ("broad", true, "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n"),
+        ("wide", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
+        ("broad", false, "+---+     +---+\n| a | ### | b |\n+---+     +---+\n"),
         // gently-oy2: the repeated-pattern family — arrowed runs keep the
         // dot-dot-dash styling, undirected runs shift by the gap's
         // absolute x, and dot-dot-dash widens the gap to 6 (upstream

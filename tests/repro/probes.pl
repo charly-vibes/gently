@@ -148,7 +148,8 @@ my %SERVES = (
     'edge-style-short-runs'  => 'gently-oy2 (POD repeated-pattern family — the full short-edge style run rule: arrowed runs, undirected rx-shifted runs, dot-dot-dash gap widening)',
     'pod-triangle'           => 'gently-ni9.1 (POD mining — Easy.pm interlinked-triangle example; gently layout diverges by 2 columns → bug bead)',
     'pod-unicode'            => 'gently-ni9.1 (POD mining — UTF-8 input prose; oracle width-counts bytes, gently chars → bug bead)',
-    'pod-style-family'       => 'gently-ni9.1 (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead)',
+    'pod-style-family'       => 'gently-ni9.1, gently-51d (POD mining — POD wide/broad style example; oracle renders ##>, gently --> → bug bead gently-51d)',
+    'edge-style-wide-undirected' => 'gently-51d (the arrowless wide/broad short-edge run — pod-style-family covers only directed runs; pins the undirected ## family bytes)',
     'pod-bidir'              => 'gently-7qz (POD mining — Easy.pm \'<->\' example — the straight bidirectional run rule)',
     'pod-bidir-parallel'     => 'gently-7qz (parallel \'<-->\' pair — the start arrowhead on a bent bidirectional edge)',
     'pod-double-dash'        => 'gently-ni9.1 (POD mining — POD \'= >\' double-dash example; gently collapses to --> → bug bead)',
@@ -528,6 +529,19 @@ pod_probe_body('pod-style-family', <<'EXAMPLE')
 [ AB ] --> { style: bold; } [ ABC ]
 [ ABC ] --> { style: wide; } [ ABCD ]
 [ ABCD ] --> { style: broad; } [ ABCDE ]
+EXAMPLE
+PROBE
+
+    'edge-style-wide-undirected' => <<'PROBE',
+# serves: gently-51d
+# claim probed: the ARROWLESS (undirected) wide/broad short-edge run —
+# pod-style-family pins only the directed '##>' runs. Observed: wide AND
+# broad render the bold-family '###' fill (undirected, rx-shifted like
+# bold); upstream As_ascii $edge_styles rows wide/broad are byte-identical
+# to bold ('##') and _correct_size does NOT widen their gap (only
+# dot-dot-dash).
+pod_probe_body('edge-style-wide-undirected', <<'EXAMPLE')
+[ A ] -- { style: wide; } [ B ] -- { style: broad; } [ C ]
 EXAMPLE
 PROBE
 

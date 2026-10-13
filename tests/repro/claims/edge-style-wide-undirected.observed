@@ -1,0 +1,17 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: edge-style-wide-undirected
+== seed 0 ==
+as_txt:
+[ A ] -- { style: wide; } [ B ]
+[ B ] -- { style: broad; } [ C ]
+as_ascii:
++---+     +---+     +---+
+| A | ### | B | ### | C |
++---+     +---+     +---+
+== seed 1 ==
+as_txt:
+[ A ] -- { style: wide; } [ B ]
+[ B ] -- { style: broad; } [ C ]
+as_ascii:
++---+     +---+     +---+
+| A | ### | B | ### | C |
++---+     +---+     +---+
