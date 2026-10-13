@@ -1,3 +1,6 @@
+> *"Everything is connected!"*
+> — Dirk Gently
+
 # Introduction
 
 **gently** is a Rust port of Perl's
