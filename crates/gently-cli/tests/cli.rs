@@ -77,6 +77,51 @@ mod scenarios {
             let _ = std::fs::remove_dir_all(&dir);
         }
 
+        /// cli.p9 (c1, gently-in2): a terminal stdin with no file argument
+        /// fails fast with a diagnostic naming stdin and the input file;
+        /// piped stdin is still read to EOF.
+        #[test]
+        fn p9() {
+            // Piped stdin (the oracle path) is still read to EOF: empty
+            // pipe renders the empty graph, exit 0.
+            let r = run_gently(&[], b"");
+            assert_eq!(Some(0), r.code, "piped stdin must still be read to EOF");
+            assert!(
+                r.stderr.is_empty(),
+                "piped stdin renders without diagnostics"
+            );
+
+            // Terminal stdin: run the binary under a pty via `script` so
+            // IsTerminal holds. Skipped silently when `script` is absent
+            // (non-POSIX CI runners).
+            let ok = Command::new("script")
+                .arg("-qec")
+                .arg(env!("CARGO_BIN_EXE_gently"))
+                .arg("/dev/null")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .stdin(Stdio::null())
+                .output();
+            if let Ok(out) = ok {
+                assert_eq!(
+                    Some(1),
+                    out.status.code(),
+                    "terminal stdin with no file argument must fail fast, not block"
+                );
+                // `script` muxes the child's stderr onto the pty, so the
+                // diagnostic lands on script's stdout.
+                let err = String::from_utf8_lossy(&out.stdout);
+                assert!(
+                    err.contains("stdin is a terminal"),
+                    "diagnostic must name stdin: {err}"
+                );
+                assert!(
+                    err.contains("input file"),
+                    "diagnostic must name the input file: {err}"
+                );
+            }
+        }
+
         /// cli.p2 (c2): each requested format renders through its renderer;
         /// the default is ascii; `--output` receives the rendered bytes
         /// instead of stdout.
