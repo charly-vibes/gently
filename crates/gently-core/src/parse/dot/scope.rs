@@ -1,75 +1,103 @@
 //! Purpose: scope and subgraph handling for the ge.dot_parser grammar
 //! (gently-89p, c4). Responsibilities: the statement loop of one scope
-//! body; bare `{ }` scopes — nodes ungrouped, with the oracle's surviving
-//! left-edge stack (the pinned spurious edge from the enclosing chain
-//! tail to the scope's last node); `subgraph NAME { ... }` statements and
-//! inline subgraph endpoints — groups under their verbatim name except
+//! body — including graph-scope attribute statements (`key=value`,
+//! gently-a0k); the scope-boundary rules of the oracle's node stack (held
+//! on `P`, see stmt.rs): an edge operator directly after `}` keeps the
+//! stack alive (`} ->` continuation), a plain `}` resets it; bare `{ }`
+//! scopes keep their nodes ungrouped; `subgraph NAME { ... }` statements
+//! and inline subgraph endpoints — groups under their verbatim name except
 //! for the graphviz cluster convention (gently-j2i, see `cluster_convention`),
-//! innermost-only membership, with the nameless keyword form and any
-//! attribute list before `{` as tokenizing errors. Rationale: split from
-//! mod.rs so files stay under the pretender ratchet's limits.
-use super::{err,ParseError,P,ScopeSt};
+//! with the nameless keyword form and any attribute list before `{` as
+//! tokenizing errors. Rationale: split from mod.rs so files stay under the
+//! ratchets' limits.
+use super::{attrs, err, ParseError, P, ScopeSt};
+use crate::graph::Scope;
 use super::lex::Tok;
 
 impl P<'_> {
-    /// Parse statements until the closing `}` (not consumed). Returns the
-    /// scope's chain tail — its last endpoint node, if any.
-    pub(super) fn scope_body(&mut self, group: Option<usize>) -> Result<Option<usize>, ParseError> {
-        self.scopes.push(ScopeSt {
-            pending: None,
-            group,
-        });
+    /// Parse statements until the closing `}` (not consumed — the caller
+    /// applies the scope-boundary rules via `scope_end`).
+    pub(super) fn scope_body(&mut self, is_group: bool, group: Option<usize>) -> Result<(), ParseError> {
+        self.scopes.push(ScopeSt { is_group, group });
         loop {
             self.skip_semis();
             match self.peek_tok() {
                 Some(Tok::RBrace) | None => break,
-                Some(Tok::LBrace) => self.bare_scope()?,
-                Some(Tok::Ident(s)) if s == "subgraph" => self.subgraph_stmt()?,
-                Some(Tok::Ident(_)) | Some(Tok::Str(_)) => {
-                    if let Some(last) = self.statement()? {
-                        if let Some(scope) = self.scopes.last_mut() {
-                            scope.pending = Some(last);
-                        }
+                Some(Tok::LBrace) | Some(Tok::Ident(_)) | Some(Tok::Str(_)) => {
+                    if self.graph_attr_stmt()? {
+                        continue;
                     }
+                    self.statement()?;
                 }
                 Some(_) => return Err(err(self.line(), "expected a statement")),
             }
         }
-        Ok(self.scopes.pop().map(|s| s.pending).unwrap_or(None))
+        self.scopes.pop();
+        Ok(())
     }
 
-    /// A bare `{ ... }` scope at statement position: nodes ungrouped, and
-    /// the oracle's surviving left-edge stack links the enclosing scope's
-    /// chain tail to the scope's last node (the pinned spurious edge).
-    pub(super) fn bare_scope(&mut self) -> Result<(), ParseError> {
-        self.pos += 1;
-        let last = self.scope_body(None)?;
+    /// Consume the closing `}` of a scope. An edge operator directly after
+    /// it (`} ->`) keeps the node stack alive — the operator links the
+    /// scope's nodes (plus anything leaked onto the stack); a plain `}`
+    /// resets the stack (the oracle's "always reset the stack"). Returns
+    /// whether an operator follows. The pending left side survives both
+    /// forms: a later bare-scope push still links it (observed: the nodes
+    /// before `-> { b }` link a `y` pushed after the scope).
+    pub(super) fn scope_end(&mut self) -> Result<bool, ParseError> {
         self.expect_rbrace()?;
-        let inner = match last {
-            Some(inner) => inner,
-            None => return Ok(()),
-        };
-        if let Some(scope) = self.scopes.last_mut() {
-            if let Some(outer) = scope.pending {
-                self.g.add_edge(outer, inner, true);
-            }
-            scope.pending = Some(inner);
+        let arrow = matches!(self.peek_tok(), Some(Tok::Arrow(_)));
+        if !arrow {
+            self.stack.clear();
         }
-        Ok(())
+        Ok(arrow)
     }
 
-    /// A `subgraph NAME { ... }` statement: the group gets the name
-    /// verbatim; a nameless keyword form or an attribute list before `{`
-    /// is a tokenizing error. Returns nothing — named scopes do not
-    /// participate in the edge stack (no spurious edge).
-    pub(super) fn subgraph_stmt(&mut self) -> Result<(), ParseError> {
-        self.named_subgraph()?;
-        Ok(())
+    /// A graph-scope attribute statement `key=value` (the oracle's
+    /// `_match_graph_attribute` form: bare key, quoted or bare value, at
+    /// statement position). For Graphviz, stray attributes apply to the
+    /// parent — the innermost enclosing named subgraph (group) or the
+    /// graph. The graph target remaps `rankdir` to `flow` (gently-a0k);
+    /// every other key lands verbatim. Returns false when the lookahead
+    /// is not one (the statement is parsed normally).
+    fn graph_attr_stmt(&mut self) -> Result<bool, ParseError> {
+        let is_stmt = matches!(self.peek_tok(), Some(Tok::Ident(_)))
+            && matches!(self.toks.get(self.pos + 1).map(|t| &t.tok), Some(Tok::Eq));
+        if !is_stmt {
+            return Ok(false);
+        }
+        let Tok::Ident(key) = self.toks[self.pos].tok.clone() else {
+            unreachable!("matched Ident above")
+        };
+        self.pos += 2;
+        let value = match self.peek_tok() {
+            Some(Tok::Str(q)) => {
+                let v = attrs::unquote(q);
+                self.pos += 1;
+                v
+            }
+            Some(Tok::Ident(s)) => {
+                let v = s.clone();
+                self.pos += 1;
+                v
+            }
+            _ => return Err(err(self.line(), "expected an attribute value")),
+        };
+        match self.scopes.iter().rev().find_map(|s| s.group) {
+            Some(gidx) => self.g.set_attr(Scope::Group(gidx), &key, &value),
+            None if key == "rankdir" => {
+                self.g.set_attr(Scope::Graph, "flow", attrs::rankdir_flow(&value));
+            }
+            None => self.g.set_attr(Scope::Graph, &key, &value),
+        }
+        Ok(true)
     }
 
     /// Named subgraph shared by statement and endpoint positions; the
-    /// `subgraph` keyword is already peeked, not consumed.
-    pub(super) fn named_subgraph(&mut self) -> Result<String, ParseError> {
+    /// `subgraph` keyword is already peeked, not consumed. The scope's
+    /// nodes reach the stack (a group-scope node statement replaces it),
+    /// so `subgraph g { x } -> y` links x — no node is created for the
+    /// subgraph's name.
+    pub(super) fn named_subgraph(&mut self) -> Result<(), ParseError> {
         let start = self.toks[self.pos].start;
         self.pos += 1;
         let name = match self.peek_tok() {
@@ -85,11 +113,10 @@ impl P<'_> {
             _ => return Err(self.not_recognized(start)),
         }
         let gidx = self.g.add_group(&cluster_convention(&name));
-        self.scope_body(Some(gidx))?;
-        self.expect_rbrace()?;
-        Ok(name)
+        self.scope_body(true, Some(gidx))?;
+        self.scope_end()?;
+        Ok(())
     }
-
 }
 
 /// The graphviz renderer's cluster convention (gently-j2i,

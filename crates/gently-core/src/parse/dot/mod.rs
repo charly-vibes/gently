@@ -3,17 +3,23 @@
 //! `Graph::Easy::Parser::Graphviz`, feeding [[ge.graph_model]].
 //! Responsibilities: `digraph`/`graph` headers set only the model graph's
 //! `type`/`title` attributes — edge DIRECTION comes from the operator,
-//! never the header (c1/c2, per the pinned probes); attribute lists
-//! unescape quoted values exactly once onto the right object (c3); named
-//! subgraphs become groups under their verbatim name with innermost-only
-//! membership, the nameless `subgraph` keyword form (with or without an
-//! attribute list) is a tokenizing error, and a bare `{ }` scope keeps its
-//! nodes ungrouped — with the oracle's surviving left-edge stack, so the
-//! node preceding a bare scope is still linked to the scope's last node
-//! (c4); record and HTML-like labels autosplit into `name.N` part nodes
-//! with port markers stripped and edges reattached, while unresolvable
-//! port references and malformed labels fail with the oracle's typed
-//! errors and no partial graph (c5). Every property row has a scenario in
+//! never the header, and an unnamed header names the graph `unnamed`
+//! (c1/c2, per the pinned probes); attribute lists unescape quoted values
+//! exactly once onto the right object (c3), and a graph-scope attribute
+//! statement `key=value` applies to the graph with `rankdir` remapped to
+//! `flow` (gently-a0k); linkage follows the oracle's NODE STACK (c2/c4 —
+//! held on `P`, surviving scope boundaries): a group-scope node statement
+//! replaces it, a bare-scope node statement pushes onto it, an edge
+//! operator links EVERY node on it, a plain `}` resets it — so bare scopes
+//! as edge-chain endpoints link all their nodes (gently-2n5) and the node
+//! preceding a bare scope is still linked by the scope's inner edge chain;
+//! named subgraphs become groups under their verbatim name with
+//! innermost-only membership, the nameless `subgraph` keyword form (with
+//! or without an attribute list) is a tokenizing error; record and
+//! HTML-like labels autosplit into `name.N` part nodes with port markers
+//! stripped and edges reattached, while unresolvable port references and
+//! malformed labels fail with the oracle's typed errors and no partial
+//! graph (c5). Every property row has a scenario in
 //! `tests/scenarios/ge_dot_parser.rs`; observed behavior is pinned in
 //! `tests/repro/claims/*.observed` (Graph::Easy v0.69 @ ededa3d7) — where
 //! the POD diverges, the probes win.
@@ -68,9 +74,11 @@ pub fn parse(src: &str) -> Result<Graph, ParseError> {
         src,
         g: Graph::default(),
         scopes: vec![ScopeSt {
-            pending: None,
+            is_group: true,
             group: None,
         }],
+        stack: Vec::new(),
+        left: None,
         split: HashMap::new(),
     };
     p.header()?;
@@ -82,8 +90,6 @@ pub fn parse(src: &str) -> Result<Graph, ParseError> {
 /// "Cannot find autosplit node" error can name the failing edge id.
 #[derive(Debug, Clone)]
 pub(super) enum Ep {
-    /// A resolved node index (bare scope consumed as an endpoint).
-    Idx(usize),
     /// A node by name (interning + split-map lookup happen at resolve).
     Name(String),
     /// `name:port[:compass]`.
@@ -92,14 +98,19 @@ pub(super) enum Ep {
         port: String,
         compass: Option<String>,
     },
+    /// A scope endpoint (bare `{ ... }` or inline named subgraph): its
+    /// nodes are already on the stack — linkage flows through the stack,
+    /// nothing to resolve here.
+    Scope,
 }
 
-/// One nesting level of the parse: the chain tail (`pending` — the oracle's
-/// left-edge stack, the source of the bare-scope spurious edge) and the
-/// group nodes declared here belong to (`None` at graph level and in bare
-/// scopes — bare scopes keep their nodes ungrouped).
+/// One nesting level of the parse: whether node statements REPLACE the
+/// stack (group scopes — graph level and named subgraphs) or PUSH onto it
+/// (bare scopes), and the group nodes declared here belong to (`None` at
+/// graph level and in bare scopes — bare scopes keep their nodes
+/// ungrouped).
 pub(super) struct ScopeSt {
-    pub(super) pending: Option<usize>,
+    pub(super) is_group: bool,
     pub(super) group: Option<usize>,
 }
 
@@ -109,6 +120,13 @@ pub(super) struct P<'a> {
     pub(super) src: &'a str,
     pub(super) g: Graph,
     pub(super) scopes: Vec<ScopeSt>,
+    /// The oracle's left-side node stack: survives scope boundaries, reset
+    /// by a plain `}` (scope.rs `scope_end`), driven by stmt.rs.
+    pub(super) stack: Vec<usize>,
+    /// The pending left side of the last edge operator: direction plus the
+    /// stack snapshot at operator time — bare-scope pushes link it (kept,
+    /// per the oracle's left_edge).
+    pub(super) left: Option<(bool, Vec<usize>)>,
     /// Original node name → autosplit part indices (`parts[0]` first).
     pub(super) split: HashMap<String, Vec<usize>>,
 }
@@ -148,15 +166,18 @@ impl<'a> P<'a> {
             Some(Tok::Str(q)) => Some(attrs::unquote(q)),
             _ => None,
         };
-        if let Some(name) = &name {
-            self.pos += 1;
-            self.g.attributes.set("title", name);
+        match name {
+            Some(name) => {
+                self.pos += 1;
+                self.g.attributes.set("title", &name);
+            }
+            None => self.g.attributes.set("title", "unnamed"),
         }
         match self.peek_tok() {
             Some(Tok::LBrace) => self.pos += 1,
             _ => return Err(err(self.line(), "expected `{' to open the graph body")),
         }
-        self.scope_body(None)?;
+        self.scope_body(true, None)?;
         self.expect_rbrace()?;
         self.skip_semis();
         if self.pos < self.toks.len() {
@@ -169,6 +190,16 @@ impl<'a> P<'a> {
         while matches!(self.peek_tok(), Some(Tok::Semi)) {
             self.pos += 1;
         }
+    }
+
+    /// An edge operator with nothing on the stack: nothing can link — the
+    /// oracle's unmatched-backbuffer error, quoting the rest of the line.
+    pub(super) fn arrow_not_recognized(&self, start: usize, line: usize) -> ParseError {
+        let rest = self.src[start..].lines().next().unwrap_or("").trim_end();
+        err(
+            line,
+            format!("'{}' not recognized by Graph::Easy::Parser::Graphviz", rest),
+        )
     }
 
     fn expect_rbrace(&mut self) -> Result<(), ParseError> {
@@ -185,13 +216,13 @@ impl<'a> P<'a> {
     /// creation or node-attribute application).
     pub(super) fn resolve(&mut self, ep: &Ep) -> Result<usize, ParseError> {
         match ep {
-            Ep::Idx(i) => Ok(*i),
             Ep::Name(name) => self.intern(name),
             Ep::Port {
                 base,
                 port,
                 compass,
             } => self.resolve_port(base, port, compass.as_deref()),
+            Ep::Scope => unreachable!("scope endpoints never resolve — linkage flows through the stack"),
         }
     }
 
