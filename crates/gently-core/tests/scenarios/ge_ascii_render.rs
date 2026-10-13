@@ -324,3 +324,43 @@ fn p6() {
     let art = ascii::render(&g, &layout::layout(&g)).expect("colored node must render");
     assert_eq!(art, "+---+\n| x |\n+---+\n", "color must not change ascii bytes");
 }
+
+/// ge.ascii_render.p7 (c7, gently-b0z): anonymous nodes render boxless —
+/// the oracle's `node.anon` class carries borderstyle none and the label
+/// `' '`, so the node's own 3×3 cell renders blank and the edges attach
+/// to the empty space. Expected bytes: tests/repro/claims/pod-anon-nodes
+/// .observed (seed 0, Parser.pm POD anonymous-nodes example).
+#[test]
+fn p7() {
+    let g = text::parse("[ ] --> [ Bonn ]\n[ Bonn ] --> [ ]\n")
+        .expect("anon chain must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).expect("anon chain must render");
+    assert_eq!(art, "        +------+\n    --> | Bonn | -->\n        +------+\n");
+}
+
+/// ge.ascii_render.p8 (c8, gently-7rx bonus): a node group renders the
+/// dashed border frame (`+ - - +` corners with `'` sides — the dashed
+/// style's border row-0 glyphs) around its members with the `Name:`
+/// title band above; the title cell shares the leftmost member's grid
+/// column and its `label+2` minimum widens it. Expected bytes:
+/// tests/repro/claims/pod-group.observed (seed 0, Parser.pm POD groups
+/// example).
+#[test]
+fn p8() {
+    let g = text::parse("( Cities:\n  [ Berlin ]\n  [ Bonn ]\n)\n\n[ Bonn ] --> [ Berlin ]\n")
+        .expect("group example must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).expect("group example must render");
+    assert_eq!(
+        art,
+        concat!(
+            "+ - - - - - - - - - - - - -+\n",
+            "' Cities:                  '\n",
+            "'                          '\n",
+            "' +-------+     +--------+ '\n",
+            "' | Bonn  | --> | Berlin | '\n",
+            "' +-------+     +--------+ '\n",
+            "'                          '\n",
+            "+ - - - - - - - - - - - - -+\n",
+        )
+    );
+}
