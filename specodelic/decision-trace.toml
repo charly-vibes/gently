@@ -1,0 +1,37 @@
+source = "decision.trace"
+
+[[constraints]]
+id = "c1"
+kind = "invariant"
+expr = "The decision trace is a versioned artifact — a `version` field is mandatory from day one — carrying one sub-vocabulary per pipeline stage (parse, graph model, rank/col, bands, spans, route classification, bends, glyphs), and every event carries its governing spec id; the seed vocabulary for route classification is the `Route` enum of `crates/gently-core/src/layout.rs` (`Selfloop`, `Grew`, `Parallel(usize)`, `Around`, `PortBelow`, `PortAbove`), and no stage vocabulary may invent route spellings that contradict it (design D1)."
+traces_to = "[[decision.trace]]"
+
+[[constraints]]
+id = "c2"
+kind = "invariant"
+expr = "The oracle→Dec normalization is the explicit committed table `tests/repro/trace/normalization-table.md` (rows N1–N8), never prose, each row enforced by a named subtest in `crates/gently-core/tests/e3_faithfulness.rs` (`row_nN_*`); the pairwise faithfulness property holds: for every pair of corpus fixtures whose oracle dumps differ at stage S, the normalized traces differ in S's image, and per fixture, canonically-ordered state snapshots normalize to an identical trace regardless of dump ordering (design D2 / CORR-001; E3 PASS gently-ugy)."
+traces_to = "[[decision.trace]]"
+
+[[constraints]]
+id = "c3"
+kind = "invariant"
+expr = 'Divergence is a set over the decision dependency poset: trace-diff reports the minimal antichain (cut set), never a unique "first" — a linear presentation is presentation only — and trace-diff runs only on byte-divergent fixtures, with decision-only diffs on byte-equal fixtures downgraded to informational; byte equality remains the CI gate (design D3 / CORR-002, D6; E1 PASS gently-asc).'
+traces_to = "[[decision.trace]]"
+
+[[constraints]]
+id = "c4"
+kind = "invariant"
+expr = "Oracle dumps are committed companions carrying the oracle pin header AND the hash seed as an explicit field, and mark per-stage observability so partially-observed stages are never reported as divergences; tier-2 (hash-seed-dependent) fixture classes stay excluded from the committed-dump corpus, and the exclusion is by admission probe naming [[ge.oracle.c7]], not prose (design D4; E2 PASS gently-8je)."
+traces_to = "[[decision.trace]]"
+
+[[constraints]]
+id = "c5"
+kind = "effect"
+expr = "A committed dump that is invalid — missing the pin header, missing the explicit hash-seed field, missing per-stage observability marks, or a tier-2 (hash-seed-dependent) fixture present in the committed-dump corpus — produces a typed error naming the defect and the remediation (re-dump under the pinned seed per the README Recording recipe, or removal from the corpus via the admission probe [[ge.oracle.c7]])."
+traces_to = "[[decision.trace]]"
+
+[[constraints]]
+id = "c6"
+kind = "invariant"
+expr = "Adjudication of every reported cut element is governed by the pre-registered (b)-checklist registry committed under `tests/repro/trace/` (design D5; E4 dry-run record gently-btf): (a) gently diverges → fix gently (default); (b) oracle defect → all five checklist items must hold (deterministic probe reproduction under ≥2 hash seeds, no existing spec constraint contradicts gently, the upstream defect is durably recorded and links the probe, gently's behavior is renderable and deterministic under its own invariants per [[ge.layout.c1]], the delta is not covered by the [[ge.oracle.c7]] scope-off classes), and any failure drops the element to (a) or (c) underdetermined → human decides; each adjudication is recorded as a wai decision record — precedent: gently-58m classed (b) with all five items holding (`.wai/projects/decision-trace/designs/2026-10-14-decision-e4-adjudication-dry-run-gently-58m.md`)."
+traces_to = "[[decision.trace]]"
