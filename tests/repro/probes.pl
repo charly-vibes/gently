@@ -43,7 +43,9 @@ probes: usage: perl tests/repro/probes.pl <mode> [args]
   admit <fixtures-dir> [out.tsv]   tier-1 admission sweep over the corpus (ge-oracle.c7/p7)
   claim <name>                     run one claim probe (see: perl tests/repro/probes.pl claims)
   claims                           list probes and the beads they serve
-  dump [claim...]                  E2 oracle _prepare_layout dump pilot (gently-8je; default: the five E2 fixtures)
+  dump [name...]                   oracle _prepare_layout dump mode (gently-8je pilot, gently-h1b corpus extension;
+                                   default: the five E2 pilot fixtures PLUS every admission.tsv stable class —
+                                   tier-2 hash-dependent classes are excluded by the admission row itself)
 Run under the pinned oracle, e.g.:
   PERL5LIB=/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib perl tests/repro/probes.pl admit tests/fixtures/graph-easy
 EOF
@@ -2019,16 +2021,18 @@ if ($mode eq 'admit') {
 }
 
 # ---------------------------------------------------------------------------
-# dump mode (gently-8je — decision-trace E2 oracle dump pilot, design D4/D7):
+# dump mode (gently-8je E2 pilot — gently-h1b corpus extension, D4/D7):
 # wraps ONLY the oracle's _prepare_layout (package Graph::Easy::Layout::Grid,
 # file Grid.pm in the pinned dist) via symbol-table aliasing after the module
-# is loaded, then renders each E2 claim fixture through the real as_ascii
-# path and appends a COMPACT placement/band summary per invocation to
-# tests/repro/dumps/<claim>.dump.txt. Each example is parsed as its OWN
-# graph exactly like the claim probes do (never merged across examples),
-# under the same seeds (0, 1). No raw dumps of graph objects, no full edge
-# cell matrices; the per-dump budget is $DUMP_BUDGET bytes, exceeded output
-# is cut with a '... (truncated ...)' marker line.
+# is loaded, then renders each fixture through the real as_ascii path and
+# appends a COMPACT placement/band summary per invocation to
+# tests/repro/dumps/<name>.dump.txt. No-arg mode sweeps the CORPUS: the five
+# E2 pilot fixtures plus every admission.tsv stable class (fixture input);
+# tier-2 hash-dependent classes are excluded by the admission row itself.
+# Each example is parsed as its OWN graph exactly like the claim probes do
+# (never merged across examples), under the same seeds (0, 1). No raw dumps
+# of graph objects, no full edge cell matrices; the per-dump budget is
+# $DUMP_BUDGET bytes, exceeded output is cut with a '... (truncated ...)' marker line.
 # ---------------------------------------------------------------------------
 my @E2_CLAIMS = qw(fan-layout pod-anon-group dot-bare-scope-in-named so-flowchart-size so-start-port-index);
 my $DUMP_BUDGET = 8000;
@@ -2186,42 +2190,124 @@ for my $ci (0 .. $#case_files) {
 }
 CHILD
 
+# Parse the admission manifest (ge.oracle c7: tier-1 membership is defined
+# by the admission probes/manifest, never by a hardcoded list — the tier-2
+# guard reads the SAME rows the admit sweep wrote). Returns {class => verdict}.
+sub admission_classes {
+    my $tsv = dirname(__FILE__) . '/admission.tsv';
+    open my $fh, '<', $tsv or die "probes: dump: cannot read admission manifest '$tsv': $!\n";
+    my %cls;
+    while (my $l = <$fh>) {
+        next if $l =~ /^#/;
+        chomp $l;
+        next unless $l =~ /\S/;
+        my ($name, $verdict) = split /\t/, $l;
+        next unless defined $name && defined $verdict && $name =~ /\S/;
+        $cls{$name} = $verdict;
+    }
+    close $fh;
+    return \%cls;
+}
+
+# The admission-probe input for a corpus class: its tier-1 fixture file
+# (the same bytes the admit sweep hashes). Returns () when the input is
+# not extractable — the caller emits a named skip: line, never a silent
+# omission (gently-h1b).
+sub dump_cases_for_admission {
+    my ($class) = @_;
+    my $fixture = dirname(__FILE__) . '/../fixtures/graph-easy/' . $class . '.txt';
+    return () unless -f $fixture;
+    open my $fh, '<:encoding(UTF-8)', $fixture or return ();
+    local $/; my $text = <$fh>; close $fh;
+    return ($text);
+}
+
+sub dump_run {
+    my ($name, $cases, $dumps_dir, $t0ref) = @_;
+    my $dump_file = "$dumps_dir/$name.dump.txt";
+    open my $z, '>', $dump_file or die "probes: dump: cannot write '$dump_file': $!\n";
+    print $z "# dump: $PIN — claim: $name — wrapped: Graph::Easy::_prepare_layout (defined in lib/Graph/Easy/Layout/Grid.pm; Grid.pm re-opens package Graph::Easy, so the alias lands in Graph::Easy)\n";
+    close $z;
+    my $tmp = File::Temp->newdir('dump-cases-XXXXXX', TMPDIR => 1, CLEANUP => 1);
+    my @case_files;
+    for my $i (0 .. $#$cases) {
+        my $file = "$tmp/case$i.txt";
+        open my $fh, '>:encoding(UTF-8)', $file or die "probes: dump: $!\n";
+        print $fh $cases->[$i];
+        close $fh;
+        push @case_files, $file;
+    }
+    for my $seed (0, 1) {
+        local $ENV{PERL_HASH_SEED} = $seed;
+        local $ENV{DUMP_BUDGET} = $DUMP_BUDGET;
+        open my $m, '>>', $dump_file or die "probes: dump: $!\n";
+        print $m "-- seed $seed\n";
+        close $m;
+        my ($status, $out, $err) = run_perl_snippet($DUMP_CHILD_SRC, 30, $dump_file, @case_files);
+        chomp(my $msg = $err // '');
+        die "probes: dump '$name' seed $seed: $status $msg" if $status ne 'ok';
+        print "$name seed $seed: $msg\n" if $msg ne '';
+    }
+    return $dump_file;
+}
+
 if ($mode eq 'dump') {
     my $dumps_dir = dirname(__FILE__) . '/dumps';
     make_path($dumps_dir);
-    my @claims = @ARGV ? @ARGV : @E2_CLAIMS;
-    for my $name (@claims) {
-        die "probes: dump: unknown claim probe '$name'\n$usage" unless $CLAIMS{$name};
+    my $admission = admission_classes();
+    my $fixtures_dir = dirname(__FILE__) . '/../fixtures/graph-easy';
+
+    # The work list: [name, \@cases] pairs. Explicit args may name either a
+    # claim probe (existing dump_cases_for extraction) or an admission class
+    # (fixture input); the no-arg corpus sweep (gently-h1b) is the five E2
+    # pilot fixtures PLUS every admission.tsv stable class.
+    my (@work, @excluded, @skipped);
+    if (@ARGV) {
+        for my $name (@ARGV) {
+            my $verdict = $admission->{$name};
+            if (defined $verdict && $verdict ne 'stable') {
+                push @excluded, [$name, $verdict];
+                next;
+            }
+            die "probes: dump: unknown claim probe '$name'\n$usage" unless $CLAIMS{$name} || -f "$fixtures_dir/$name.txt";
+            my @cases = $CLAIMS{$name} ? dump_cases_for($name) : dump_cases_for_admission($name);
+            if (!@cases) { push @skipped, [$name, 'no extractable probe input']; next; }
+            push @work, [$name, \@cases];
+        }
+        # Explicit tier-2 request: named reason per excluded class, exit 2
+        # (the admission-probe meter — never silently skipped).
+        if (@excluded) {
+            printf STDERR "exclude: %s (admission.tsv: %s — tier-2 hash-dependent class, not admitted to the dump corpus; ge.oracle c7)\n", $_->[0], $_->[1] for @excluded;
+            exit 2;
+        }
     }
+    else {
+        my %seen = map { $_ => 1 } @E2_CLAIMS;
+        for my $name (@E2_CLAIMS) {
+            push @work, [$name, [dump_cases_for($name)]];
+        }
+        for my $class (sort keys %$admission) {
+            if ($admission->{$class} ne 'stable') {
+                push @excluded, [$class, $admission->{$class}];
+                next;
+            }
+            next if $seen{$class}++;
+            my @cases = dump_cases_for_admission($class);
+            if (!@cases) { push @skipped, [$class, 'no extractable admission fixture input']; next; }
+            push @work, [$class, \@cases];
+        }
+        # Tier-2 guard: exclusion is data-driven from the admission row
+        # itself (ge.oracle c7) — named lines, never a hardcoded list, and
+        # the sweep still exits cleanly.
+        printf "exclude: %s (admission.tsv: %s — tier-2 hash-dependent class not admitted to the dump corpus; ge.oracle c7)\n", $_->[0], $_->[1] for @excluded;
+    }
+    printf "skip: %s (%s)\n", $_->[0], $_->[1] for @skipped;
+
     my $t0 = time();
     my @dump_files;
-    for my $name (@claims) {
-        my @cases = dump_cases_for($name);
-        my $dump_file = "$dumps_dir/$name.dump.txt";
-        open my $z, '>', $dump_file or die "probes: dump: cannot write '$dump_file': $!\n";
-        print $z "# dump: $PIN — claim: $name — wrapped: Graph::Easy::_prepare_layout (defined in lib/Graph/Easy/Layout/Grid.pm; Grid.pm re-opens package Graph::Easy, so the alias lands in Graph::Easy)\n";
-        close $z;
-        my $tmp = File::Temp->newdir('dump-cases-XXXXXX', TMPDIR => 1, CLEANUP => 1);
-        my @case_files;
-        for my $i (0 .. $#cases) {
-            my $file = "$tmp/case$i.txt";
-            open my $fh, '>:encoding(UTF-8)', $file or die "probes: dump: $!\n";
-            print $fh $cases[$i];
-            close $fh;
-            push @case_files, $file;
-        }
-        for my $seed (0, 1) {
-            local $ENV{PERL_HASH_SEED} = $seed;
-            local $ENV{DUMP_BUDGET} = $DUMP_BUDGET;
-            open my $m, '>>', $dump_file or die "probes: dump: $!\n";
-            print $m "-- seed $seed\n";
-            close $m;
-            my ($status, $out, $err) = run_perl_snippet($DUMP_CHILD_SRC, 30, $dump_file, @case_files);
-            chomp(my $msg = $err // '');
-            die "probes: dump '$name' seed $seed: $status $msg" if $status ne 'ok';
-            print "$name seed $seed: $msg\n" if $msg ne '';
-        }
-        push @dump_files, $dump_file;
+    for my $entry (@work) {
+        my ($name, $cases) = @$entry;
+        push @dump_files, dump_run($name, $cases, $dumps_dir);
     }
     my $elapsed = time() - $t0;
     my $total = 0;

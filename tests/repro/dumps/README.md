@@ -6,23 +6,63 @@ oracle with `PERL_HASH_SEED` swept over 0 and 1 per fixture).
 
 ## Sizes (`wc -c`)
 
-| dump | bytes |
-|---|---|
-| dot-bare-scope-in-named.dump.txt | 996 |
-| fan-layout.dump.txt | 1503 |
-| pod-anon-group.dump.txt | 859 |
-| so-flowchart-size.dump.txt | 876 |
-| so-start-port-index.dump.txt | 896 |
-| **TOTAL** | **5130** |
+## Sizes (gently-h1b corpus sweep, `wc -c`)
+
+| dump | bytes | source |
+|---|---|---|
+| bg-chain-continue.dump.txt | 672 | admission |
+| bg-dotted-style.dump.txt | 592 | admission |
+| chain.dump.txt | 596 | admission |
+| dot-bare-scope-in-named.dump.txt | 996 | E2 pilot |
+| fan-layout.dump.txt | 1503 | E2 pilot |
+| mixed_isolated.dump.txt | 725 | admission |
+| parallel.dump.txt | 657 | admission |
+| pod-anon-group.dump.txt | 859 | E2 pilot |
+| pod-bold-label.dump.txt | 579 | admission |
+| pod-bold-style.dump.txt | 579 | admission |
+| pod-inline-styles.dump.txt | 640 | admission |
+| pod-one-node.dump.txt | 553 | admission |
+| port-chain-right.dump.txt | 695 | admission |
+| port-end-right.dump.txt | 661 | admission |
+| port-skip-right.dump.txt | 694 | admission |
+| port-start-left.dump.txt | 664 | admission |
+| port-start-right.dump.txt | 663 | admission |
+| selfloop.dump.txt | 625 | admission |
+| size-attr.dump.txt | 1306 | admission |
+| so-flowchart-size.dump.txt | 876 | E2 pilot |
+| so-start-port-index.dump.txt | 896 | E2 pilot |
+| tracer.dump.txt | 565 | admission |
+| txt-isolated.dump.txt | 691 | admission |
+| txt-shared-target.dump.txt | 608 | admission |
+| **TOTAL (24 dumps)** | **17895** | |
+
+Excluded (tier-2 guard, admission.tsv verdict `hash-dependent`):
+`exclude: txt-diamond (admission.tsv: hash-dependent — tier-2
+hash-dependent class not admitted to the dump corpus; ge.oracle c7)`. No
+`skip:` lines were needed — every stable admission class has an extractable
+fixture input.
 
 ## Meter (pre-registered in the brief)
 
 - **PASS** iff total < 51200 bytes AND elapsed < 1 day of work.
 - **KILL** iff total > 512000 bytes, or hooking required >5 subs.
 
-**Verdict: PASS** — 5130 bytes (10% of the PASS ceiling), ~1 s wall-clock for
-the whole dump run (regenerating all five fixtures under both seeds), and
-exactly **1 sub wrapped** (`_prepare_layout` only, per the design constraint).
+**Verdict: PASS** — 5130 bytes at the pilot (10% of the PASS ceiling), ~1 s
+wall-clock for the five-fixture pilot, and exactly **1 sub wrapped**
+(`_prepare_layout` only, per the design constraint).
+
+## gently-h1b corpus extension (2026-10-14)
+
+The no-arg dump sweep over the full tier-1 corpus (24 dumps = five E2 pilot
+fixtures + 19 stable admission classes; `txt-diamond` excluded by its
+admission row) produced 17895 bytes and ran in **3.9 s** wall-clock. The
+five E2 pilot dumps remained byte-identical after the extension (verified
+against the committed pilot bytes via `git show` + `cmp`); admission-class
+dumps reuse the identical dump format, child, and seed sweep, reading the
+tier-1 fixture file as the single case. All 19 stable classes dumped —
+zero skips; the only named non-admission is the `txt-diamond` exclude line.
+Explicit `dump txt-diamond` still names the exclusion on stderr and exits 2
+(the admission-probe meter).
 Dumps are byte-deterministic across regens: per-band node lines are sorted,
 because `%{$graph->{cells}}` iteration order is hash-seed dependent (the same
 upstream hash-order artifact behind the `so-flowchart-size.observed` dirt).

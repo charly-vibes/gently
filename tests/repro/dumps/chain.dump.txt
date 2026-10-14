@@ -1,0 +1,13 @@
+# dump: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — claim: chain — wrapped: Graph::Easy::_prepare_layout (defined in lib/Graph/Easy/Layout/Grid.pm; Grid.pm re-opens package Graph::Easy, so the alias lands in Graph::Easy)
+-- seed 0
+== invocation 1 (case0, format: ascii) nodes=3 edge-cells=2 group-cells=0
+band y=0 nodes=3 edge-cells=2 group-cells=0
+  a @ (0,0) 5x3
+  b @ (2,0) 5x3
+  c @ (4,0) 5x3
+-- seed 1
+== invocation 1 (case0, format: ascii) nodes=3 edge-cells=2 group-cells=0
+band y=0 nodes=3 edge-cells=2 group-cells=0
+  a @ (0,0) 5x3
+  b @ (2,0) 5x3
+  c @ (4,0) 5x3
