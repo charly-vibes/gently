@@ -43,6 +43,7 @@ probes: usage: perl tests/repro/probes.pl <mode> [args]
   admit <fixtures-dir> [out.tsv]   tier-1 admission sweep over the corpus (ge-oracle.c7/p7)
   claim <name>                     run one claim probe (see: perl tests/repro/probes.pl claims)
   claims                           list probes and the beads they serve
+  dump [claim...]                  E2 oracle _prepare_layout dump pilot (gently-8je; default: the five E2 fixtures)
 Run under the pinned oracle, e.g.:
   PERL5LIB=/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib perl tests/repro/probes.pl admit tests/fixtures/graph-easy
 EOF
@@ -93,6 +94,9 @@ remediation: fetch the pinned dist isolated and put it on PERL5LIB:
   tar xzf Graph-Easy-$PIN_VERSION.tar.gz
   PERL5LIB=/var/tmp/ge$PIN_VERSION/Graph-Easy-$PIN_VERSION/lib perl tests/repro/probes.pl <mode> ...
 EOF
+    # dump mode degrades instead of dying (gently-8je): printed reason + exit 2,
+    # so an absent oracle can never hang or half-run the dump pilot.
+    if ($mode eq 'dump') { print STDERR $remediation; exit 2; }
     die $remediation;
 }
 
@@ -2011,6 +2015,224 @@ if ($mode eq 'admit') {
     }
     close($o);
     print "admission manifest written: $out (", scalar(@inputs), " inputs)\n";
+    exit 0;
+}
+
+# ---------------------------------------------------------------------------
+# dump mode (gently-8je — decision-trace E2 oracle dump pilot, design D4/D7):
+# wraps ONLY the oracle's _prepare_layout (package Graph::Easy::Layout::Grid,
+# file Grid.pm in the pinned dist) via symbol-table aliasing after the module
+# is loaded, then renders each E2 claim fixture through the real as_ascii
+# path and appends a COMPACT placement/band summary per invocation to
+# tests/repro/dumps/<claim>.dump.txt. Each example is parsed as its OWN
+# graph exactly like the claim probes do (never merged across examples),
+# under the same seeds (0, 1). No raw dumps of graph objects, no full edge
+# cell matrices; the per-dump budget is $DUMP_BUDGET bytes, exceeded output
+# is cut with a '... (truncated ...)' marker line.
+# ---------------------------------------------------------------------------
+my @E2_CLAIMS = qw(fan-layout pod-anon-group dot-bare-scope-in-named so-flowchart-size so-start-port-index);
+my $DUMP_BUDGET = 8000;
+
+# Extract the example text(s) each claim probe feeds the oracle, so the dump
+# runs parse exactly what the probes parse (single source of truth, no
+# duplicated fixtures here). Returns one text per graph.
+sub dump_cases_for {
+    my ($name) = @_;
+    my $src = $CLAIMS{$name} // die "probes: dump: unknown claim probe '$name'\n";
+    if ($name eq 'fan-layout') {
+        # the probe loops over two double-quoted inline texts; extract them
+        # from the for-statement and unescape \n like the probe's "" strings
+        my ($stmt) = $src =~ /for my \$t \((.*?)\) \{/s
+            or die "probes: dump: fan-layout: cannot find the input loop\n";
+        my @cases;
+        while ($stmt =~ /'([^']*)'|"((?:[^"\\]|\\.)*)"/g) {
+            my $t = defined $1 ? $1 : $2;
+            $t =~ s/\\n/\n/g;
+            push @cases, $t;
+        }
+        die "probes: dump: fan-layout: expected 2 cases, found " . scalar(@cases) . "\n" unless @cases == 2;
+        return @cases;
+    }
+    if ($name eq 'dot-bare-scope-in-named') {
+        # the probe's @cases pairs: [ 'label', "dot text" ]
+        my @cases;
+        while ($src =~ /^\s*\[\s*'[^']*',\s*"((?:[^"\\]|\\.)*)"\s*\],?\s*$/mg) {
+            push @cases, $1;
+        }
+        die "probes: dump: dot-bare-scope-in-named: expected 2 cases, found " . scalar(@cases) . "\n" unless @cases == 2;
+        return @cases;
+    }
+    # pod_probe_body claims: the <<'EXAMPLE' heredoc is the verbatim text
+    # (escapes like \n inside edge labels stay literal — the parser owns them)
+    my ($example) = $src =~ /pod_probe_body\('$name', <<'EXAMPLE'\)\n(.*?)\nEXAMPLE\n/s
+        or die "probes: dump: cannot extract the EXAMPLE heredoc for '$name'\n";
+    return ($example);
+}
+
+# The dump child: installs the wrapper, then parses each case file as its own
+# graph (UTF-8 read layer, same as pod_probe_body) and renders as_ascii. Runs
+# as a child per (claim, seed) because the hash seed is fixed at perl startup.
+my $DUMP_CHILD_SRC = <<'CHILD';
+use strict; use warnings;
+use Graph::Easy;
+use Graph::Easy::Layout::Grid;
+use Graph::Easy::Parser;
+use Graph::Easy::Parser::Graphviz;
+my ($dump_file, @case_files) = @ARGV;
+open my $dfh, '>>', $dump_file or die "dump: $!\n";
+binmode $dfh, ':raw';
+my $invocations = 0;
+my $current_case = 'case0';
+my $budget = $ENV{DUMP_BUDGET} + 0;
+my $written = 0;
+my $truncated = 0;
+
+sub dump_line {
+    my ($line) = @_;
+    return if $truncated;
+    if ($written + length($line) > $budget) {
+        my $m = "... (truncated at $budget bytes)\n";
+        print $dfh $m; $written += length($m); $truncated = 1;
+        return;
+    }
+    print $dfh $line;
+    $written += length($line);
+}
+
+sub dump_summary {
+    my ($graph, $format) = @_;
+    my %band_nodes;   # grid row (y rank) -> [ "name @ (x,y) wxh" ]
+    my %band_edges;   # grid row -> edge-cell count
+    my %band_groups;  # grid row -> group-border-cell count
+    my $nodes = 0;
+    for my $cell (values %{$graph->{cells}}) {
+        if ($cell->isa('Graph::Easy::Edge::Cell')) {
+            $band_edges{ defined $cell->{y} ? $cell->{y} : -1 }++;
+            next;
+        }
+        # multi-celled nodes place Node::Cell FILLER cells (isa Node, empty
+        # name) for each spanned grid cell — skip them; the owning node is
+        # emitted ONCE with its cx/cy span below
+        next if $cell->isa('Graph::Easy::Node::Cell');
+        if ($cell->isa('Graph::Easy::Group::Cell')) {
+            $band_groups{ defined $cell->{y} ? $cell->{y} : -1 }++;
+            next;
+        }
+        next unless $cell->isa('Graph::Easy::Node');
+        $nodes++;
+        my $y = defined $cell->{y} ? $cell->{y} : -1;
+        my $name = defined $cell->{name} ? $cell->{name} : '<anon>';
+        $name =~ s/\s+/ /g;
+        my $span = (($cell->{cx} || 1) > 1 || ($cell->{cy} || 1) > 1)
+            ? " cx=$cell->{cx} cy=$cell->{cy}" : '';
+        push @{$band_nodes{$y}},
+            sprintf("  %s @ (%s,%s) %sx%s%s\n", $name, $cell->{x} // '?', $y,
+                    $cell->{w} // '?', $cell->{h} // '?', $span);
+    }
+    my @lines;
+    my $edge_cells = 0;
+    $edge_cells += $_ for values %band_edges;
+    my $group_cells = 0;
+    $group_cells += $_ for values %band_groups;
+    push @lines, sprintf("== invocation %d (%s, format: %s) nodes=%d edge-cells=%d group-cells=%d\n",
+                         $invocations, $current_case, $format // 'undef', $nodes, $edge_cells, $group_cells);
+
+    my %seen_band;
+    for my $y (sort { $a <=> $b } (keys %band_nodes, keys %band_edges, keys %band_groups)) {
+        next if $seen_band{$y}++;
+        my $members = $band_nodes{$y} || [];
+        push @lines, sprintf("band y=%s nodes=%d edge-cells=%d group-cells=%d\n",
+                             $y, scalar(@$members), $band_edges{$y} || 0, $band_groups{$y} || 0);
+        # sorted: %{$graph->{cells}} hash iteration order is hash-seed
+        # dependent (visible as Server/Client line flips between seeds) —
+        # sort the member lines so committed dumps are byte-stable
+        push @lines, sort @$members;
+    }
+    dump_line($_) for @lines;
+}
+
+# THE WRAPPER (gently-8je): one sub, _prepare_layout only, aliased in the
+# package that actually defines it AFTER the module is loaded. NOTE: Grid.pm
+# re-opens `package Graph::Easy;' at line 14, so the sub compiled at line 67
+# lives in the Graph::Easy symbol table, NOT Graph::Easy::Layout::Grid
+# (verified: exists $Graph::Easy::{_prepare_layout}). Calls the original,
+# records the compact summary from the mutated cell state, returns unchanged.
+{
+    no warnings 'redefine';
+    no strict 'refs';
+    my $pkg = 'Graph::Easy';
+    my $orig = \&{$pkg . '::_prepare_layout'}
+        or die "dump: _prepare_layout not found in $pkg\n";
+    *{$pkg . '::_prepare_layout'} = sub {
+        my ($self, $format) = @_;
+        my @r = $orig->(@_);
+        $invocations++;
+        dump_summary($self, $format);
+        return @r;
+    };
+}
+
+# each case file is parsed as its OWN graph — exactly one from_text per file,
+# the same read layer pod_probe_body uses
+for my $ci (0 .. $#case_files) {
+    my $file = $case_files[$ci];
+    $current_case = "case$ci";
+    local $/; open my $fh, '<:encoding(UTF-8)', $file or die "open: $!\n";
+    my $text = <$fh>;
+    my $g = Graph::Easy::Parser->new->from_text($text);
+    die "parse failed for $file\n" unless $g;
+    my $ascii = $g->as_ascii();
+    print "-- $current_case ($file): render ", length($ascii), " bytes, invocations=$invocations\n";
+}
+CHILD
+
+if ($mode eq 'dump') {
+    my $dumps_dir = dirname(__FILE__) . '/dumps';
+    make_path($dumps_dir);
+    my @claims = @ARGV ? @ARGV : @E2_CLAIMS;
+    for my $name (@claims) {
+        die "probes: dump: unknown claim probe '$name'\n$usage" unless $CLAIMS{$name};
+    }
+    my $t0 = time();
+    my @dump_files;
+    for my $name (@claims) {
+        my @cases = dump_cases_for($name);
+        my $dump_file = "$dumps_dir/$name.dump.txt";
+        open my $z, '>', $dump_file or die "probes: dump: cannot write '$dump_file': $!\n";
+        print $z "# dump: $PIN — claim: $name — wrapped: Graph::Easy::_prepare_layout (defined in lib/Graph/Easy/Layout/Grid.pm; Grid.pm re-opens package Graph::Easy, so the alias lands in Graph::Easy)\n";
+        close $z;
+        my $tmp = File::Temp->newdir('dump-cases-XXXXXX', TMPDIR => 1, CLEANUP => 1);
+        my @case_files;
+        for my $i (0 .. $#cases) {
+            my $file = "$tmp/case$i.txt";
+            open my $fh, '>:encoding(UTF-8)', $file or die "probes: dump: $!\n";
+            print $fh $cases[$i];
+            close $fh;
+            push @case_files, $file;
+        }
+        for my $seed (0, 1) {
+            local $ENV{PERL_HASH_SEED} = $seed;
+            local $ENV{DUMP_BUDGET} = $DUMP_BUDGET;
+            open my $m, '>>', $dump_file or die "probes: dump: $!\n";
+            print $m "-- seed $seed\n";
+            close $m;
+            my ($status, $out, $err) = run_perl_snippet($DUMP_CHILD_SRC, 30, $dump_file, @case_files);
+            chomp(my $msg = $err // '');
+            die "probes: dump '$name' seed $seed: $status $msg" if $status ne 'ok';
+            print "$name seed $seed: $msg\n" if $msg ne '';
+        }
+        push @dump_files, $dump_file;
+    }
+    my $elapsed = time() - $t0;
+    my $total = 0;
+    print "-- dump sizes (wc -c) --\n";
+    for my $f (@dump_files) {
+        my $sz = -s $f;
+        $total += $sz;
+        printf "%8d  %s\n", $sz, $f;
+    }
+    printf "TOTAL: %d bytes across %d dumps (meter: PASS < 51200, KILL > 512000)\n", $total, scalar(@dump_files);
+    printf "elapsed: %ds\n", $elapsed;
     exit 0;
 }
 

@@ -1,0 +1,39 @@
+# dump: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — claim: fan-layout — wrapped: Graph::Easy::_prepare_layout (defined in lib/Graph/Easy/Layout/Grid.pm; Grid.pm re-opens package Graph::Easy, so the alias lands in Graph::Easy)
+-- seed 0
+== invocation 1 (case0, format: ascii) nodes=4 edge-cells=3 group-cells=0
+band y=0 nodes=3 edge-cells=2 group-cells=0
+  A @ (0,0) 5x3
+  C @ (-2,0) 5x3
+  D @ (2,0) 5x3
+band y=1 nodes=0 edge-cells=1 group-cells=0
+band y=2 nodes=1 edge-cells=0 group-cells=0
+  B @ (0,2) 5x3
+== invocation 2 (case1, format: ascii) nodes=5 edge-cells=4 group-cells=0
+band y=0 nodes=3 edge-cells=2 group-cells=0
+  hub @ (2,0) 7x6 cx=1 cy=3
+  n1 @ (0,0) 6x3
+  n4 @ (4,0) 6x3
+band y=2 nodes=1 edge-cells=1 group-cells=0
+  n2 @ (4,2) 6x3
+band y=3 nodes=0 edge-cells=1 group-cells=0
+band y=4 nodes=1 edge-cells=0 group-cells=0
+  n3 @ (2,4) 7x3
+-- seed 1
+== invocation 1 (case0, format: ascii) nodes=4 edge-cells=3 group-cells=0
+band y=0 nodes=3 edge-cells=2 group-cells=0
+  A @ (0,0) 5x3
+  B @ (2,0) 5x3
+  D @ (-2,0) 5x3
+band y=1 nodes=0 edge-cells=1 group-cells=0
+band y=2 nodes=1 edge-cells=0 group-cells=0
+  C @ (0,2) 5x3
+== invocation 2 (case1, format: ascii) nodes=5 edge-cells=4 group-cells=0
+band y=0 nodes=3 edge-cells=2 group-cells=0
+  hub @ (2,0) 7x6 cx=1 cy=3
+  n1 @ (0,0) 6x3
+  n4 @ (4,0) 6x3
+band y=2 nodes=1 edge-cells=1 group-cells=0
+  n2 @ (4,2) 6x3
+band y=3 nodes=0 edge-cells=1 group-cells=0
+band y=4 nodes=1 edge-cells=0 group-cells=0
+  n3 @ (2,4) 7x3
