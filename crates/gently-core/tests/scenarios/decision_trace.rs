@@ -138,14 +138,11 @@ fn p3() {
     let err = gently_core::trace_diff::trace_diff(same_bytes, same_bytes, a, b, false)
         .expect_err("byte gate must refuse byte-identical fixtures with differing traces");
     assert_eq!(err.to_string(), gently_core::trace_diff::INFORMATIONAL_HINT);
-    if let gently_core::trace_diff::TraceDiffError::DecisionOnly { .. } = &err {
-        assert!(
-            !cut.is_empty(),
-            "the refused cut is reported for --informational"
-        );
-    } else {
-        panic!("byte gate must be the typed DecisionOnly refusal");
-    }
+    let gently_core::trace_diff::TraceDiffError::DecisionOnly { cut } = err;
+    assert!(
+        !cut.is_empty(),
+        "the refused cut is reported for --informational"
+    );
     // --informational downgrades the decision-only diff.
     let info = gently_core::trace_diff::trace_diff(same_bytes, same_bytes, a, b, true)
         .expect("informational mode shows the decision-only diff");
@@ -175,6 +172,7 @@ fn p3() {
 ///   - byte-identical class with a decision-only trace diff → the byte
 ///     gate refuses it (typed `DecisionOnly`), and --informational shows
 ///     the diff.
+///
 /// Byte equality itself stays pinned by the existing corpus tests.
 fn excl001() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../");
@@ -425,10 +423,10 @@ fn claims_ascii(path: &Path) -> Option<String> {
         }
         block = raw;
     }
-    while block.first().map_or(false, |l| l.trim().is_empty()) {
+    while block.first().is_some_and(|l| l.trim().is_empty()) {
         block.remove(0);
     }
-    while block.last().map_or(false, |l| l.trim().is_empty()) {
+    while block.last().is_some_and(|l| l.trim().is_empty()) {
         block.pop();
     }
     if block.is_empty() {
