@@ -2,15 +2,15 @@
 
 ## 1. Spec corpus first (spec-first convention)
 
-- [ ] 1.1 Write `specs/decision-trace.md` (specodelic four-layer format)
+- [x] 1.1 Write `specs/decision-trace.md` (specodelic four-layer format)
       covering requirements R1–R5 below; run `spk lint specs` to zero
       findings.
-- [ ] 1.2 Deploy the openspec mirror (`tools/deploy_specs.py`) and
+- [x] 1.2 Deploy the openspec mirror (`tools/deploy_specs.py`) and
       regenerate specodelic artifacts (TOMLs, `*_props.rs`, `*.check.json`);
       run `rustfmt --edition 2021 specodelic/*.rs` after every compile
       (specodelic#15). Stage spec + mirror + artifacts in the SAME commit
       as the corpus change (spec-drift-gate gotcha).
-- [ ] 1.3 Register the espectacular contract scenarios (`.espectacular/`
+- [x] 1.3 Register the espectacular contract scenarios (`.espectacular/`
       TOMLs) for the new capability; `ah check --run-tests` clean.
 
 ## 2. Trace emission (D1 — harden the E1 prototype)
