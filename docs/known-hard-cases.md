@@ -276,3 +276,9 @@ input classes are outside byte-equality with the oracle by design:
 - `tests/repro/` — falsifiable probe harness (`probes.pl`) computing
   tier-1 admission and recording oracle-observed behavior for the
   divergences above
+- `tests/repro/dumps/` — committed oracle dumps for the decision-trace
+  pipeline: when a new divergence shows up, run the reproducer under
+  `GENTLY_TRACE=<stage>` for a stage trace, diff it against the committed
+  oracle dump (trace-diff driver, EXCL-001 exclusions), reduce to a
+  minimal antichain cut, then adjudicate via the committed registry
+  (a/b/c) before opening a bead
