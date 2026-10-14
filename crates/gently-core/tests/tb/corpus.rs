@@ -87,6 +87,20 @@ fn selfloop_renders_oracle_ascii() {
     );
 }
 
+/// ge.oracle.c3: size-attr (gently-awd) — five size-attributed chains:
+/// `size: W,H` / `rows:` / `columns:` stretch the node over W grid
+/// columns (balance grows the spanned columns smallest-first), so the
+/// box widens to the span sum while the B nodes shift east column by
+/// column; rows spans collapse (empty continuation rows are 0 tall),
+/// so `size: 1,2` / `rows: 3` stay standard 3-line boxes.
+#[test]
+fn size_attr_renders_oracle_ascii() {
+    assert_eq!(
+        rendered_ascii("size-attr").into_bytes(),
+        oracle_body("size-attr", "ascii")
+    );
+}
+
 /// ge.oracle.c3: txt-diamond (a->b, a->c, b->d, c->d) — ranks 0/1/2,
 /// c below rank 1, vertical segments + arrowheads as recorded.
 #[test]
@@ -137,6 +151,7 @@ fn all_fixtures_render_oracle_txt() {
         "mixed_isolated",
         "parallel",
         "selfloop",
+        "size-attr",
         "txt-diamond",
         "txt-isolated",
         "txt-shared-target",

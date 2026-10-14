@@ -14,6 +14,7 @@ port-skip-right	stable	0.006
 port-start-left	stable	0.006
 port-start-right	stable	0.008
 selfloop	stable	0.006
+size-attr	stable	0.006
 tracer	stable	0.007
 txt-diamond	hash-dependent	0.007
 txt-isolated	stable	0.006
