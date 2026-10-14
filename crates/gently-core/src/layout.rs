@@ -65,6 +65,12 @@ pub(super) enum Route {
     /// edge: bends through the gap row above the band (odd prior count) or
     /// below it (even), so parallel edges never overlap the straight one.
     Parallel(usize),
+    /// Parallel channel between a MULTI-ROW pair (gently-awd): channel
+    /// `k` rides the boxes' row span — grid row `band + k` — as a
+    /// straight run through the tall boxes (the so-flowchart-size
+    /// oracle shape); the pair's first edge keeps the band-row run and
+    /// channels beyond the span fall back to `Parallel` bends.
+    Stacked(usize),
     /// Both endpoints were already placed and this is the pair's first
     /// edge: straight when adjacent, otherwise east/west along the source
     /// band, then vertically through the gap rows at the target column.

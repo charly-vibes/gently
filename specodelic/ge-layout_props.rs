@@ -35,6 +35,10 @@ pub mod spec_gen {
     pub fn chain() -> impl Strategy<Value = String> {
         Just("chain".into())
     }
+
+    pub fn channels() -> impl Strategy<Value = String> {
+        Just("channels".into())
+    }
 }
 
 proptest! {
@@ -65,11 +69,11 @@ fn p3() {
 
 proptest! {
     // id: p4
-    // generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges, plus the stacked-column fans (comma-chain fan-out, fan-in star) and the size-span chain (gently-awd)
-    // predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; a size-attributed source's straight edge routes through the single gap column east of its span and enters no spanned cell (gently-awd); structurally (any scale): every model edge receives a routed path
+    // generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges, plus the stacked-column fans (comma-chain fan-out, fan-in star), the size-span chain (gently-awd), and the multi-row flowchart's stacked channels (gently-awd completion)
+    // predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; a size-attributed source's straight edge routes through the single gap column east of its span and enters no spanned cell (gently-awd); a multi-row pair's parallel channels ride distinct rows of the boxes' row span — channel k's single gap cell sits on grid row `band + k` — while one-row pairs keep the bend shape (gently-awd completion); structurally (any scale): every model edge receives a routed path
     #[test]
-    fn p4(v0 in spec_gen::fans(), v1 in spec_gen::chain()) {
-        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; a size-attributed source's straight edge routes through the single gap column east of its span and enters no spanned cell (gently-awd); structurally (any scale): every model edge receives a routed path");
+    fn p4(v0 in spec_gen::fans(), v1 in spec_gen::chain(), v2 in spec_gen::channels()) {
+        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; a size-attributed source's straight edge routes through the single gap column east of its span and enters no spanned cell (gently-awd); a multi-row pair's parallel channels ride distinct rows of the boxes' row span — channel k's single gap cell sits on grid row `band + k` — while one-row pairs keep the bend shape (gently-awd completion); structurally (any scale): every model edge receives a routed path");
     }
 }
 

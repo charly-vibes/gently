@@ -86,7 +86,10 @@ pub(super) fn band_layout(
             if !horizontal {
                 continue;
             }
-            let r = layout.node_cells[edge.from].1;
+            // The label rides ITS OWN grid row (gently-awd): a stacked
+            // channel's single path cell sits on a continuation row of
+            // the boxes' row span, south of the band row.
+            let r = layout.edge_paths[ei][0].1;
             row_height[r] = row_height[r].max(lines.len() + 2);
         }
     }

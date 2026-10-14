@@ -335,7 +335,17 @@ impl Canvas {
         if path.len() == 1 {
             let (span_f, span_t) = (self.spans[edge.from], self.spans[edge.to]);
             if sr == tr && (tc == sc + span_f.0 + 1 || sc == tc + span_t.0 + 1) {
-                self.draw_gap_column(sr, path[0].0, tc < sc, edge_index, edge.from, edge.to);
+                // The run rides the PATH's row (gently-awd): a stacked
+                // parallel channel's single cell sits on a continuation
+                // row of the boxes' row span, south of the band row.
+                self.draw_gap_column(
+                    path[0].1,
+                    path[0].0,
+                    tc < sc,
+                    edge_index,
+                    edge.from,
+                    edge.to,
+                );
                 return Ok(());
             }
             if sc == tc && sr.abs_diff(tr) == 2 {

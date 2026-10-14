@@ -28,6 +28,10 @@ pub mod spec_gen {
         Just("chains".into())
     }
 
+    pub fn channels() -> impl Strategy<Value = String> {
+        Just("channels".into())
+    }
+
     pub fn style() -> impl Strategy<Value = String> {
         Just("style".into())
     }
@@ -55,11 +59,11 @@ pub mod spec_gen {
 
 proptest! {
     // id: p1
-    // generator: nodes with every border style, plus the size-attributed chains (gently-awd: `size: W,H` / `rows` / `columns` spans)
-    // predicate: each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed, and a size-attributed node's box widens to the balanced span sum (11 for `size: 2,3`, 17 for `size: 3,1`/`columns: 3`) while `rows` spans stay standard 3-line boxes — byte-identical to the recorded oracle companions
+    // generator: nodes with every border style, plus the size-attributed chains (gently-awd: `size: W,H` / `rows` / `columns` spans) and the multi-row flowchart's stacked channels (gently-awd completion)
+    // predicate: each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed, and a size-attributed node's box widens to the balanced span sum (11 for `size: 2,3`, 17 for `size: 3,1`/`columns: 3`) while `rows` spans stay standard 3-line boxes — byte-identical to the recorded oracle companions; a multi-row pair's stacked channels render straight runs at distinct heights with each label riding its own channel row and the boxes grown to their full row span (gently's deterministic channel order — scenarios ge_ascii_render p1_parallel_channels_rows)
     #[test]
-    fn p1(v0 in spec_gen::chains()) {
-        todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed, and a size-attributed node's box widens to the balanced span sum (11 for `size: 2,3`, 17 for `size: 3,1`/`columns: 3`) while `rows` spans stay standard 3-line boxes — byte-identical to the recorded oracle companions");
+    fn p1(v0 in spec_gen::chains(), v1 in spec_gen::channels()) {
+        todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed, and a size-attributed node's box widens to the balanced span sum (11 for `size: 2,3`, 17 for `size: 3,1`/`columns: 3`) while `rows` spans stay standard 3-line boxes — byte-identical to the recorded oracle companions; a multi-row pair's stacked channels render straight runs at distinct heights with each label riding its own channel row and the boxes grown to their full row span (gently's deterministic channel order — scenarios ge_ascii_render p1_parallel_channels_rows)");
     }
     // id: p2
     // generator: graphs with every edge style (bold/wide/broad as one aliased family), in straight gaps and chains, plus bidirectional (`<-->`, `<-- label -->`) and labeled-undirected edges straight and bent

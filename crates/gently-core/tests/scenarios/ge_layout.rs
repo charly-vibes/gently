@@ -56,6 +56,28 @@ fn labelled_edge_graph() -> Graph {
     g
 }
 
+/// The so-flowchart-size graph (gently-awd): Client/Msg Server carry
+/// `{ size: 5,10; }` and the pair carries THREE edges — two east-going
+/// Msg Server -> Client, one west-going Client -> Msg Server — in model
+/// order (put msg, 1. Number, 3. X Msg, 2. read X).
+fn flowchart_size_graph() -> Graph {
+    let mut g = Graph::default();
+    let client = g.add_node("Client");
+    let msg = g.add_node("Msg Server");
+    let server = g.add_node("Server");
+    g.set_attr(Scope::Node(client), "size", "5,10");
+    g.set_attr(Scope::Node(msg), "size", "5,10");
+    let e0 = g.add_edge(server, msg, true).expect("live endpoints");
+    g.set_attr(Scope::Edge(e0), "label", "put msg\n via http");
+    let e1 = g.add_edge(msg, client, true).expect("live endpoints");
+    g.set_attr(Scope::Edge(e1), "label", "1. Number X of unread");
+    let e2 = g.add_edge(msg, client, true).expect("live endpoints");
+    g.set_attr(Scope::Edge(e2), "label", "3. X Msg");
+    let e3 = g.add_edge(client, msg, true).expect("live endpoints");
+    g.set_attr(Scope::Edge(e3), "label", "2. read X");
+    g
+}
+
 /// Four parallel edges a -> b (the pair carries a 4-way multi-edge).
 fn quad_parallel_graph() -> Graph {
     let mut g = Graph::default();
@@ -364,6 +386,45 @@ fn p4_fan_stack_routes_jog_not_jump() {
         }
         gently_core::render::ascii::render(g, &l).expect("fan must render");
     }
+}
+
+/// ge.layout.p4 (c4, gently-awd): parallel channels between MULTI-ROW
+/// node pairs stack as grid ROWS through the boxes' row span — the
+/// pair's first edge keeps the straight band-row run, channel k rides
+/// the band's continuation row k (upstream places each parallel edge's
+/// cell on the next free row of the span; the so-flowchart-size oracle
+/// render: three straight runs at distinct heights, the box grown to
+/// its full 10-row span). One-row pairs keep the recorded bend shape
+/// (parallel.txt: channel 1 bends ABOVE the band).
+#[test]
+fn p4_parallel_channels_stack_rows() {
+    let g = flowchart_size_graph();
+    let l = layout::layout(&g);
+    assert_all_routed(&l, g.edges.len());
+    // Placement: one band, Server col0, Msg Server cols 2-6, Client
+    // cols 8-12 (the recorded oracle placement, seed-stable).
+    assert_eq!(l.node_cells[0], (8, 0), "Client");
+    assert_eq!(l.node_cells[1], (2, 0), "Msg Server");
+    assert_eq!(l.node_cells[2], (0, 0), "Server");
+    // The channels: e1 (pair's first edge) stays straight on the band
+    // row; e2/e3 stack on the continuation rows 1 and 2 — single gap
+    // cells east of Msg Server's span (column 7) / west of Client's.
+    assert_eq!(
+        l.edge_paths[1],
+        vec![(7, 0)],
+        "channel 0 stays on the band row"
+    );
+    assert_eq!(
+        l.edge_paths[2],
+        vec![(7, 1)],
+        "channel 1 rides continuation row 1"
+    );
+    assert_eq!(
+        l.edge_paths[3],
+        vec![(7, 2)],
+        "channel 2 rides continuation row 2"
+    );
+    gently_core::render::ascii::render(&g, &l).expect("flowchart must render");
 }
 
 /// The two cells differ by exactly one step on one axis.

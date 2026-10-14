@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 
 use super::chains::chain_order;
-use super::{Placement, Route};
+use super::{node_span, Placement, Route};
 use crate::graph::Graph;
 
 /// Arrange the placement for the configured flow: the oracle-compatible
@@ -78,6 +78,9 @@ fn rank_pass(graph: &Graph) -> Vec<usize> {
 /// decides by geometry).
 fn classify(graph: &Graph, cell: &[Option<(usize, usize)>]) -> Vec<Route> {
     let mut pairs: HashMap<(usize, usize), usize> = HashMap::new();
+    let spans: Vec<(usize, usize)> = (0..graph.nodes.len())
+        .map(|i| node_span(graph, i))
+        .collect();
     graph
         .edges
         .iter()
@@ -91,7 +94,12 @@ fn classify(graph: &Graph, cell: &[Option<(usize, usize)>]) -> Vec<Route> {
             if e.from == e.to {
                 Route::Selfloop
             } else if count >= 1 && pu.1 == pv.1 {
-                Route::Parallel(count)
+                let cy = spans[e.from].1.max(spans[e.to].1);
+                if cy > 1 && count < cy {
+                    Route::Stacked(count)
+                } else {
+                    Route::Parallel(count)
+                }
             } else {
                 Route::Grew
             }
@@ -108,6 +116,7 @@ pub(super) fn place(graph: &Graph) -> Option<Placement> {
     }
     let mut placer = Placer::new(graph.edges.len(), n);
     placer.ranks = rank_pass(graph);
+    placer.spans = (0..n).map(|i| node_span(graph, i)).collect();
     if graph.edges.is_empty() {
         // Edgeless graphs line up on band 0 in insertion order — the
         // tracer-era behavior pinned by the tb.ascii_render tests.
@@ -146,6 +155,10 @@ struct Placer {
     /// Longest-path rank of each node (gently-jrr): constrains the east
     /// extension column so a shared-middle bypass stays inline.
     ranks: Vec<usize>,
+    /// Grid-cell row span of each node (gently-awd): gates the stacked
+    /// parallel channels (a multi-row pair stacks channels on its row
+    /// span; a one-row pair keeps the bend shape).
+    spans: Vec<(usize, usize)>,
 }
 
 impl Placer {
@@ -157,6 +170,7 @@ impl Placer {
             route: vec![Route::Grew; edge_count],
             pairs: HashMap::new(),
             ranks: vec![0; node_count],
+            spans: vec![(1, 1); node_count],
         }
     }
 
@@ -185,7 +199,7 @@ impl Placer {
         let prior = *self.pairs.get(&key).unwrap_or(&0);
         self.pairs.insert(key, prior + 1);
         match (self.cell[u], self.cell[v]) {
-            (Some(pu), Some(pv)) => self.place_both_placed(ei, prior, pu, pv),
+            (Some(pu), Some(pv)) => self.place_both_placed(ei, u, v, prior, pu, pv),
             (Some(pu), None) => {
                 self.route[ei] = Route::Grew;
                 self.extend_or_below(v, pu);
@@ -206,16 +220,29 @@ impl Placer {
     }
 
     /// Both endpoints placed: a parallel bend when the pair already has an
-    /// edge on one band, otherwise a route around.
+    /// edge on one band, otherwise a route around. A multi-row pair
+    /// stacks its channels on the boxes' row span instead (gently-awd):
+    /// channel k rides the grid row `band + k` while the span has rows
+    /// for it (k <= cy - 1), so the channels run straight through the
+    /// tall boxes and grow them to their full span (the so-flowchart-size
+    /// oracle shape); a one-row pair keeps the recorded bend shape
+    /// (parallel.txt: channel 1 bends above the band).
     fn place_both_placed(
         &mut self,
         ei: usize,
+        u: usize,
+        v: usize,
         prior: usize,
         pu: (usize, usize),
         pv: (usize, usize),
     ) {
         self.route[ei] = if prior >= 1 && pu.1 == pv.1 {
-            Route::Parallel(prior)
+            let cy = self.spans[u].1.max(self.spans[v].1);
+            if cy > 1 && prior < cy {
+                Route::Stacked(prior)
+            } else {
+                Route::Parallel(prior)
+            }
         } else {
             Route::Around
         };

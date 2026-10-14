@@ -113,6 +113,39 @@ fn p1_size_attr_spans() {
     assert_eq!(art, want);
 }
 
+/// ge.ascii_render.p1 (c1, gently-awd): parallel channels between
+/// multi-row boxes ride the boxes' row span — each channel a straight
+/// run at its own height, the label riding its own channel row, the
+/// boxes grown to their full row span (the so-flowchart-size class).
+/// The bytes are gently's deterministic channel order (model order):
+/// the pinned oracle's seed-0 render swaps the two east-going labels
+/// (its channel order is hash-driven — same class as the fan
+/// residuals), the recorded claim probe
+/// tests/repro/claims/so-flowchart-size.observed pins both seeds.
+#[test]
+fn p1_parallel_channels_rows() {
+    let src = "[ Client ] { size: 5,10; }\n[ Msg Server ] { size: 5,10; }\
+\n\n[ Server ] -- put msg\\n via http --> [ Msg Server ]\
+\n[ Msg Server ] -- 1. Number X of unread --> [ Client ]\
+\n[ Msg Server ] -- 3. X Msg --> [ Client ]\
+\n[ Client ] -- 2. read X --> [ Msg Server ]\n";
+    let g = text::parse(src).expect("flowchart must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).expect("flowchart must render");
+    let want = concat!(
+        "+--------+  put msg    +------------+                          +--------+\n",
+        "| Server |  via http   |            |  1. Number X of unread   |        |\n",
+        "|        | ----------> |            | -----------------------> |        |\n",
+        "+--------+             |            |                          |        |\n",
+        "                       | Msg Server |  3. X Msg                | Client |\n",
+        "                       |            | -----------------------> |        |\n",
+        "                       |            |                          |        |\n",
+        "                       |            |  2. read X               |        |\n",
+        "                       |            | <----------------------- |        |\n",
+        "                       +------------+                          +--------+\n",
+    );
+    assert_eq!(art, want);
+}
+
 /// ge.ascii_render.p2 (c2): each edge's glyph run matches the style table
 /// byte-for-byte, arrowed and arrow-less (probed oracle bytes).
 #[test]

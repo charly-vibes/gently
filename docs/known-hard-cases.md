@@ -148,7 +148,7 @@ gently — keeps x ungrouped (no group emitted, no group box).
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-awd` | `{ size: 5,10; }` node attribute blocks (SO 47323345 flowchart): the oracle honors node sizes and lays Server/Msg Server/Client out 2x2 (bytes below), gently lays a 1-3-2 flow. RESOLVED SLICES (gently-awd, committed): (1) txt merges `size: W,H` (ge.txt_render c5/p5); (2) column spans — `size: W,H` / `columns` / `rows` stretch nodes over their grid-cell span (rank→col accumulation `2·rank + Σ(cx−1)`, per-column/row sizing from single-celled cells only, balance smallest-first to the label width, rows spans render 0-tall continuation rows) — the 5-chain size-attr fixture renders byte-identically (tests/fixtures/graph-easy/size-attr.*); (3) span-aware edge attachments (straight gap east/west of the span, bends entering/leaving through span columns). The flowchart's PLACEMENT now also matches the recorded oracle (Server col 0, Msg Server cols 2-6, Client cols 8-12, one band). REMAINING DELTA: parallel-edge CHANNEL routing — the oracle gives each parallel edge its own grid ROW below the band (the runs render as separate straight runs at distinct heights through the 10-line-tall boxes, and those edge rows grow Msg Server's box to its full 10-row span), while gently bends parallel channels through the gap rows above/below the band, leaving the continuation rows 0-tall (box stays 4 lines). Needs the upstream parallel-channel-as-rows mechanism — kin to gently-byq's indexed-port slots. |
+| `gently-awd` | RESOLVED (all slices committed): (1) txt merges `size: W,H` (ge.txt_render c5/p5); (2) column spans — `size: W,H` / `columns` / `rows` stretch nodes over their grid-cell span (rank→col accumulation `2·rank + Σ(cx−1)`, per-column/row sizing from single-celled cells only, balance smallest-first to the label width) — the 5-chain size-attr fixture renders byte-identically (tests/fixtures/graph-easy/size-attr.*); (3) span-aware edge attachments (straight gap east/west of the span, bends entering/leaving through span columns); (4) parallel-channel-as-rows (completion): a multi-row pair's parallel channels stack as grid ROWS through the boxes' row span — the pair's first edge keeps the straight band-row run, channel k rides grid row `band + k`, the channel rows carry edge cells so the boxes grow to their full row span (4+3+3 = the flowchart's 10 rows) — while one-row pairs keep the recorded bend shape (parallel.txt). Channel order is model order: the pinned oracle's is hash-driven (seed 0 assigns the pair's second model edge to the band row, seed 1 the first — so-flowchart-size.observed pins both), and gently byte-matches the seed-1 render (scenarios ge_ascii_render p1_parallel_channels_rows). Spec rows re-derived: ge.layout c4/p4, ge.ascii_render c1/p1. |
 | `gently-byq` | Indexed ports `{ start: front, N }`: the oracle honors the index and lands the edges at the indexed slots (bytes below), gently routes to the default slot. Unindexed side routing (`start: right` dips below, `left` bends above, `front` is the default) is PORTED byte-identically (`gently-89r`, `port-*` fixtures) — the index form needs variable node heights (the oracle stretches a 1-row box to 5 lines for a `front,1` slot) and the unprobed `back` (west) wrap runs outside the bounding box. |
 
 **`gently-awd`** — input and the divergence side-by-side:
@@ -181,20 +181,22 @@ oracle — `{ size: 5,10; }` honored, taller/wider boxes, 2x2 layout
                        +------------+                          +--------+
 ```
 
-gently — same input after the span slices (placement + box widths match
-the oracle; the parallel edges bend above/below instead of taking their
-own rows, so Msg Server's box stays 4 lines instead of stretching to its
-10-row span):
+gently — same input, byte-identical to the oracle's seed-1 render
+(placement + box widths + stacked channels match; the channel ORDER is
+model order, so the two east-going labels sit one channel up vs the
+oracle's seed-0 render — its channel order is hash-driven):
 
 ```
-                         +---------------------------------------+
-                         |                                       v
 +--------+  put msg    +------------+                          +--------+
-| Server |  via http   | Msg Server |  1. Number X of unread   | Client |
+| Server |  via http   |            |  1. Number X of unread   |        |
 |        | ----------> |            | -----------------------> |        |
-+--------+             +------------+                          +--------+
-                         ^                                       |
-                         +---------------------------------------+
++--------+             |            |                          |        |
+                       | Msg Server |  3. X Msg                | Client |
+                       |            | -----------------------> |        |
+                       |            |                          |        |
+                       |            |  2. read X               |        |
+                       |            | <----------------------- |        |
+                       +------------+                          +--------+
 ```
 
 **`gently-byq`** — input and the divergence side-by-side:

@@ -68,6 +68,9 @@ fn mark_slot(slot: &mut [usize], route: Route, pu: Cell, pv: Cell) {
             let (boundary, k) = parallel_channel(prior, pu.1);
             raise(slot, boundary, k + 1);
         }
+        // A stacked channel rides the boxes' row-span continuation rows
+        // (gently-awd) — no gap rows; the span reserves them.
+        Route::Stacked(_) => {}
         Route::Grew | Route::Around => mark_travel(slot, pu, pv),
     }
 }
@@ -231,26 +234,45 @@ fn edge_path(route: Route, ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> 
             // nodes — east of the source's column span or west of the
             // target's (gently-awd: a multi-celled node's east border
             // sits at `col + cx - 1`, so the gap column shifts east).
-            let gap = if gu.0 < gv.0 {
-                (gv.0 == gu.0 + span_u.0 + 1).then_some(gu.0 + span_u.0)
-            } else {
-                (gu.0 == gv.0 + span_v.0 + 1).then_some(gv.0 + span_v.0)
-            };
-            if gu.1 == gv.1 {
-                match gap {
-                    Some(c) => vec![(c, gu.1)],
-                    None => bend_path(
-                        gu,
-                        gv,
-                        span_u,
-                        span_v,
-                        bend_gap_row(route, su.1, rows, gu.1),
-                    ),
-                }
-            } else {
-                multiband_path(ep, rows, ctx)
+            match straight_gap(gu, gv, span_u, span_v) {
+                Some(c) if gu.1 == gv.1 => vec![(c, gu.1)],
+                _ if gu.1 == gv.1 => bend_path(
+                    gu,
+                    gv,
+                    span_u,
+                    span_v,
+                    bend_gap_row(route, su.1, rows, gu.1),
+                ),
+                _ => multiband_path(ep, rows, ctx),
             }
         }
+        // A stacked channel (gently-awd): straight through the gap
+        // column at grid row `band + k` — the pair's boxes' row span
+        // hosts the channel rows (the so-flowchart-size oracle shape);
+        // a non-adjacent pair bends through the stacked row.
+        Route::Stacked(k) => {
+            let row = gu.1 + k;
+            match straight_gap(gu, gv, span_u, span_v) {
+                Some(c) => vec![(c, row)],
+                None => bend_path(gu, gv, span_u, span_v, row),
+            }
+        }
+    }
+}
+
+/// The single gap column between two same-band neighbours: east of the
+/// source's column span, or west of the target's (`None` when the pair
+/// is not adjacent).
+fn straight_gap(
+    gu: Cell,
+    gv: Cell,
+    span_u: (usize, usize),
+    span_v: (usize, usize),
+) -> Option<usize> {
+    if gu.0 < gv.0 {
+        (gv.0 == gu.0 + span_u.0 + 1).then_some(gu.0 + span_u.0)
+    } else {
+        (gu.0 == gv.0 + span_v.0 + 1).then_some(gv.0 + span_v.0)
     }
 }
 
