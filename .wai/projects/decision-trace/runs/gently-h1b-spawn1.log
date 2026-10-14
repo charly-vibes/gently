@@ -1,0 +1,15 @@
+## Report — gently-h1b
+
+**Commit:** `496936b` — `feat(repro): corpus-wide oracle dump mode with tier-2 admission guard (gently-h1b)` (file-scoped: `tests/repro/probes.pl` + 19 new dumps + `tests/repro/dumps/README.md`; pre-commit hooks incl. ah-check/spk-lint all green).
+
+**Dump inventory:** 24 dumps, **17 895 bytes** total — five E2 pilot fixtures (via `dump_cases_for`, unchanged path) + all 19 `stable` admission.tsv classes (fixture input via new `dump_cases_for_admission`; zero `skip:` lines — every stable class had an extractable fixture).
+
+**Exclusions:** `exclude: txt-diamond (admission.tsv: hash-dependent …)` in the no-arg sweep (exit 0); explicit `dump txt-diamond` prints the same named reason to stderr and exits 2 (ticket meter). Guard is data-driven from admission.tsv — no hardcoded list.
+
+**E2-five byte-identity:** PASS — regenerated sweep compared against `git show HEAD:…` via `cmp`, all five identical. Cross-run determinism of new dumps also verified.
+
+**Sweep wall-clock:** 3.9 s (< 60 s budget).
+
+**Gates:** `just gates` exit 0; regenerated specodelic props restored to byte-identical-to-HEAD after rustfmt (`use_small_heuristics=Max`, matching the repo fmt recipe) — `fmt-check` clean; `cargo test` 219 passed (count unchanged).
+
+**Handoff notes:** pre-existing working-tree churn NOT mine and NOT committed: `tests/repro/claims/so-flowchart-size.observed` (mtime 13:41, before this session; re-recorded oracle bytes differ in edge-label placement order — flagged for adjudication) plus `.wai/`/`.whisper/` churn. Nothing pushed; bd state untouched (orchestrator owns ship).

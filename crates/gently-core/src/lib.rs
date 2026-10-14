@@ -17,6 +17,7 @@ pub mod parse;
 pub mod perf;
 pub mod render;
 pub mod trace;
+pub mod trace_diff;
 
 #[cfg(test)]
 mod tests {

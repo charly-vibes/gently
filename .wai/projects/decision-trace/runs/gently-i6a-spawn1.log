@@ -1,0 +1,8 @@
+**gently-i6a spec slice complete — commit `54f4691`** (single commit, no push, no `bd close`).
+
+- **Spec:** `specs/decision-trace.md` (id `decision.trace`) — 6 constraints (c1 D1 schema w/ mandatory version + Route seed vocabulary; c2 D2 normalization table N1–N8 + pairwise faithfulness; c3 D3 minimal-antichain cuts + D6 byte-gate; c4 D4 seed-pinned stage-observable dumps, tier-2 excluded per [[ge.oracle.c7]]; c5 effect — invalid-dump typed errors; c6 D5 adjudication registry, E4/gently-58m (b) precedent), 6 unit properties (p1–p6), 4 states / 4 transitions, failure terminal `dump_invalid` → c5.
+- **Mirror:** `openspec/specs/decision-trace/spec.md` deployed via `tools/deploy_specs.py`, same commit.
+- **Contracts:** `.espectacular/decision-trace/p1..p6.toml` (PF, `decision_trace::pN`, staged — no tests/scenarios files).
+- **Artifacts:** `spk compile specs` + rustfmt; scope-hash updates to 12 sibling `*.check.json` staged (corpus-wide regeneration).
+- **Verification:** `spk lint` 0 findings; `ah check --run-tests` = exactly the 6 expected `no-tests-ran` backlog entries (exit-0 tests, 77 existing passing); `just gates` exit 0; no test code added (cargo count unchanged by this slice — note: absolute count reads 218, baseline drift from other landed slices, e.g. e3_faithfulness).
+- All pre-commit hooks green (spec-drift-gate, spk-lint, fmt-check, ah-check). No deviations from brief.

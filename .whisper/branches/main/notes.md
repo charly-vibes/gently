@@ -195,3 +195,4 @@
   - D7 matrix populated from E-results: E1 PASS (gently-asc) + E2 PASS (gently-8je) -> decision rule satisfied; gently-25r (openspec go/no-go) and gently-ugy (E3) unblocked; gently-btf (E4) = interactive session. Only gently-awd remains in_progress (dormant, lease expired, parallel-channels-as-rows residual).
   - **Next:** /clear then /renew -> gently-25r (go/no-go gate) or gently-ugy (E3 pairwise faithfulness on tests/repro/dumps/); E4 interactive; then 58m+fb1 parser residuals, byq indexed ports, cij.
 - 2026-10-14T17:49:33Z [id:45f9d22eddf2f8b7957bda199079f87f2667cfe6ce7d75e091a23383f70ad1c6] (#snap) -
+- 2026-10-14T17:52:36Z [id:918e6868058441b3cfd74c25df3ef6e5f8d06f89a3472a04cbf20c368e73c903] (#snap) -

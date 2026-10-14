@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # E1 retrospective localization driver (gently-asc) — decision-trace prototype.
 #
+# SUPERSEDED (gently-9nn): the prototype-injection hack below (copying the
+# env-gated trace block onto fix^/fix worktrees) is obsolete — trace.rs is
+# now the real D1 layer (gently-p7y) and the trace-diff driver lives in
+# crates/gently-core/src/trace_diff.rs, exercised by scenarios::decision_trace::p3
+# (minimal antichain + byte gate + EXCL-001 corpus property). This script
+# stays as the historical record of E1's method and its verdicts (README.md).
+#
 # For each case, builds throwaway worktrees at fix^ and fix (shared target
 # dir), runs the fixture with GENTLY_TRACE=<pre-registered stage>, and diffs
 # traces against the pre-registered reference:

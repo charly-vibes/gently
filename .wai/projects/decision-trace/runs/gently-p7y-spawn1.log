@@ -1,0 +1,17 @@
+Done. **Report (gently-p7y):**
+
+**Commits** (branch local, not pushed, ticket open — orchestrator owns ship):
+- `c311ab2` — RED: `test(decision-trace): p1 contract RED — trace events lack version + spec id`
+- `d82e567` — GREEN: `feat(decision-trace): promote trace.rs to the D1 layer — versioned stage vocabulary + governing spec ids`
+
+**Files touched:** `crates/gently-core/src/trace.rs` (rewritten: `pub` D1 layer — `VERSION=1`, `SPEC_ID="decision.trace"`, 10-stage `STAGES` vocabulary, `emit()` prefixes every line `dt v1 stage=<s> spec=decision.trace`), `lib.rs` (`pub mod trace`), `layout.rs` (emit calls updated), `parse/text/mod.rs` (new `parse`-stage emission in the statement dispatch loop — decision already materialized there), `tests/scenarios.rs` + `tests/scenarios/decision_trace.rs` (registered, `decision_trace::p1`).
+
+**Contract status:** p1 executing green; p2–p6 remain no-tests-ran backlog (5, down from 6).
+
+**Gates:** `cargo test` 219 passed / 0 failed (218 baseline + 1); `cargo clippy --all-targets` clean; `ah check --run-tests` 78 passed (77+p1); `just gates` exit 0.
+
+**Deviations / notes:**
+- `just gates` regenerated `specodelic/*_props.rs`; `rustfmt --edition 2021` restored them byte-identical to HEAD (specodelic#15 fmt noise) — nothing staged, no spec amended.
+- Uncommitted runtime state left for orchestrator: `.wai/*` run files, `.whisper/*`, `tests/repro/claims/so-flowchart-size.observed`.
+- Doc-comment in trace.rs records the declared-but-unemitted stages (`graph.model`, `rank.col`, `bands`, `spans`, `bends`, `glyphs`) as follow-up beads; no distant-code refactors.
+- p1 regression arm asserts the API-level gate (no trace file created with gate off); byte-identical corpus stays pinned by existing corpus tests.

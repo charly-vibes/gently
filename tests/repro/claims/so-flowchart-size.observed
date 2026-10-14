@@ -30,10 +30,10 @@ as_txt:
 [ Client ] -- 2. read X --> [ Msg Server ]
 as_ascii:
 +--------+  put msg    +------------+                          +--------+
-| Server |  via http   |            |  3. X Msg                |        |
+| Server |  via http   |            |  1. Number X of unread   |        |
 |        | ----------> |            | -----------------------> |        |
 +--------+             |            |                          |        |
-                       | Msg Server |  1. Number X of unread   | Client |
+                       | Msg Server |  3. X Msg                | Client |
                        |            | -----------------------> |        |
                        |            |                          |        |
                        |            |  2. read X               |        |
