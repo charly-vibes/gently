@@ -20,3 +20,32 @@ OK   [bare scope in named subgraph]
 '         '
 + - - - - +
 
+OK   [bare scope in bare scope in named subgraph]
+     groups: outer=[x]
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } | group { |   align: center; |   fill: inherit; | } |  | ( outer |   [ x ] | )
+     as_ascii:
++ - - - - +
+'  outer  '
+'         '
+' +-----+ '
+' |  x  | '
+' +-----+ '
+'         '
++ - - - - +
+
+OK   [bare scope after named group closed]
+     groups: a=[q]
+     as_txt: edge { arrowstyle: filled; } | graph { |   colorscheme: x11; |   flow: south; |   title: G; | } | group { |   align: center; |   fill: inherit; | } |  | ( a |   [ q ] | ) |  | [ x ]
+     as_ascii:
++ - - - +
+'   a   '
+'       '
+' +---+ '
+' | q | '
+' +---+ '
+'       '
++ - - - +
+  +---+
+  | x |
+  +---+
+

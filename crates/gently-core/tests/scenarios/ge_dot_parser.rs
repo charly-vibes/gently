@@ -280,6 +280,50 @@ fn p4() {
         (node(&g, "a"), node(&g, "b"))
     );
 
+    // bare scope group membership follows the oracle's group_stack
+    // (gently-fb1, observed Graph::Easy v0.69 @ ededa3d7,
+    // tests/repro/claims/dot-bare-scope-in-named.observed): a bare scope
+    // nested INSIDE a named subgraph joins the innermost ENCLOSING named
+    // group — transitively through nested bare scopes — while a top-level
+    // bare scope stays ungrouped and a bare scope AFTER the named group's
+    // scope closed is ungrouped again (the group popped).
+    let g = dot::parse("digraph G { subgraph outer { { x } } }\n").expect("must parse");
+    let outer = g
+        .groups
+        .iter()
+        .position(|grp| grp.name == "outer")
+        .expect("outer group");
+    assert_eq!(
+        g.groups[outer].members,
+        vec![node(&g, "x")],
+        "bare scope nested in a named subgraph joins the enclosing group"
+    );
+    let g = dot::parse("digraph G { subgraph outer { { { x } } } }\n").expect("must parse");
+    let outer = g
+        .groups
+        .iter()
+        .position(|grp| grp.name == "outer")
+        .expect("outer group");
+    assert_eq!(
+        g.groups[outer].members,
+        vec![node(&g, "x")],
+        "bare-in-bare-in-named is transitive: still the named group"
+    );
+    let g = dot::parse("digraph G { { x } }\n").expect("must parse");
+    assert!(g.groups.is_empty(), "top-level bare scope stays ungrouped");
+    let g = dot::parse("digraph G { subgraph a { q } { x } }\n").expect("must parse");
+    let a = g
+        .groups
+        .iter()
+        .position(|grp| grp.name == "a")
+        .expect("group a");
+    assert_eq!(g.groups[a].members, vec![node(&g, "q")]);
+    assert_eq!(
+        g.groups.len(),
+        1,
+        "the group popped at its close: the trailing bare scope is ungrouped"
+    );
+
     scope_stack_endpoints();
     scope_stack_resets();
 

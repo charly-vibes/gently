@@ -246,8 +246,10 @@ impl<'a> P<'a> {
     }
 
     /// Intern a name: split-map hit resolves to the first part node;
-    /// otherwise the node is created (and joins the current group, if
-    /// any — innermost named scope wins, membership at creation).
+    /// otherwise the node is created (and joins the innermost ENCLOSING
+    /// named group, if any — membership at creation, per the oracle's
+    /// group_stack: it survives bare-scope boundaries (gently-fb1) but
+    /// pops at the enclosing named group's close).
     pub(super) fn intern(&mut self, name: &str) -> Result<usize, ParseError> {
         if let Some(parts) = self.split.get(name) {
             return Ok(parts[0]);
@@ -255,7 +257,7 @@ impl<'a> P<'a> {
         let fresh = self.g.node_by_name(name).is_none();
         let idx = self.g.add_node(name);
         if fresh {
-            if let Some(grp) = self.scopes.last().and_then(|s| s.group) {
+            if let Some(grp) = self.scopes.iter().rev().find_map(|s| s.group) {
                 self.g.set_node_group(idx, grp);
             }
         }

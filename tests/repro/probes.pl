@@ -1137,13 +1137,19 @@ PROBE
 # ungrouped at TOP level (pinned p4, both parsers), but a bare scope nested
 # INSIDE a named subgraph inherits the enclosing named group: the oracle's
 # group_stack survives bare-scope boundaries, so x lands IN group 'outer'
-# (GROUP(outer: x)). gently keeps x ungrouped — this divergence is the
-# remaining delta.
+# (GROUP(outer: x)). Transitive too: bare-in-bare-in-named still joins the
+# named group. Once the named group's scope CLOSES, the stack pops — a
+# following top-level bare scope is ungrouped again. gently keeps nested
+# bare-scope nodes ungrouped — this divergence is gently-fb1's delta.
 use Graph::Easy::Parser::Graphviz;
 my $p = Graph::Easy::Parser::Graphviz->new();
 my @cases = (
   [ 'bare scope, top level',        "digraph G { { x } }" ],
   [ 'bare scope in named subgraph', "digraph G { subgraph outer { { x } } }" ],
+  [ 'bare scope in bare scope in named subgraph',
+                                    "digraph G { subgraph outer { { { x } } } }" ],
+  [ 'bare scope after named group closed',
+                                    "digraph G { subgraph a { q } { x } }" ],
 );
 for my $c (@cases) {
   my ($label, $text) = @$c;
@@ -2126,7 +2132,7 @@ sub dump_cases_for {
         while ($src =~ /^\s*\[\s*'[^']*',\s*"((?:[^"\\]|\\.)*)"\s*\],?\s*$/mg) {
             push @cases, $1;
         }
-        die "probes: dump: dot-bare-scope-in-named: expected 2 cases, found " . scalar(@cases) . "\n" unless @cases == 2;
+        die "probes: dump: dot-bare-scope-in-named: expected 4 cases, found " . scalar(@cases) . "\n" unless @cases == 4;
         return @cases;
     }
     # pod_probe_body claims: the <<'EXAMPLE' heredoc is the verbatim text
