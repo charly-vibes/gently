@@ -1,0 +1,7 @@
+ticket: gently-vhc
+branch: main
+brief: .wai/projects/decision-trace/briefs/gently-vhc.md
+steps: []
+claim d561eac
+brief d561eac
+gates d561eac
