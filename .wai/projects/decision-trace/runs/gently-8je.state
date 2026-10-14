@@ -3,3 +3,9 @@ branch: main
 brief: .wai/projects/decision-trace/briefs/gently-8je.md
 steps: []
 gates 9a60319
+brief e7f87b9
+spawn e7f87b9
+verify c664876
+verify c664876
+ship c664876
+stop c664876
