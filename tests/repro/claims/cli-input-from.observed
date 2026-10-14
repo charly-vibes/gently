@@ -1,0 +1,117 @@
+# observed: Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 — probe: cli-input-from
+[--from dot]
++---+
+| a |
++---+
+  |
+  |
+  v
++---+
+| b |
++---+
+exit=0
+[--from graphviz]
++---+
+| a |
++---+
+  |
+  |
+  v
++---+
+| b |
++---+
+exit=0
+[no --from (sniff)]
++---+
+| a |
++---+
+  |
+  |
+  v
++---+
+| b |
++---+
+exit=0
+[--from txt (sniff under txt)]
++---+
+| a |
++---+
+  |
+  |
+  v
++---+
+| b |
++---+
+exit=0
+[--from_txt]
++---+
+| a |
++---+
+  |
+  |
+  v
++---+
+| b |
++---+
+exit=0
+[--from_graphviz]
++---+
+| a |
++---+
+  |
+  |
+  v
++---+
+| b |
++---+
+exit=0
+[--from graphviz on text (no reverse sniff)]
+exit=255
+[--from foo]
+Unknown input format 'foo' at /var/tmp/ge0.69/Graph-Easy-0.69/bin/graph-easy line 333.
+exit=255
+[--from vcg]
+' digraph G { a -> b }' not recognized by Graph::Easy::Parser::VCG at /var/tmp/ge0.69/Graph-Easy-0.69/bin/graph-easy line 84.
+exit=255
+[--from gdl]
+exit=255
+[--from_vcg]
+exit=255
+[--from_dot (undeclared option)]
+Useless use of /d modifier in transliteration operator at /var/tmp/ge0.69/Graph-Easy-0.69/lib/Graph/Easy/Parser.pm line 641.
+exit=2
+[graph:{ sniff (VCG parser)]
+' node: a }' not recognized by Graph::Easy::Parser::VCG at /var/tmp/ge0.69/Graph-Easy-0.69/bin/graph-easy line 90.
+exit=2
+[mid-line digraph (not sniffed)]
+' digraph x { }' not recognized by Graph::Easy::Parser at /var/tmp/ge0.69/Graph-Easy-0.69/bin/graph-easy line 84.
+exit=255
+[defaults: groupless digraph {att} =>]
+$VAR1 = {
+          'graph' => {
+                       'colorscheme' => 'x11',
+                       'flow' => 'south',
+                       'title' => 'G'
+                     },
+          'group' => {},
+          'node' => {},
+          'edge' => {
+                      'arrowstyle' => 'filled'
+                    }
+        };
+[defaults: cluster digraph {att} =>]
+$VAR1 = {
+          'edge' => {
+                      'arrowstyle' => 'filled'
+                    },
+          'node' => {},
+          'graph' => {
+                       'colorscheme' => 'x11',
+                       'title' => 'G',
+                       'flow' => 'south'
+                     },
+          'group' => {
+                       'fill' => 'inherit',
+                       'align' => 'center'
+                     }
+        };

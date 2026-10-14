@@ -6,7 +6,7 @@
 //! the header; any named subgraph becomes a group verbatim; records and
 //! HTML-like labels autosplit into `name.N` part nodes).
 
-use gently_core::graph::Graph;
+use gently_core::graph::{Graph, ObjectKind, Scope};
 use gently_core::parse::dot;
 
 /// The index of the node with `name` (panics when missing — tests only).
@@ -34,6 +34,70 @@ fn p1() {
     );
     let g = dot::parse("digraph { a -> b }\n").expect("must parse");
     assert_eq!(g.attributes.get("title"), Some("unnamed"), "unnamed header");
+}
+
+/// ge.dot_parser.p6 (c6, gently-cij): the upstream Graphviz parser's
+/// defaults (Graphviz::reset) land on the model: the graph carries
+/// `flow: south` and `colorscheme: x11`, the edge base class carries
+/// `arrowstyle: filled`, and the group base class carries `align: center`
+/// / `fill: inherit` once a group exists — the upstream class table only
+/// surfaces the group defaults when a group is created (observed in the
+/// oracle's post-parse `{att}` dump,
+/// tests/repro/claims/cli-input-from.observed). An explicit statement
+/// overrides the default (`rankdir` remaps to `flow` per c3).
+#[test]
+fn p6() {
+    let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
+    assert_eq!(
+        g.get_attr(Scope::Graph, "flow"),
+        Some("south"),
+        "the flow default drives the vertical layout"
+    );
+    assert_eq!(
+        g.get_attr(Scope::Graph, "colorscheme"),
+        Some("x11"),
+        "colorscheme default"
+    );
+    assert_eq!(
+        g.get_attr(Scope::Class(ObjectKind::Edge, String::new()), "arrowstyle"),
+        Some("filled"),
+        "edge base-class arrowstyle default"
+    );
+    // A groupless graph carries no group class defaults.
+    let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
+    assert_eq!(
+        g.get_attr(Scope::Class(ObjectKind::Group, String::new()), "align"),
+        None,
+        "group class defaults stay unset without a group"
+    );
+
+    // A named subgraph (cluster convention or not) creates the group and
+    // with it the group base-class defaults.
+    let g = dot::parse("digraph G { subgraph cluster_x { a } a -> b }\n").expect("must parse");
+    assert_eq!(
+        g.get_attr(Scope::Class(ObjectKind::Group, String::new()), "align"),
+        Some("center"),
+        "group class align default surfaces with a group"
+    );
+    assert_eq!(
+        g.get_attr(Scope::Class(ObjectKind::Group, String::new()), "fill"),
+        Some("inherit"),
+        "group class fill default surfaces with a group"
+    );
+
+    // An explicit statement overrides the default (rankdir → flow per c3).
+    let g = dot::parse("digraph G { rankdir=LR; a -> b }\n").expect("must parse");
+    assert_eq!(
+        g.get_attr(Scope::Graph, "flow"),
+        Some("east"),
+        "explicit rankdir overrides the flow default"
+    );
+    let g = dot::parse("digraph G { colorscheme=none; a -> b }\n").expect("must parse");
+    assert_eq!(
+        g.get_attr(Scope::Graph, "colorscheme"),
+        Some("none"),
+        "explicit colorscheme overrides the default"
+    );
 }
 
 /// ge.dot_parser.p2 (c2): one model edge per arrow; direction follows the

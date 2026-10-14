@@ -19,11 +19,24 @@ pub const SUBCOMMANDS: &[&str] = &["init", "doctor"];
 
 /// Flags that consume a following value — skipped when scanning for the
 /// subcommand position.
-pub const VALUE_FLAGS: &[&str] = &["--as", "--output"];
+pub const VALUE_FLAGS: &[&str] = &["--as", "--output", "--from"];
 
 /// Known long flags (c7 registry), dashes stripped for typo matching.
 pub const KNOWN_FLAG_NAMES: &[&str] = &[
-    "as", "output", "json", "human", "verbose", "quiet", "fix", "help", "version",
+    "as",
+    "output",
+    "from",
+    "from_txt",
+    "from_graphviz",
+    "from_vcg",
+    "from_gdl",
+    "json",
+    "human",
+    "verbose",
+    "quiet",
+    "fix",
+    "help",
+    "version",
 ];
 
 /// Known single-dash flags (clap's derived shorts: `-v`/`-q` verbosity,

@@ -29,3 +29,9 @@ id = "c5"
 kind = "effect"
 expr = "A record label — a `shape=record` node whose label contains a vertical bar — or an HTML-like table label parses into numbered part nodes named `name.N`, with port markers stripped and edges reattached to the referenced part; a construct the parser cannot tokenize — such as the `subgraph` keyword without a name or a malformed HTML-like label — and a port reference with no matching part fail with a typed error, and no partial graph is returned."
 traces_to = "[[ge.dot_parser]]"
+
+[[constraints]]
+id = "c6"
+kind = "invariant"
+expr = """The parser seeds the model graph with the upstream Graphviz parser's defaults (Graph::Easy::Parser::Graphviz::reset — "graphviz has different defaults as Graph::Easy"): the graph carries `flow: south` and `colorscheme: x11` and the edge base class carries `arrowstyle: filled` before the first statement is read, so an explicit `rankdir` (remapped per [[ge.dot_parser.c3]]), `flow`, or `colorscheme` statement overrides them; the group base class carries `align: center` and `fill: inherit` once a group is created — the upstream post-parse attribute table surfaces the group defaults only when a group exists (gently-cij; probe evidence tests/repro/claims/cli-input-from.observed)."""
+traces_to = "[[ge.dot_parser]]"

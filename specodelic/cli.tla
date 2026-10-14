@@ -18,7 +18,7 @@ TypeOK == vpc \in StateValues
 Init == vpc = "reading"
 
 Next ==
-  \* t1: reading -> rendering (guard: [[cli.c1]])
+  \* t1: reading -> rendering (guard: [[cli.c1]] [[cli.c9]])
   \/ vpc = "reading" /\ vpc' = "rendering"
   \* t2: rendering -> cli_done (guard: [[cli.c2]])
   \/ vpc = "rendering" /\ vpc' = "cli_done"
@@ -28,7 +28,7 @@ Next ==
   \/ vpc = "reading" /\ vpc' = "diagnosing"
   \* t5: diagnosing -> cli_done (guard: [[cli.c6]])
   \/ vpc = "diagnosing" /\ vpc' = "cli_done"
-  \* t6: reading -> cli_failed (guard: [[cli.c1]] [[cli.c5]])
+  \* t6: reading -> cli_failed (guard: [[cli.c1]] [[cli.c5]] [[cli.c9]])
   \/ vpc = "reading" /\ vpc' = "cli_failed"
   \* stuttering: guards are prose (uninterpreted) — a terminal
   \* state must not read as an engine-side deadlock

@@ -76,3 +76,11 @@ proptest! {
         todo_predicate!("record and HTML-like table labels split into `name.N` part nodes with port markers stripped and edges reattached to the referenced parts, while the failing constructs each produce the oracle's typed error — tokenizing failures quote the offending input, unresolvable port references name the `base:port` and edge id — and return no partial graph");
     }
 }
+
+// id: p6
+// generator: digraph and graph headers with and without explicit `rankdir`/`flow`/`colorscheme` statements, with and without a named subgraph
+// predicate: the defaults land exactly as observed — `flow: south`, `colorscheme: x11`, and edge-class `arrowstyle: filled` always; group-class `align: center` and `fill: inherit` only once a group exists; an explicit statement wins over the default it overrides
+#[test]
+fn p6() {
+    todo_predicate!("the defaults land exactly as observed — `flow: south`, `colorscheme: x11`, and edge-class `arrowstyle: filled` always; group-class `align: center` and `fill: inherit` only once a group exists; an explicit statement wins over the default it overrides");
+}

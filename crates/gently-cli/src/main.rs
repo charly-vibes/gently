@@ -47,6 +47,27 @@ struct Cli {
     #[arg(long)]
     output: Option<PathBuf>,
 
+    /// Input format (upstream `--from <fmt>`, specs/cli.md c9): `txt`
+    /// (default), `dot` (aliases graphviz) or `graphviz` route to the
+    /// graph-text or DOT parser; under txt the source is sniffed for a
+    /// line-start `digraph [name] {` header, which routes to the DOT
+    /// parser (upstream Graph::Easy::Parser sniffing, gently-cij).
+    /// `vcg`/`gdl` (and the `--from_vcg`/`--from_gdl` aliases) are upstream
+    /// names for the VCG parser gently never ports — scope-offs exiting
+    /// 255; an unknown value dies upstream (get_options) and exits 255
+    /// here. `--from_dot` is NOT an upstream GetOptions flag: the unknown
+    /// flag path (exit 2, c7 suggestion) is bug-for-bug.
+    #[arg(long = "from")]
+    from_: Option<String>,
+    #[arg(long = "from_txt")]
+    from_txt: bool,
+    #[arg(long = "from_graphviz")]
+    from_graphviz: bool,
+    #[arg(long = "from_vcg")]
+    from_vcg: bool,
+    #[arg(long = "from_gdl")]
+    from_gdl: bool,
+
     /// Verbosity plumbing from genesis (cli.c5): `--quiet` suppresses
     /// non-error output, `-v` adds verbose diagnostics on stderr.
     #[command(flatten)]
@@ -109,6 +130,16 @@ fn dispatch(cli: &Cli, guide: &Guide, subcommand: Option<&str>) -> i32 {
         Some("init") => return doctor::run_init(guide, format),
         Some("doctor") => return doctor::run_doctor(guide, cli.fix, format),
         _ => {}
+    }
+
+    // cli.c9 (gently-cij): validate the input-format surface before the
+    // pipeline — an unknown `--from` value dies upstream at get_options
+    // (exit 255) and the unwired VCG parser (vcg/gdl) is a scope-off with
+    // the same exit; the output format's own check follows, mirroring
+    // upstream's get_options-before-render order.
+    if let Err(e) = pipeline::check_input_format(cli) {
+        report_error(guide, &e.0);
+        return 255;
     }
 
     // cli.c2: resolve the output format — `--as` wins; otherwise the output

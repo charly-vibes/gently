@@ -47,3 +47,9 @@ id = "c8"
 kind = "effect"
 expr = "`gently doctor` runs the suite health checks through genesis `DoctorRunner` — oracle availability (perl + pinned Graph::Easy), output-format support, fixture pin freshness — and applies available auto-fixes."
 traces_to = "[[cli]]"
+
+[[constraints]]
+id = "c9"
+kind = "invariant"
+expr = "The input parser is selected by the `--from` flag — txt default, `dot` aliases graphviz, the boolean aliases `--from_txt`/`--from_graphviz`/`--from_vcg`/`--from_gdl` override `--from` in upstream's loop order, and `--from_dot` is NOT a declared upstream option (it hits the unknown-flag path, exit 2) — and, when txt is selected, by upstream's content sniffing: a line-start `(strict)?(di)?graph [name]? {` header routes the source to the DOT parser [[ge.dot_parser]] even under an explicit txt selection (the Graphviz parser never sniffs back), and a `graph: {` header routes to the VCG parser upstream. Unknown `--from` values produce the upstream `Unknown input format '<fmt>'` diagnostic and exit 255 (get_options' die); the upstream-valid `vcg`/`gdl` names route to a VCG parser gently never ports — documented scope-offs exiting 255 — and a sniffed `graph: {` header is the same scope-off at parse time (gently-cij; probe evidence tests/repro/claims/cli-input-from.observed)."
+traces_to = "[[cli]]"

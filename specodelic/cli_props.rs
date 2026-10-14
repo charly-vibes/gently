@@ -91,3 +91,11 @@ fn p8() {
 fn p9() {
     todo_predicate!("a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF");
 }
+
+// id: p10
+// generator: invocations across `--from` values, boolean aliases, and sniffable/unsniffable sources
+// predicate: the selected parser parses the source (a digraph fixture renders the oracle's DOT bytes; graph-text input parses unchanged; a forced DOT parser rejects text content); unknown values and vcg/gdl exit 255 with diagnostics naming the value or the unwired VCG parser; `--from_dot` exits 2 through the unknown-flag path; a sniffed `graph: {` header is a scope-off diagnostic
+#[test]
+fn p10() {
+    todo_predicate!("the selected parser parses the source (a digraph fixture renders the oracle's DOT bytes; graph-text input parses unchanged; a forced DOT parser rejects text content); unknown values and vcg/gdl exit 255 with diagnostics naming the value or the unwired VCG parser; `--from_dot` exits 2 through the unknown-flag path; a sniffed `graph: {` header is a scope-off diagnostic");
+}

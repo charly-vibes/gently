@@ -126,6 +126,7 @@ my %SERVES = (
     'dot-records-ports'      => 'gently-13f (dot_parser c5 — records, HTML-like labels, port references)',
     'cli-flags'              => 'gently-0h9 (closed — kept as upstream evidence)',
     'cli-formats'            => 'gently-4ig (cli c2/c4 — the wired --as format surface)',
+    'cli-input-from'         => 'gently-cij (cli c9 — the --from input-format surface: value map, boolean aliases, the text-parser content sniff, the Graphviz::reset graph defaults, and the VCG scope-offs)',
     'node-unnamed'           => 'gently-r22 (graph_model c1)',
     'anon-numbering'         => 'gently-r22 (graph_model c1 — exact #N scheme)',
     'attr-store-decompose'   => 'gently-r22 (graph_model c2 — store-layer unquote + border decomposition)',
@@ -1280,6 +1281,68 @@ for my $case (@cases) {
   $out =~ s/\s+\z//;
   print "[$label]\n$out\n";
 }
+PROBE
+
+    'cli-input-from' => <<'PROBE',
+# serves: gently-cij (cli c9 — the --from input-format surface)
+# claim probed: how bin/graph-easy v0.69 + Graph::Easy::Parser select the
+# INPUT parser. Observed: --from values txt|graphviz|dot|vcg|gdl are valid
+# (dot aliases graphviz at get_options), an unknown value dies at
+# get_options (line 333, exit 255: `Unknown input format 'foo'`), the
+# boolean aliases are ONLY --from_txt/--from_vcg/--from_gdl/--from_graphviz
+# (--from_dot is NOT declared: `Unknown option: from_dot` + usage, exit 2),
+# and the DEFAULT is txt with NO extension sniffing — the auto-detect is
+# CONTENT sniffing inside Graph::Easy::Parser::from_text (Parser.pm ~557):
+# a line-start `(strict)?(di)?graph [name]? {` header swaps in the Graphviz
+# parser (even under an explicit --from txt; the Graphviz parser itself
+# never sniffs back), `graph: {` swaps in the VCG parser. A forced Graphviz
+# parser on text content dies exit 255; a graph:{-sniffed source dies exit
+# 2 when the VCG parser rejects it. Also recorded: the Graphviz::reset
+# graph defaults observed in the post-parse {att} dump — graph
+# flow=south + colorscheme=x11, edge class arrowstyle=filled, group class
+# align=center + fill=inherit SURFACING ONLY WHEN A GROUP EXISTS.
+my $bin = do { my $d = $INC{'Graph/Easy.pm'}; $d =~ s|lib/Graph/Easy\.pm$|bin/graph-easy|; $d };
+my $dir = "/tmp/probes-cli-input-from";
+mkdir $dir;
+open my $fh, '>', "$dir/graph.dot" or die $!; print $fh "digraph G { a -> b }\n"; close $fh;
+open $fh, '>', "$dir/graph.txt" or die $!; print $fh "[ a ] --> [ b ]\n"; close $fh;
+open $fh, '>', "$dir/graph.vcg" or die $!; print $fh "graph: {\nnode: a\n}\n"; close $fh;
+open $fh, '>', "$dir/mid.dot" or die $!; print $fh "[a]->[b] digraph x { }\n"; close $fh;
+open $fh, '>', "$dir/cluster.dot" or die $!; print $fh "digraph G { subgraph cluster_x { a } a -> b }\n"; close $fh;
+my @cases = (
+  ['--from dot', qq{"$bin" --from dot "$dir/graph.dot" 2>/dev/null; echo "exit=\$?"}],
+  ['--from graphviz', qq{"$bin" --from graphviz "$dir/graph.dot" 2>/dev/null; echo "exit=\$?"}],
+  ['no --from (sniff)', qq{"$bin" "$dir/graph.dot" 2>/dev/null; echo "exit=\$?"}],
+  ['--from txt (sniff under txt)', qq{"$bin" --from txt "$dir/graph.dot" 2>/dev/null; echo "exit=\$?"}],
+  ['--from_txt', qq{"$bin" --from_txt "$dir/graph.dot" 2>/dev/null; echo "exit=\$?"}],
+  ['--from_graphviz', qq{"$bin" --from_graphviz "$dir/graph.dot" 2>/dev/null; echo "exit=\$?"}],
+  ['--from graphviz on text (no reverse sniff)', qq{"$bin" --from graphviz "$dir/graph.txt" 2>/dev/null; echo "exit=\$?"}],
+  ['--from foo', qq{"$bin" --from foo "$dir/graph.dot" 2>&1 | grep -v Useless; "$bin" --from foo "$dir/graph.dot" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--from vcg', qq{"$bin" --from vcg "$dir/graph.dot" 2>&1 | grep -v Useless | head -1; "$bin" --from vcg "$dir/graph.dot" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--from gdl', qq{"$bin" --from gdl "$dir/graph.dot" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--from_vcg', qq{"$bin" --from_vcg "$dir/graph.dot" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['--from_dot (undeclared option)', qq{"$bin" --from_dot "$dir/graph.dot" 2>&1 | head -1; "$bin" --from_dot "$dir/graph.dot" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['graph:{ sniff (VCG parser)', qq{"$bin" "$dir/graph.vcg" 2>&1 | grep -v Useless | head -1; "$bin" "$dir/graph.vcg" >/dev/null 2>&1; echo "exit=\$?"}],
+  ['mid-line digraph (not sniffed)', qq{"$bin" "$dir/mid.dot" 2>&1 | grep -v Useless | head -1; "$bin" "$dir/mid.dot" >/dev/null 2>&1; echo "exit=\$?"}],
+);
+for my $case (@cases) {
+  my ($label, $cmd) = @$case;
+  my $out = `$cmd 2>/dev/null`;
+  $out =~ s/\s+\z//;
+  print "[$label]\n$out\n";
+}
+
+# The Graphviz::reset defaults in the post-parse {att} dump (serves
+# ge.dot_parser c6): graph flow/colorscheme, edge-class arrowstyle, and
+# the group-class pair that surfaces only with a group.
+use Data::Dumper;
+use Graph::Easy::Parser::Graphviz;
+my $pv = Graph::Easy::Parser::Graphviz->new();
+my $gv = $pv->from_text("digraph G { a -> b }\n");
+print "[defaults: groupless digraph {att} =>]\n", Dumper($gv->{att});
+my $pv2 = Graph::Easy::Parser::Graphviz->new();
+my $gv2 = $pv2->from_text("digraph G { subgraph cluster_x { a } a -> b }\n");
+print "[defaults: cluster digraph {att} =>]\n", Dumper($gv2->{att});
 PROBE
 
     'node-unnamed' => <<'PROBE',

@@ -18,9 +18,9 @@ TypeOK == vpc \in StateValues
 Init == vpc = "reading"
 
 Next ==
-  \* t1: reading -> accepted (guard: [[ge.dot_parser.c1]])
+  \* t1: reading -> accepted (guard: [[ge.dot_parser.c1]] [[ge.dot_parser.c6]])
   \/ vpc = "reading" /\ vpc' = "accepted"
-  \* t2: reading -> dot_rejected (guard: [[ge.dot_parser.c1]])
+  \* t2: reading -> dot_rejected (guard: [[ge.dot_parser.c1]] [[ge.dot_parser.c6]])
   \/ vpc = "reading" /\ vpc' = "dot_rejected"
   \* t3: accepted -> reading (guard: [[ge.dot_parser.c3]])
   \/ vpc = "accepted" /\ vpc' = "reading"

@@ -12,7 +12,8 @@
 //! ratchets' limits.
 use super::lex::Tok;
 use super::{attrs, err, ParseError, ScopeSt, P};
-use crate::graph::Scope;
+use crate::graph::Scope::Class;
+use crate::graph::{ObjectKind, Scope};
 
 impl P<'_> {
     /// Parse statements until the closing `}` (not consumed — the caller
@@ -121,9 +122,29 @@ impl P<'_> {
             _ => return Err(self.not_recognized(start)),
         }
         let gidx = self.g.add_group(&cluster_convention(&name));
+        self.apply_group_defaults();
         self.scope_body(true, Some(gidx))?;
         self.scope_end()?;
         Ok(())
+    }
+}
+
+impl P<'_> {
+    /// The group base-class defaults (`align: center`, `fill: inherit`) —
+    /// upstream sets them in Graphviz::reset, but its post-parse attribute
+    /// table only carries them once a group exists, so the parser applies
+    /// them at first group creation (ge.dot_parser c6, gently-cij).
+    pub(super) fn apply_group_defaults(&mut self) {
+        if self
+            .g
+            .get_attr(Class(ObjectKind::Group, String::new()), "align")
+            .is_none()
+        {
+            self.g
+                .set_attr(Class(ObjectKind::Group, String::new()), "align", "center");
+            self.g
+                .set_attr(Class(ObjectKind::Group, String::new()), "fill", "inherit");
+        }
     }
 }
 

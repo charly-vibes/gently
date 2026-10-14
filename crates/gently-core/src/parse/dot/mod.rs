@@ -33,7 +33,8 @@ mod record;
 mod scope;
 mod stmt;
 
-use crate::graph::{Graph, Scope};
+use crate::graph::Scope::Class;
+use crate::graph::{Graph, ObjectKind, Scope};
 use lex::{Tok, Token};
 
 /// An attribute list: ordered `(key, value)` pairs, values unquoted once.
@@ -72,7 +73,7 @@ pub fn parse(src: &str) -> Result<Graph, ParseError> {
         toks,
         pos: 0,
         src,
-        g: Graph::default(),
+        g: graphviz_defaults(Graph::default()),
         scopes: vec![ScopeSt {
             is_group: true,
             group: None,
@@ -83,6 +84,24 @@ pub fn parse(src: &str) -> Result<Graph, ParseError> {
     };
     p.header()?;
     Ok(p.g)
+}
+
+/// Seed the model graph with the upstream Graphviz parser's defaults
+/// (Graph::Easy::Parser::Graphviz::reset — "graphviz has different defaults
+/// as Graph::Easy", ge.dot_parser c6): the graph carries `flow: south` and
+/// `colorscheme: x11` and the edge base class carries `arrowstyle: filled`.
+/// The group base-class defaults (`align: center`, `fill: inherit`) only
+/// surface when a group exists in the oracle's post-parse attribute table,
+/// so the parser applies them at first group creation instead (scope.rs).
+fn graphviz_defaults(mut g: Graph) -> Graph {
+    g.set_attr(Scope::Graph, "flow", "south");
+    g.set_attr(Scope::Graph, "colorscheme", "x11");
+    g.set_attr(
+        Class(ObjectKind::Edge, String::new()),
+        "arrowstyle",
+        "filled",
+    );
+    g
 }
 
 /// An edge-statement endpoint as written, resolved lazily — port refs and

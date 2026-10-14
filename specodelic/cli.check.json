@@ -1,5 +1,5 @@
 {
-  "artifact_sha256": "643c3839c344724dd21db8b4d351c9286962532fb9c586cd438b17d2f5663df2",
+  "artifact_sha256": "db17c63475261b10ac70b1349cc98bf099bc05ced338f23f0e414370fc5d8729",
   "backend": {
     "engine": "stateright",
     "version": "0.31.0"
@@ -12,7 +12,7 @@
   "expected_claim_ids": [],
   "invariants_checked": [],
   "outcome": "exploration_only",
-  "scope_sha256": "a1a9325b69dd11effd27503a34c8b73f4b5b0a2331f3c262fd9ee2d85e8a0762",
+  "scope_sha256": "17b5b30e0023c21d55630fac81e4afe0a9cc0f942e27966acd5134f93d0a9eba",
   "states_explored": 5,
   "unchecked_claim_ids": [
     "c1",
@@ -20,6 +20,7 @@
     "c3",
     "c5",
     "c6",
-    "c7"
+    "c7",
+    "c9"
   ]
 }

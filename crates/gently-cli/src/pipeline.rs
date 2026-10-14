@@ -19,8 +19,9 @@ use std::path::{Path, PathBuf};
 
 use genesis::guide::{Guide, Output, OutputFormat};
 use gently_core::{
+    graph::Graph,
     layout,
-    parse::text,
+    parse::{dot, text},
     render::{ascii, graphviz, html, txt},
 };
 use serde::Serialize;
@@ -46,6 +47,201 @@ const EXTENSION_FORMATS: &[(&str, &str)] = &[
     ("gdl", "gdl"),
     ("graphml", "graphml"),
 ];
+
+/// Which parser upstream's text-parser sniffing redirects to (Parser.pm
+/// ~557): a line-start `(strict)?(di)?graph [name] {` header swaps in the
+/// Graphviz parser, `graph: {` the VCG parser.
+enum Sniffed {
+    Text,
+    Dot,
+    Vcg,
+}
+
+/// The effective `--from` selection: the flag wins, then the boolean
+/// aliases in upstream get_options' override order (txt, graphviz, vcg,
+/// gdl — the `dot` VALUE aliases graphviz; `--from_dot` is not an upstream
+/// option).
+#[derive(Clone, Copy, PartialEq)]
+enum From {
+    Txt,
+    Graphviz,
+    Vcg,
+    Gdl,
+}
+
+impl From {
+    fn name(self) -> &'static str {
+        match self {
+            From::Txt => "txt",
+            From::Graphviz => "graphviz",
+            From::Vcg => "vcg",
+            From::Gdl => "gdl",
+        }
+    }
+}
+
+fn input_from(cli: &Cli) -> Result<Option<From>, CliError> {
+    // The boolean aliases override `--from` in get_options' loop order
+    // (qw/txt graphviz dot vcg gdl/ — later wins), then the value is
+    // validated: an unknown name dies upstream (bin/graph-easy line 333).
+    let mut raw = cli.from_.as_deref();
+    if cli.from_txt {
+        raw = Some("txt");
+    }
+    if cli.from_graphviz {
+        raw = Some("graphviz");
+    }
+    if cli.from_vcg {
+        raw = Some("vcg");
+    }
+    if cli.from_gdl {
+        raw = Some("gdl");
+    }
+    Ok(match raw {
+        None => None,
+        Some("txt") => Some(From::Txt),
+        Some("dot" | "graphviz") => Some(From::Graphviz),
+        Some("vcg") => Some(From::Vcg),
+        Some("gdl") => Some(From::Gdl),
+        Some(other) => return Err(CliError(format!("Unknown input format '{other}'"))),
+    })
+}
+
+/// Validate the `--from` surface before the pipeline (dispatch-level, c9):
+/// an unknown value dies upstream at get_options (bin/graph-easy line 333,
+/// `Unknown input format '<fmt>'`) — exit 255; `vcg`/`gdl` (value or
+/// boolean alias) name the VCG parser gently never ports — documented
+/// scope-offs, exit 255 like the c4 output-side unwired formats.
+pub fn check_input_format(cli: &Cli) -> Result<(), CliError> {
+    match input_from(cli)? {
+        None | Some(From::Txt) | Some(From::Graphviz) => Ok(()),
+        Some(f @ (From::Vcg | From::Gdl)) => Err(CliError(format!(
+            "{} input parsing is not wired: gently has no VCG parser (scope-off, gently-cij)",
+            f.name()
+        ))),
+    }
+}
+
+/// Parse the source with the c9-selected input parser: `--from` picks the
+/// parser, and a txt-selected source is sniffed for a line-start DOT or
+/// VCG header (upstream Graph::Easy::Parser sniffing — the sniff applies
+/// even under an explicit `--from txt`). A sniffed `graph: {` header
+/// routes to the VCG parser upstream; with no gently VCG parser the sniff
+/// is a scope-off diagnostic (upstream exits 0/2 via its own parser).
+fn parse_input(cli: &Cli, source: &str) -> Result<Graph, CliError> {
+    match input_from(cli)? {
+        Some(From::Graphviz) => dot::parse(source).map_err(|e| {
+            CliError(format!("parse error, line {}: {}", e.line, e.message))
+        }),
+        Some(f @ (From::Vcg | From::Gdl)) => Err(CliError(format!(
+            "{} input parsing is not wired: gently has no VCG parser (scope-off, gently-cij)",
+            f.name()
+        ))),
+        Some(From::Txt) | None => match sniff(source) {
+            Sniffed::Dot => dot::parse(source).map_err(|e| {
+                CliError(format!("parse error, line {}: {}", e.line, e.message))
+            }),
+            Sniffed::Vcg => Err(CliError(
+                "graph: { input requires the upstream VCG parser — not wired (scope-off, gently-cij)"
+                    .to_string(),
+            )),
+            Sniffed::Text => text::parse(source).map_err(|e| {
+                CliError(format!("parse error, line {}: {}", e.line, e.message))
+            }),
+        },
+    }
+}
+
+/// Upstream Graph::Easy::Parser content sniffing (Parser.pm ~557): the
+/// source is scanned line-wise — the digraph-family header regexes run
+/// first over the whole text, then the `graph: {` VCG sniff. A line head
+/// matches the DOT family when, after leading whitespace and `/*...*/`
+/// comments, it reads `strict? digraph|graph [name]? {` — where a nameless
+/// `graph {` matches only under `strict` (the upstream regexes require a
+/// name otherwise). Whitespace between the tokens is optional upstream.
+fn sniff(source: &str) -> Sniffed {
+    if source
+        .lines()
+        .any(|line| line_head_sniffs_dot(&line.to_lowercase()))
+    {
+        return Sniffed::Dot;
+    }
+    // The VCG sniff is case-sensitive upstream (no /i).
+    if source.lines().any(line_head_sniffs_vcg) {
+        return Sniffed::Vcg;
+    }
+    Sniffed::Text
+}
+
+/// Strip leading whitespace and /*...*/ comment groups from a line head
+/// (upstream's $o_cmt prefix alternation).
+fn strip_line_head(line: &str) -> &str {
+    let mut rest = line;
+    loop {
+        rest = rest.trim_start();
+        if let Some(after) = rest.strip_prefix("/*") {
+            match after.find("*/") {
+                Some(i) => rest = &after[i + 2..],
+                None => return rest,
+            }
+        } else {
+            return rest;
+        }
+    }
+}
+
+/// One lowercased line head against the upstream DOT-family header regex
+/// `(strict)?$o_cmt(di)?graph$o_cmt("[^"]*"|[\w_]+)?$o_cmt\{` — with the
+/// upstream nuance that a nameless `graph {` only matches under `strict`.
+fn line_head_sniffs_dot(line: &str) -> bool {
+    let rest = strip_line_head(line);
+    let (strict, rest) = match rest.strip_prefix("strict") {
+        Some(r) => (true, r.trim_start()),
+        None => (false, rest),
+    };
+    let (has_di, rest) = if let Some(r) = rest.strip_prefix("digraph") {
+        (true, r)
+    } else if let Some(r) = rest.strip_prefix("graph") {
+        (false, r)
+    } else {
+        return false;
+    };
+    let rest = rest.trim_start();
+    // Optional graph name: a quoted string or a word ([\w_]+ upstream).
+    let (named, rest) = if let Some(after) = rest.strip_prefix('"') {
+        match after.find('"') {
+            Some(i) => (true, &after[i + 1..]),
+            None => return false,
+        }
+    } else if rest.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
+        let n = rest
+            .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .unwrap_or(rest.len());
+        (true, &rest[n..])
+    } else {
+        (false, rest)
+    };
+    let rest = rest.trim_start();
+    if !rest.starts_with('{') {
+        return false;
+    }
+    // A nameless, non-strict `graph {` does not match the upstream regexes.
+    !(!has_di && !named && !strict)
+}
+
+/// One line against the upstream VCG sniff regex `^[\s\n\t]*graph\s*:\s*\{`
+/// (case-sensitive — no /i on that match).
+fn line_head_sniffs_vcg(line: &str) -> bool {
+    let rest = line.trim_start();
+    let Some(rest) = rest.strip_prefix("graph") else {
+        return false;
+    };
+    let rest = rest.trim_start();
+    let Some(rest) = rest.strip_prefix(':') else {
+        return false;
+    };
+    rest.trim_start().starts_with('{')
+}
 
 /// The rendered output, printed by `Output::emit`'s human path and
 /// serialized as `data` in `--json` envelopes (c6).
@@ -138,8 +334,7 @@ fn write_output(art: &str, output_path: Option<&Path>) -> Result<(), CliError> {
 /// renderers (c2); the c4 guard rejects other formats before dispatch.
 fn render(cli: &Cli, format_name: &str) -> Result<String, CliError> {
     let source = read_source(cli)?;
-    let graph = text::parse(&source)
-        .map_err(|e| CliError(format!("parse error, line {}: {}", e.line, e.message)))?;
+    let graph = parse_input(cli, &source)?;
     match format_name {
         "graphviz" => Ok(graphviz::render(&graph)),
         "txt" => Ok(txt::render(&graph)),

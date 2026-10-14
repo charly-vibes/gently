@@ -26,6 +26,7 @@ positionals are `[inputfile [outputfile]]`.
 | c6 | invariant | With `--json`, machine-readable results are emitted wrapped in the genesis Envelope (`ok`, `envelope_version`, `envelope_kind`, `data`, `warnings`, `hints`, `meta`); without it (human mode), the rendered graph is printed to stdout as raw bytes exactly as the oracle comparison requires. | [[cli]] | |
 | c7 | invariant | An unknown subcommand or flag produces a genesis suggestion (`DidYouMean` / `Fix`) on stderr before the nonzero exit. | [[cli]] | [[cli.c8]] |
 | c8 | effect | `gently doctor` runs the suite health checks through genesis `DoctorRunner` — oracle availability (perl + pinned Graph::Easy), output-format support, fixture pin freshness — and applies available auto-fixes. | [[cli]] | |
+| c9 | invariant | The input parser is selected by the `--from` flag — txt default, `dot` aliases graphviz, the boolean aliases `--from_txt`/`--from_graphviz`/`--from_vcg`/`--from_gdl` override `--from` in upstream's loop order, and `--from_dot` is NOT a declared upstream option (it hits the unknown-flag path, exit 2) — and, when txt is selected, by upstream's content sniffing: a line-start `(strict)?(di)?graph [name]? {` header routes the source to the DOT parser [[ge.dot_parser]] even under an explicit txt selection (the Graphviz parser never sniffs back), and a `graph: {` header routes to the VCG parser upstream. Unknown `--from` values produce the upstream `Unknown input format '<fmt>'` diagnostic and exit 255 (get_options' die); the upstream-valid `vcg`/`gdl` names route to a VCG parser gently never ports — documented scope-offs exiting 255 — and a sniffed `graph: {` header is the same scope-off at parse time (gently-cij; probe evidence tests/repro/claims/cli-input-from.observed). | [[cli]] | [[cli.c3]] |
 
 ## Model
 
@@ -41,12 +42,12 @@ positionals are `[inputfile [outputfile]]`.
 
 | id | from | to | guard |
 |----|------|----|-------|
-| t1 | reading | rendering | [[cli.c1]] |
+| t1 | reading | rendering | [[cli.c1]] [[cli.c9]] |
 | t2 | rendering | cli_done | [[cli.c2]] |
 | t3 | rendering | cli_failed | [[cli.c2]] |
 | t4 | reading | diagnosing | [[cli.c5]] |
 | t5 | diagnosing | cli_done | [[cli.c6]] |
-| t6 | reading | cli_failed | [[cli.c1]] [[cli.c5]] |
+| t6 | reading | cli_failed | [[cli.c1]] [[cli.c5]] [[cli.c9]] |
 
 ## Properties
 
@@ -61,3 +62,4 @@ positionals are `[inputfile [outputfile]]`.
 | p7 | unit | [[cli.c7]] | misspelled subcommands and flags | every misspelling yields a DidYouMean/Fix suggestion naming the closest known name |
 | p8 | unit | [[cli.c8]] | environments with and without the oracle toolchain and fresh/stale fixture pins | the DoctorReport names each check's status and applies available auto-fixes |
 | p9 | unit | [[cli.c1]] | no-file-argument invocations with terminal stdin and with piped stdin | a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF |
+| p10 | unit | [[cli.c9]] | invocations across `--from` values, boolean aliases, and sniffable/unsniffable sources | the selected parser parses the source (a digraph fixture renders the oracle's DOT bytes; graph-text input parses unchanged; a forced DOT parser rejects text content); unknown values and vcg/gdl exit 255 with diagnostics naming the value or the unwired VCG parser; `--from_dot` exits 2 through the unknown-flag path; a sniffed `graph: {` header is a scope-off diagnostic |
