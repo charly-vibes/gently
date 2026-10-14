@@ -166,9 +166,16 @@ without a run):
 | option | localization power | adjudication support | cost | drift resilience | overfit risk |
 |---|---|---|---|---|---|
 | D: status quo+ (package old probes) | low | none | lowest | low | low |
-| A: Rust trace + byte-gated diff | med | low | low | high | med |
-| B: A + oracle dumps (D1–D6) | high | high | med | med | med |
-| C: B + overlay/lens | high | high | high | med | med |
+| A: Rust trace + byte-gated diff | high (E1: both cuts at pre-registered stages, ~8 s) | low (E1 awd oracle-side cut needed the E2 dump) | low (E1: 1 session, ~8 s driver) | high (E1: corpus byte-identical with trace off) | med |
+| B: A + oracle dumps (D1–D6) | high (E1+E2: awd cut closed only against the aligned oracle dump) | high (E2: aligned dumps made the oracle-side cut decidable; 5130 B) | med (E2: 5130 B total, 1 sub, ~1 s — committed dumps cheap for this fixture class) | med (dumps pin the oracle side; seed field mandatory) | med (5 fixtures only — E3 faithfulness gates scale-out) |
+| C: B + overlay/lens | high (inherits B; no extra E-evidence) | high (inherits B) | high (unmeasured; no E-result motivates it) | med | med |
+
+Matrix provenance: E1 = gently-asc PASS (both cuts belong to
+pre-registered stages; cost ~8 s + 1 session vs multi-session original
+hunts; corpus byte-identical with trace off). E2 = gently-8je PASS
+(5130 B total dumps, 1 sub wrapped, ~1 s run, D4 storage question settled
+for this fixture class: committed). E3/E4 pending — scores above them
+are marked inherited/unmeasured, not fabricated.
 
 ## Open questions (carried)
 
