@@ -109,6 +109,22 @@ impl Parser {
         loop {
             self.skip_all_ws();
             let line = self.line;
+            // decision-trace `parse` stage (specs/decision-trace.md c1):
+            // the statement dispatch is already materialized here, so one
+            // gated event per statement — no parse behavior change.
+            if crate::trace::enabled("parse") {
+                let kind = match self.peek() {
+                    Some('[') => "node",
+                    Some(',') => "comma",
+                    Some('(') => "group",
+                    Some(')') => "group_end",
+                    Some('{') => "attrs",
+                    Some(c) if edge::is_op_start(c) && !self.stack.is_empty() => "edge",
+                    Some(c) if c.is_ascii_alphabetic() => "class",
+                    _ => " unrecognized",
+                };
+                crate::trace::emit("parse", &format!("stmt line={line} kind={kind}"));
+            }
             match self.peek() {
                 None => {
                     return if in_group {

@@ -54,6 +54,11 @@ fn p1() {
         std::fs::remove_file(&file).ok();
         set_gate(stage, &file);
         let _ = layout::layout(&graph);
+        if stage == "parse" {
+            // parse events fire in the text parser's statement loop, not
+            // in the layout pass — drive a tiny source through it.
+            let _ = gently_core::parse::text::parse("[ a ] --> [ b ]\n");
+        }
         std::env::remove_var("GENTLY_TRACE");
         let text = std::fs::read_to_string(&file)
             .unwrap_or_else(|e| panic!("trace file for stage {stage} missing: {e}"));

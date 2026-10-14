@@ -231,7 +231,7 @@ pub fn layout(graph: &Graph) -> Layout {
             let (cx, cy) = crate::trace::node_span_of(graph, i);
             crate::trace::emit(
                 "layout.place",
-                format!(
+                &format!(
                     "place {} x={} y={} cx={} cy={}",
                     graph.nodes[i].name, c, r, cx, cy
                 ),
@@ -246,7 +246,7 @@ pub fn layout(graph: &Graph) -> Layout {
                 .count();
             crate::trace::emit(
                 "render.route",
-                format!(
+                &format!(
                     "route e{} {}->{} cells={} bends={}",
                     ei,
                     graph.nodes[graph.edges[ei].from].name,

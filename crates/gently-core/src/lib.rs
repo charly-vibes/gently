@@ -16,7 +16,7 @@ pub mod layout;
 pub mod parse;
 pub mod perf;
 pub mod render;
-mod trace;
+pub mod trace;
 
 #[cfg(test)]
 mod tests {
