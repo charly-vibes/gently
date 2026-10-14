@@ -56,9 +56,12 @@
 
 ## 6. Adjudication registry (D5 — gated on E4)
 
-- [ ] 6.1 Land E4 (gently-btf, interactive session): run the
+- [x] 6.1 Land E4 (gently-btf, interactive session): run the
       pre-registered (b)-checklist on gently-58m. Do NOT build the
-      registry before E4 reports.
+      registry before E4 reports. DONE 2026-10-14: class (b) reachable,
+      all 5 items hold (item 3 = in-repo beads record gently-278, no
+      upstream post per user); record in
+      `.wai/projects/decision-trace/designs/2026-10-14-decision-e4-adjudication-dry-run-gently-58m.md`.
 - [ ] 6.2 If E4 reaches class (b): commit the registry (checklist +
       adjudication-record template). If E4 kills: record the kill in the
       design doc and ship the registry in a later change.
