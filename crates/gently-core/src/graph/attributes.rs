@@ -25,6 +25,21 @@ impl AttributeTable {
             set_entry(&mut self.entries, "border_width", &width);
             set_entry(&mut self.entries, "border_color", &color);
         }
+        // `size` is a virtual attribute (gently-awd): upstream
+        // Node::set_attribute stores `columns`/`rows` derived from the
+        // `^(\d+)\s*,\s*(\d+)\z` split and never keeps `size` itself; a
+        // non-matching value stores the upstream fallback 0,0 (abs(int(undef)).
+        if key == "size" {
+            self.entries.retain(|(k, _)| k != "size");
+            let (w, h) = split_size(value);
+            set_entry(&mut self.entries, "columns", &w);
+            set_entry(&mut self.entries, "rows", &h);
+        }
+        // `columns`/`rows` store the abs(int()) normalized value.
+        if key == "columns" || key == "rows" {
+            let normalized = normalize_int(value);
+            set_entry(&mut self.entries, key, &normalized);
+        }
     }
 
     /// The verbatim value stored under `key`, if any.
@@ -141,6 +156,38 @@ fn strip_first_style_word(s: &str) -> (String, Option<&'static str>) {
 
 /// All `\d+(px|em|%)` token ranges in `s`, left to right (upstream's global
 /// width substitution: the unit is required, bare digits are left alone).
+/// `size: W,H` split mirroring upstream's `^(\d+)\s*,\s*(\d+)\z`
+/// (Node::set_attribute size branch): optional inner whitespace, no
+/// leading/trailing slack; digits normalize like abs(int()) (leading
+/// zeros collapse). A non-matching value yields the upstream fallback
+/// `0,0` (abs(int(undef))).
+fn split_size(value: &str) -> (String, String) {
+    match value.split_once(',') {
+        Some((w, h)) if is_digits(w.trim_end()) && is_digits(h.trim_start()) => {
+            (normalize_int(w), normalize_int(h))
+        }
+        _ => ("0".into(), "0".into()),
+    }
+}
+
+/// The value is all digits (the regex's `(\d+)` group); optional
+/// whitespace around the comma is the regex's `\s*`.
+fn is_digits(s: &str) -> bool {
+    !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
+}
+
+/// abs(int($val)) — the numeric prefix, sign-stripped; no digits → "0".
+fn normalize_int(value: &str) -> String {
+    let trimmed = value.trim().trim_start_matches(['-', '+']);
+    let digits: String = trimmed.chars().take_while(|c| c.is_ascii_digit()).collect();
+    let stripped = digits.trim_start_matches('0');
+    if stripped.is_empty() {
+        "0".into()
+    } else {
+        stripped.into()
+    }
+}
+
 fn width_ranges(s: &str) -> Vec<(usize, usize)> {
     let b = s.as_bytes();
     let mut out = Vec::new();

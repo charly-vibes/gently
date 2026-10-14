@@ -173,6 +173,7 @@ my %SERVES = (
     'so-flowchart-size'      => 'gently-ni9.4, gently-527 (community mining — SO 47323345 question: { size: 5,10; } node attrs + literal-\\n edge label printed raw → gently-527 owns the label-split effect; the { size: attrs and the 2x2 layout divergence stay out of scope)',
     'so-start-port-index'    => 'gently-ni9.4 (community mining — SO 47323345 answer: {start: front,N} indexed start/end port attrs ignored → gently-byq; side mapping front = east flow-space front, gently-89r owns the unindexed side routing)',
     'so-graphviz-unknown-attrs' => 'gently-ni9.4 (community mining — SO 59659560: Graph::Easy::Parser::Graphviz unknown dot attrs warn and render anyway)',
+    'size-attr'              => 'gently-awd (re-derivation probe — { size: W,H; } / rows: / columns: node attrs; minimal A->B graphs pin the txt canonicalization (size stays, rows stays, columns merges to size: N,1), the cell-span model, and when the box actually stretches: spans grow the box ONLY over rows/cols that carry other content (edge cells) — empty continuation rows collapse to 0 height; so-flowchart-size.observed stays the 2x2 fixture)',
 );
 
 my %CLAIMS = (
@@ -443,6 +444,33 @@ pod_probe_body('so-edge-labels', <<'EXAMPLE')
 [ 14 ] -- 2 --> [ million ]
 [ digital ] -- 2 --> [ humanities ] -- 2 --> [ research ]
 [ participants ] -- 2 --> [ may ] -- 3 --> [ want ]
+EXAMPLE
+PROBE
+
+    'size-attr' => <<'PROBE',
+# serves: gently-awd
+# claim probed: the { size: W,H; } node-attribute machinery on minimal
+# A->B graphs (dis-entangled from so-flowchart-size's 2x2 layout).
+# Observed (pinned oracle): the txt canonicalization is size: W,H;
+# verbatim when size was set, rows: N; when only rows was set, and
+# size: N,1; when only columns was set (columns always merges into the
+# size form, As_txt.pm). The ascii render does NOT stretch the box on a
+# bare A->B graph — the size only reserves grid CELLS; the box grows
+# over a spanned row/column only when that row/column carries other
+# content (edge cells with minh 3), because empty continuation rows
+# collapse to 0 height in the row-max pass. A 1,3-sized A on A->B
+# renders the plain 3-line box; the hub stretch appears only with
+# side-content rows (see so-flowchart-size.observed).
+pod_probe_body('size-attr', <<'EXAMPLE')
+[ A ] { size: 1,2; } -> [ B ]
+
+[ A2 ] { size: 2,3; } -> [ B2 ]
+
+[ A3 ] { size: 3,1; } -> [ B3 ]
+
+[ A4 ] { rows: 3; } -> [ B4 ]
+
+[ A5 ] { columns: 3; } -> [ B5 ]
 EXAMPLE
 PROBE
 

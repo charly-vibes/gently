@@ -37,6 +37,7 @@ side effect of code edits.
 | c2 | invariant | Every node is emitted with its name and its instance attributes, and every edge as an operator chain whose operator matches the edge style and direction. | [[ge.txt_render]] |
 | c3 | invariant | Parsing the emitted text with [[ge.text_parser]] reproduces a model with the same nodes, edges, styles, labels, directions, attributes, and group membership as the source model. Re-derived (gently-0kg, closed by gently-8jf): member node declarations are emitted inside their group's section — the upstream `( name\n  [ member ]\n)` shape (tests/repro/claims/group-edge-graphviz.observed) — so membership round-trips through the parser's group-scope rule; a node belongs to exactly one group, so its declaration lives only in that section. Group-endpoint edges remain outside the contract: upstream serializes them as plain node edges (tests/repro/claims/group-edge-graphviz.observed) and the gently model cannot represent them. | [[ge.txt_render]] |
 | c4 | invariant | Recorded upstream Graph::Easy fixtures — stored under `tests/fixtures/graph-easy/` as input-text files with expected canonical-text companions, captured from one pinned upstream revision — render byte-identically. | [[ge.txt_render]] |
+| c5 | invariant | Multi-cell size attributes emit in the upstream As_txt canonical form: whenever `columns` is stored, the emitted attribute set merges `columns`/`rows` into the shorter `size: W,H;` form (rows defaulting to 1) and never outputs the default `1,1`; a lone `rows` attribute is already shorter and stays `rows: N;`. A node whose every attribute collapses to nothing (e.g. `size: 1,1`) is not attribute-bearing — it is declared in the isolated-node pass, not the declaration pass. Re-derived (gently-awd): tests/repro/claims/size-attr.observed. | [[ge.txt_render]] |
 
 ## Model
 
@@ -62,6 +63,7 @@ side effect of code edits.
 | p2 | unit | [[ge.txt_render.c2]] | arbitrary graphs of nodes, edges, and styles | every object appears exactly once with a correct operator form |
 | p3 | unit | [[ge.txt_render.c3]] | arbitrary graphs serialized then re-parsed | the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership |
 | p4 | unit | [[ge.txt_render.c4]] | the recorded upstream fixture corpus | every fixture's expected canonical text matches gently's output byte-for-byte |
+| p5 | unit | [[ge.txt_render.c5]] | attribute-bearing nodes with `size`, `columns`, `rows`, and combinations, plus a node whose attributes all collapse to the default | `columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass |
 
 ## Requirements
 
@@ -93,4 +95,10 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 - **WHEN** the recorded upstream fixture corpus
 - **THEN** every fixture's expected canonical text matches gently's output byte-for-byte
 - **VERIFIES** [[ge.txt_render.p4]]
+
+#### Scenario: p5
+
+- **WHEN** attribute-bearing nodes with `size`, `columns`, `rows`, and combinations, plus a node whose attributes all collapse to the default
+- **THEN** `columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass
+- **VERIFIES** [[ge.txt_render.p5]]
 

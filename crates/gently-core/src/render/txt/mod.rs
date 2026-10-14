@@ -87,11 +87,21 @@ fn declaration_pass(graph: &Graph) -> (String, std::collections::HashSet<usize>)
         .iter()
         .flat_map(|g| g.members.iter().copied())
         .collect();
+    // upstream As_txt marks a node for declaration only when its
+    // POST-canonicalization attribute text is non-empty ($att ne '' after
+    // attributes_as_txt) — a table whose every attribute collapses (e.g.
+    // size: 1,1 dropping to the default) leaves the node undeclared
+    // (gently-awd).
     let mut declared: Vec<usize> = graph
         .nodes
         .iter()
         .enumerate()
-        .filter(|(i, n)| !n.attributes.is_empty() && !members.contains(i))
+        .filter(|(i, n)| {
+            !members.contains(i)
+                && !instance_attributes(&n.attributes, ObjectKind::Node)
+                    .trim()
+                    .is_empty()
+        })
         .map(|(i, _)| i)
         .collect();
     declared.sort_by(|x, y| {

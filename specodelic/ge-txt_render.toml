@@ -23,3 +23,9 @@ id = "c4"
 kind = "invariant"
 expr = "Recorded upstream Graph::Easy fixtures — stored under `tests/fixtures/graph-easy/` as input-text files with expected canonical-text companions, captured from one pinned upstream revision — render byte-identically."
 traces_to = "[[ge.txt_render]]"
+
+[[constraints]]
+id = "c5"
+kind = "invariant"
+expr = "Multi-cell size attributes emit in the upstream As_txt canonical form: whenever `columns` is stored, the emitted attribute set merges `columns`/`rows` into the shorter `size: W,H;` form (rows defaulting to 1) and never outputs the default `1,1`; a lone `rows` attribute is already shorter and stays `rows: N;`. A node whose every attribute collapses to nothing (e.g. `size: 1,1`) is not attribute-bearing — it is declared in the isolated-node pass, not the declaration pass. Re-derived (gently-awd): tests/repro/claims/size-attr.observed."
+traces_to = "[[ge.txt_render]]"

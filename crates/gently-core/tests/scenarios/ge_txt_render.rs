@@ -372,3 +372,46 @@ fn p4() {
         );
     }
 }
+
+/// ge.txt_render (gently-awd): the multi-cell size canonicalization —
+/// upstream As_txt.pm merges `columns`/`rows` into the shorter `size: W,H;`
+/// form whenever `columns` is present, never outputs the default `1,1`,
+/// and leaves a lone `rows` attribute alone (`rows: 2;` is shorter than
+/// `size: 1,2;`).
+#[test]
+fn p5() {
+    fn node_attrs(source: &str) -> String {
+        let g = text::parse(source).expect("parse");
+        txt::render(&g)
+    }
+
+    // columns present → merged into size, rows defaulted to 1
+    assert_eq!(
+        node_attrs("[ A ] { columns: 3; }"),
+        "[ A ] { size: 3,1; }\n\n",
+        "columns merges into size: W,1"
+    );
+    // columns + rows together merge too
+    assert_eq!(
+        node_attrs("[ A ] { columns: 2; rows: 5; }"),
+        "[ A ] { size: 2,5; }\n\n",
+        "columns+rows merge into size: W,H"
+    );
+    // a lone rows attribute is already shorter — stays rows
+    assert_eq!(
+        node_attrs("[ A ] { rows: 3; }"),
+        "[ A ] { rows: 3; }\n\n",
+        "lone rows stays rows"
+    );
+    // the default 1,1 is dropped
+    assert_eq!(
+        node_attrs("[ A ] { size: 1,1; }"),
+        "[ A ]\n",
+        "default size 1,1 is not output"
+    );
+    assert_eq!(
+        node_attrs("[ A ] { columns: 1; rows: 1; }"),
+        "[ A ]\n",
+        "columns 1,1 collapses to no attribute"
+    );
+}

@@ -29,3 +29,9 @@ id = "c5"
 kind = "extension_point"
 expr = "The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies` cells declared on their own constraint rows."
 traces_to = "[[ge.graph_model]]"
+
+[[constraints]]
+id = "c6"
+kind = "invariant"
+expr = 'The `size: W,H` node attribute is virtual, exactly as upstream Graph::Easy 0.69 Node::set_attribute: assignment derives and stores `columns: W; rows: H` (the `^(\d+)\s*,\s*(\d+)\z` split, digits normalized like abs(int), optional whitespace around the comma), a non-matching value stores the upstream fallback `0,0`, and `size` itself is never stored. Direct `columns`/`rows` assignments store the abs(int()) normalized value. (tests/repro/claims/size-attr.observed.)'
+traces_to = "[[ge.graph_model]]"

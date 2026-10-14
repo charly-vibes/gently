@@ -319,3 +319,44 @@ fn p5() {
     assert_eq!(class_table.1, "important");
     assert_eq!(class_table.2.get("color"), Some("red"));
 }
+
+/// ge.graph_model.p6 (c2 family, gently-awd): `size: W,H` is a virtual
+/// attribute — assignment derives `columns: W; rows: H` at assignment
+/// time (upstream Node::set_attribute size branch), replaces any earlier
+/// columns/rows, and never stores `size` itself; `columns`/`rows` set
+/// directly store the abs(int()) normalized value.
+#[test]
+fn p6() {
+    let mut g = Graph::default();
+    let a = g.add_node("a");
+    g.set_attr(Scope::Node(a), "size", "5,10");
+    assert_eq!(
+        g.get_attr(Scope::Node(a), "size"),
+        None,
+        "size is virtual — never stored"
+    );
+    assert_eq!(g.get_attr(Scope::Node(a), "columns"), Some("5"));
+    assert_eq!(g.get_attr(Scope::Node(a), "rows"), Some("10"));
+    // a later size replaces both; inner whitespace around the comma is
+    // the regex's \s* (the parser trims the outer slack before set_attr)
+    g.set_attr(Scope::Node(a), "size", "2 , 3");
+    assert_eq!(g.get_attr(Scope::Node(a), "columns"), Some("2"));
+    assert_eq!(g.get_attr(Scope::Node(a), "rows"), Some("3"));
+    // direct columns/rows store the normalized value
+    g.set_attr(Scope::Node(a), "columns", "03");
+    assert_eq!(
+        g.get_attr(Scope::Node(a), "columns"),
+        Some("3"),
+        "abs(int()) normalized"
+    );
+    g.set_attr(Scope::Node(a), "rows", "-4");
+    assert_eq!(
+        g.get_attr(Scope::Node(a), "rows"),
+        Some("4"),
+        "abs() normalized"
+    );
+    // a malformed size still stores the upstream fallback (abs(int(undef)) = 0)
+    g.set_attr(Scope::Node(a), "size", "wide,tall");
+    assert_eq!(g.get_attr(Scope::Node(a), "columns"), Some("0"));
+    assert_eq!(g.get_attr(Scope::Node(a), "rows"), Some("0"));
+}

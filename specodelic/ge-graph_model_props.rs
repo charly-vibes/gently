@@ -57,3 +57,11 @@ fn p5() {
         "every consumer-visible traversal and attribute read matches direct model inspection"
     );
 }
+
+// id: p6
+// generator: arbitrary `size`/`columns`/`rows` assignments, including replacements, sign-prefixed and zero-padded digits, whitespace around the comma, and non-matching values
+// predicate: a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0`
+#[test]
+fn p6() {
+    todo_predicate!("a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0`");
+}

@@ -40,6 +40,7 @@ spec, not a silent extension of an existing one.
 | c3 | invariant | Every edge references exactly two existing endpoints as source and target at all times — usually nodes, but a group object is a legal endpoint (stored as the group object itself, never rewritten to the group's members); self-loops (source == target) are legal; deleting a node removes it and drops all its incident edges, and a later edge construction naming the deleted node succeeds by implicitly re-creating it as a fresh, attribute-less node (the deleted node's stored attributes and old edges are not revived). | [[ge.graph_model]] |
 | c4 | invariant | Each edge is either directed or undirected and this direction, together with per-end arrow-head presence, is preserved exactly as constructed. | [[ge.graph_model]] |
 | c5 | extension_point | The model publishes its traversal and attribute-access contract for downstream specs: [[ge.layout]], [[ge.ascii_render]], [[ge.html_render]], and [[ge.graphviz_render]] consume it via `satisfies` cells declared on their own constraint rows. | [[ge.graph_model]] |
+| c6 | invariant | The `size: W,H` node attribute is virtual, exactly as upstream Graph::Easy 0.69 Node::set_attribute: assignment derives and stores `columns: W; rows: H` (the `^(\d+)\s*,\s*(\d+)\z` split, digits normalized like abs(int), optional whitespace around the comma), a non-matching value stores the upstream fallback `0,0`, and `size` itself is never stored. Direct `columns`/`rows` assignments store the abs(int()) normalized value. (tests/repro/claims/size-attr.observed.) | [[ge.graph_model]] |
 
 ## Model
 
@@ -69,6 +70,7 @@ spec, not a silent extension of an existing one.
 | p3 | unit | [[ge.graph_model.c3]] | arbitrary edge constructions over existing nodes, groups, and group objects, including self-loops, plus node deletions followed by edge constructions referencing the deleted names | every stored edge resolves both endpoints to live model objects (nodes or group objects); edges constructed with a group as endpoint are stored with the group object itself, never rewritten to the group's members; after a node deletion no incident edge survives, and an edge construction naming the deleted node succeeds, re-creating the node with no stored instance attributes and none of the deleted node's old edges revived |
 | p4 | unit | [[ge.graph_model.c4]] | arbitrary directed, undirected, and bidirectional-edge constructions | round-tripping an edge through the model preserves direction and per-end arrow presence bit-exactly |
 | p5 | unit | [[ge.graph_model.c5]] | downstream consumers exercising traversal and attribute reads through the published contract | every consumer-visible traversal and attribute read matches direct model inspection |
+| p6 | unit | [[ge.graph_model.c6]] | arbitrary `size`/`columns`/`rows` assignments, including replacements, sign-prefixed and zero-padded digits, whitespace around the comma, and non-matching values | a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0` |
 
 ## Requirements
 
@@ -106,4 +108,10 @@ Every property row SHALL be verified by exactly one dedicated scenario;
 - **WHEN** downstream consumers exercising traversal and attribute reads through the published contract
 - **THEN** every consumer-visible traversal and attribute read matches direct model inspection
 - **VERIFIES** [[ge.graph_model.p5]]
+
+#### Scenario: p6
+
+- **WHEN** arbitrary `size`/`columns`/`rows` assignments, including replacements, sign-prefixed and zero-padded digits, whitespace around the comma, and non-matching values
+- **THEN** a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0`
+- **VERIFIES** [[ge.graph_model.p6]]
 

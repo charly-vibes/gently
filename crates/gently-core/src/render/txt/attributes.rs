@@ -55,7 +55,28 @@ pub fn class_section(class: &str, table: &AttributeTable, kind: ObjectKind) -> S
 pub fn instance_attributes(table: &AttributeTable, kind: ObjectKind) -> String {
     let mut att = String::new();
     let mut class_value = "";
+    // Multi-cell size canonicalization (gently-awd, upstream As_txt.pm):
+    // when `columns` is present, emit the merged `size: W,H` form instead
+    // of rows/columns (defaulting rows to 1), and never output the default
+    // `1,1`. A lone `rows` is already shorter — it stays `rows`.
+    let size_merge = table.get("columns").map(|c| {
+        let r = table.get("rows").unwrap_or("1");
+        let size = format!("{c},{r}");
+        (size.clone(), size != "1,1")
+    });
     for (key, value) in table.sorted_entries() {
+        if key == "columns" || key == "rows" {
+            match &size_merge {
+                Some((size, emit)) => {
+                    if *emit && key == "columns" {
+                        att.push_str(&format!("size: {}; ", size));
+                    }
+                    continue;
+                }
+                // no columns anywhere: a lone `rows` stays `rows`
+                None => {}
+            }
+        }
         if key.starts_with("border") || value.is_empty() {
             continue;
         }

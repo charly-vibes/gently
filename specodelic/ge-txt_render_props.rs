@@ -49,3 +49,11 @@ fn p4() {
         "every fixture's expected canonical text matches gently's output byte-for-byte"
     );
 }
+
+// id: p5
+// generator: attribute-bearing nodes with `size`, `columns`, `rows`, and combinations, plus a node whose attributes all collapse to the default
+// predicate: `columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass
+#[test]
+fn p5() {
+    todo_predicate!("`columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass");
+}
