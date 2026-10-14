@@ -4,3 +4,8 @@ brief: .wai/projects/decision-trace/briefs/gently-asc.md
 steps: []
 claim c664876
 gates c664876
+brief 1a303bb
+spawn 1a303bb
+verify ba4061d
+verify2 ba4061d
+stop ba4061d
