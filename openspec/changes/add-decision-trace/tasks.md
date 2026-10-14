@@ -15,12 +15,12 @@
 
 ## 2. Trace emission (D1 — harden the E1 prototype)
 
-- [ ] 2.1 Move `crates/gently-core/src/trace.rs` from env-gated prototype
+- [x] 2.1 Move `crates/gently-core/src/trace.rs` from env-gated prototype
       to the versioned schema: `schema_version` field, per-stage
       sub-vocabularies, `spec_id` on every event, hash seed recorded.
-- [ ] 2.2 Property: with `GENTLY_TRACE` unset, the full fixture corpus
+- [x] 2.2 Property: with `GENTLY_TRACE` unset, the full fixture corpus
       renders byte-identical (regression-pin the E1 result as a test).
-- [ ] 2.3 Red→green→refactor cycle per stage vocabulary as it lands
+- [x] 2.3 Red→green→refactor cycle per stage vocabulary as it lands
       (start: `layout.place`, `render.route` — the E1-validated stages).
 
 ## 3. Oracle dump mode (D4 — extend the E2 pilot)
