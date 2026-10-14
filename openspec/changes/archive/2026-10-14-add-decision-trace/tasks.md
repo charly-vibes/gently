@@ -74,9 +74,9 @@
 
 ## 7. Gates
 
-- [ ] 7.1 `just gates` green (spk lint/compile/model-check, ah check,
+- [x] 7.1 `just gates` green (spk lint/compile/model-check, ah check,
       pretender, spec-drift-gate — spec+mirror+artifacts same-commit).
-- [ ] 7.2 `cargo test` full suite + `clippy --all-targets` clean.
-- [ ] 7.3 `just examples-verify` byte-identical.
-- [ ] 7.4 Update `docs/known-hard-cases.md` workflow row to reference
+- [x] 7.2 `cargo test` full suite + `clippy --all-targets` clean.
+- [x] 7.3 `just examples-verify` byte-identical.
+- [x] 7.4 Update `docs/known-hard-cases.md` workflow row to reference
       trace-diff as the debugging entry point.
