@@ -1,5 +1,9 @@
 # Proposal: add-decision-trace
 
+> **Status: APPROVED** — 2026-10-14, by the user in the gently-25r
+> session. Implementation may proceed per `tasks.md` (spec corpus
+> first, task 1.1).
+
 ## Why
 
 Debugging render/layout divergences against the pinned oracle is a
