@@ -65,17 +65,14 @@ pub fn instance_attributes(table: &AttributeTable, kind: ObjectKind) -> String {
         (size.clone(), size != "1,1")
     });
     for (key, value) in table.sorted_entries() {
-        if key == "columns" || key == "rows" {
-            match &size_merge {
-                Some((size, emit)) => {
-                    if *emit && key == "columns" {
-                        att.push_str(&format!("size: {}; ", size));
-                    }
-                    continue;
+        if let Some((size, emit)) = &size_merge {
+            if key == "columns" || key == "rows" {
+                if *emit && key == "columns" {
+                    att.push_str(&format!("size: {}; ", size));
                 }
-                // no columns anywhere: a lone `rows` stays `rows`
-                None => {}
+                continue;
             }
+            // else: no columns anywhere — a lone `rows` stays `rows`
         }
         if key.starts_with("border") || value.is_empty() {
             continue;
