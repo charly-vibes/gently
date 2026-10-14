@@ -49,12 +49,12 @@
 
 ## 5. trace-diff (D3 + D6)
 
-- [ ] 5.1 Promote `tests/repro/trace/e1.sh` worktree-diff driver into the
+- [x] 5.1 Promote `tests/repro/trace/e1.sh` worktree-diff driver into the
       trace-diff tool: report the minimal antichain over the decision
       dependency poset (never a linear "first").
-- [ ] 5.2 Byte-gate: trace-diff refuses to run on byte-identical fixtures
+- [x] 5.2 Byte-gate: trace-diff refuses to run on byte-identical fixtures
       (decision-only diffs downgrade to informational).
-- [ ] 5.3 Corpus-level property test (EXCL-001): every byte-divergent
+- [x] 5.3 Corpus-level property test (EXCL-001): every byte-divergent
       fixture with complete traces yields a nonempty minimal cut that
       trace-diff computes.
 
