@@ -6,4 +6,12 @@ superseded_by = ""
 authored_with = "0.9.3"
 
 [tests]
-cargo = [{flags = "decision_trace::p2"}]
+# gently-a3l: p2's enforcement is the E3 faithfulness suite (the pairwise
+# + order-insensitivity tests and the row_n1..row_n8 subtests) — top-level
+# fns in the e3_faithfulness test binary, so the three name groups are
+# declared as separate cargo filters.
+cargo = [
+  {flags = "e3_pairwise_faithfulness"},
+  {flags = "e3_normalization_is_order_insensitive"},
+  {flags = "row_n"},
+]
