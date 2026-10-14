@@ -37,11 +37,15 @@
 
 ## 4. Normalization table (D2 — gated on E3)
 
-- [ ] 4.1 Land E3 (gently-ugy) first: prove the pairwise faithfulness
+- [x] 4.1 Land E3 (gently-ugy) first: prove the pairwise faithfulness
       criterion is computable on real dumps without hooking every
-      upstream sub. Do NOT write the table before E3 reports.
-- [ ] 4.2 Commit the normalization table as a tested artifact in
-      `tests/repro/` with the pairwise faithfulness test.
+      upstream sub. Do NOT write the table before E3 reports. DONE
+      2026-10-14: computable, kill not met —
+      crates/gently-core/tests/e3_faithfulness.rs + decision record.
+- [x] 4.2 Commit the normalization table as a tested artifact in
+      `tests/repro/` with the pairwise faithfulness test. DONE
+      2026-10-14: tests/repro/trace/normalization-table.md (rows N1-N8,
+      each enforced by a row_nN_* subtest).
 
 ## 5. trace-diff (D3 + D6)
 
@@ -62,9 +66,11 @@
       all 5 items hold (item 3 = in-repo beads record gently-278, no
       upstream post per user); record in
       `.wai/projects/decision-trace/designs/2026-10-14-decision-e4-adjudication-dry-run-gently-58m.md`.
-- [ ] 6.2 If E4 reaches class (b): commit the registry (checklist +
+- [x] 6.2 If E4 reaches class (b): commit the registry (checklist +
       adjudication-record template). If E4 kills: record the kill in the
-      design doc and ship the registry in a later change.
+      design doc and ship the registry in a later change. DONE
+      2026-10-14: tests/repro/adjudication-registry.md (checklist
+      verbatim + record template + first entry: gently-58m (b)).
 
 ## 7. Gates
 
