@@ -219,6 +219,44 @@ pub fn layout(graph: &Graph) -> Layout {
         .unwrap_or(0);
     let width = max_x + 1;
     let edge_paths = route_edges(graph, &placement, &node_cells, &rows, max_x, &spans);
+    // Env-gated decision-trace prototype (gently-asc): `layout.place` —
+    // the grid cell and span each node occupies; `render.route` — the
+    // per-edge path cell walk with its bend count. No effect when
+    // GENTLY_TRACE is unset. Anchored here (before the label pass) so
+    // the E1 driver can inject the identical block onto pre-fix
+    // revisions, where `spans` does not exist (crate::trace::node_span_of
+    // re-reads the attrs instead).
+    if crate::trace::enabled("layout.place") {
+        for (i, &(c, r)) in node_cells.iter().enumerate() {
+            let (cx, cy) = crate::trace::node_span_of(graph, i);
+            crate::trace::emit(
+                "layout.place",
+                format!(
+                    "place {} x={} y={} cx={} cy={}",
+                    graph.nodes[i].name, c, r, cx, cy
+                ),
+            );
+        }
+    }
+    if crate::trace::enabled("render.route") {
+        for (ei, path) in edge_paths.iter().enumerate() {
+            let bends = path
+                .windows(3)
+                .filter(|w| (w[1].0 != w[0].0) != (w[2].0 != w[1].0))
+                .count();
+            crate::trace::emit(
+                "render.route",
+                format!(
+                    "route e{} {}->{} cells={} bends={}",
+                    ei,
+                    graph.nodes[graph.edges[ei].from].name,
+                    graph.nodes[graph.edges[ei].to].name,
+                    path.len(),
+                    bends
+                ),
+            );
+        }
+    }
     let labels = label_cells(graph, &edge_paths);
     let grid = Layout {
         node_cells,
