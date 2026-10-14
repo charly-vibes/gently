@@ -37,7 +37,9 @@ fn p2() {
 // predicate: each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream
 #[test]
 fn p3() {
-    todo_predicate!("each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream");
+    todo_predicate!(
+        "each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream"
+    );
 }
 
 // id: p4

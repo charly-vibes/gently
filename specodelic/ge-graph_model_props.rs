@@ -21,7 +21,9 @@ macro_rules! todo_predicate {
 // predicate: the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created); every anonymous node carries a generated `#N` name and a lookup by that name resolves to the same node object
 #[test]
 fn p1() {
-    todo_predicate!("the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created); every anonymous node carries a generated `#N` name and a lookup by that name resolves to the same node object");
+    todo_predicate!(
+        "the model never exposes two distinct nodes with the same name; a duplicate name insertion merges into the existing node (upstream add_node semantics: the existing node is returned, no second node is created); every anonymous node carries a generated `#N` name and a lookup by that name resolves to the same node object"
+    );
 }
 
 // id: p2
@@ -29,7 +31,9 @@ fn p1() {
 // predicate: for any assignment, reading the attribute back on the targeted scope yields the stored form — the assigned value after store-layer unquoting, or the recomposed `border` attribute for border assignments — and reads on other scopes are unchanged (class-scope assignments do not leak into instance reads, which override them)
 #[test]
 fn p2() {
-    todo_predicate!("for any assignment, reading the attribute back on the targeted scope yields the stored form — the assigned value after store-layer unquoting, or the recomposed `border` attribute for border assignments — and reads on other scopes are unchanged (class-scope assignments do not leak into instance reads, which override them)");
+    todo_predicate!(
+        "for any assignment, reading the attribute back on the targeted scope yields the stored form — the assigned value after store-layer unquoting, or the recomposed `border` attribute for border assignments — and reads on other scopes are unchanged (class-scope assignments do not leak into instance reads, which override them)"
+    );
 }
 
 // id: p3
@@ -37,7 +41,9 @@ fn p2() {
 // predicate: every stored edge resolves both endpoints to live model objects (nodes or group objects); edges constructed with a group as endpoint are stored with the group object itself, never rewritten to the group's members; after a node deletion no incident edge survives, and an edge construction naming the deleted node succeeds, re-creating the node with no stored instance attributes and none of the deleted node's old edges revived
 #[test]
 fn p3() {
-    todo_predicate!("every stored edge resolves both endpoints to live model objects (nodes or group objects); edges constructed with a group as endpoint are stored with the group object itself, never rewritten to the group's members; after a node deletion no incident edge survives, and an edge construction naming the deleted node succeeds, re-creating the node with no stored instance attributes and none of the deleted node's old edges revived");
+    todo_predicate!(
+        "every stored edge resolves both endpoints to live model objects (nodes or group objects); edges constructed with a group as endpoint are stored with the group object itself, never rewritten to the group's members; after a node deletion no incident edge survives, and an edge construction naming the deleted node succeeds, re-creating the node with no stored instance attributes and none of the deleted node's old edges revived"
+    );
 }
 
 // id: p4
@@ -45,7 +51,9 @@ fn p3() {
 // predicate: round-tripping an edge through the model preserves direction and per-end arrow presence bit-exactly
 #[test]
 fn p4() {
-    todo_predicate!("round-tripping an edge through the model preserves direction and per-end arrow presence bit-exactly");
+    todo_predicate!(
+        "round-tripping an edge through the model preserves direction and per-end arrow presence bit-exactly"
+    );
 }
 
 // id: p5
@@ -63,5 +71,7 @@ fn p5() {
 // predicate: a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0`
 #[test]
 fn p6() {
-    todo_predicate!("a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0`");
+    todo_predicate!(
+        "a `size: W,H` assignment stores `columns: W; rows: H` and never a `size` entry; a later assignment replaces the derived pair; direct `columns`/`rows` assignments store the abs(int()) normalized value (leading zeros collapse, signs stripped); a value that fails the upstream regex stores `columns: 0; rows: 0`"
+    );
 }

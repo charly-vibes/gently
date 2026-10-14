@@ -21,7 +21,9 @@ macro_rules! todo_predicate {
 // predicate: every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin
 #[test]
 fn p1() {
-    todo_predicate!("every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin");
+    todo_predicate!(
+        "every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin"
+    );
 }
 
 // id: p2
@@ -39,7 +41,9 @@ fn p2() {
 // predicate: identical outputs pass; a single byte difference fails with input, format, and first differing line
 #[test]
 fn p3() {
-    todo_predicate!("identical outputs pass; a single byte difference fails with input, format, and first differing line");
+    todo_predicate!(
+        "identical outputs pass; a single byte difference fails with input, format, and first differing line"
+    );
 }
 
 // id: p4
@@ -75,5 +79,7 @@ fn p6() {
 // predicate: each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness
 #[test]
 fn p7() {
-    todo_predicate!("each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness");
+    todo_predicate!(
+        "each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness"
+    );
 }
