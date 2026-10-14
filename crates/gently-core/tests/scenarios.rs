@@ -415,6 +415,12 @@ mod ge_html_render;
 #[path = "scenarios/ge_dot_parser.rs"]
 mod ge_dot_parser;
 
+/// decision.trace (gently-p7y): the versioned trace layer — every event
+/// carries the schema version and its governing spec id; gate-off silence
+/// (specs/decision-trace.md p1).
+#[path = "scenarios/decision_trace.rs"]
+mod decision_trace;
+
 /// ge.perf (gently-4ln): performance budget gates (specs/ge-perf.md p1–p5).
 #[path = "scenarios/ge_perf.rs"]
 mod ge_perf;
