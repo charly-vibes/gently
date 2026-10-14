@@ -53,6 +53,17 @@ graph objects, no full edge-cell matrices; a `DUMP_BUDGET` guard truncates
 with a `...` marker line if a summary would exceed budget (never hit on
 these five fixtures).
 
+## E3 faithfulness verdict (gently-ugy, 2026-10-14)
+
+D2's pairwise criterion is **computable** on these dumps — implemented in
+`crates/gently-core/tests/e3_faithfulness.rs` (pairwise soundness across
+fixtures AND across seeds — fan-layout's genuine seed-dependent case0
+placement is preserved by normalization, not collapsed — plus per-fixture
+ordering invariance under the hash-order line permutation). Kill criterion
+not met: `_prepare_layout` alone suffices, no further upstream hooks.
+Decision record:
+`.wai/projects/decision-trace/designs/2026-10-14-decision-e3-faithfulness-computable.md`.
+
 ## Interpretation for D4/D7
 
 Five hard-case fixtures produce ~1 KB dumps each — two orders of magnitude
