@@ -38,9 +38,7 @@ pub mod spec_gen {
 // predicate: a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`
 #[test]
 fn p1() {
-    todo_predicate!(
-        "a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`"
-    );
+    todo_predicate!("a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`");
 }
 
 // id: p2
@@ -48,9 +46,7 @@ fn p1() {
 // predicate: one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header
 #[test]
 fn p2() {
-    todo_predicate!(
-        "one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header"
-    );
+    todo_predicate!("one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header");
 }
 
 proptest! {
@@ -68,9 +64,7 @@ proptest! {
 // predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error
 #[test]
 fn p4() {
-    todo_predicate!(
-        "a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error"
-    );
+    todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error");
 }
 
 proptest! {

@@ -1,0 +1,9 @@
+**Report (gently-9nn)**
+
+- **Commits**: `49ba19e` (GREEN feat), `5ea8cd8` (clippy-clean p3 fix). **Deviation**: the RED commit was aborted by the pre-commit fmt-check hook (pre-existing specodelic#15 artifact drift); the RED state (stub + failing p3, verified `decision_trace::p3 FAILED` locally) never landed as its own commit — noted on the ticket.
+- **Driver**: `crates/gently-core/src/trace_diff.rs` — `minimal_cut` / `trace_diff` / `align_dump`, invoked in-process by `scenarios::decision_trace::p3` (arms: antichain semantics, earliest-stage cut, byte gate, EXCL-001 corpus loop).
+- **awd case** (size-attr): bytes now identical → typed `DecisionOnly` refusal with hint text; informational cut = `{place A2..A5, B2..B5}` — **exactly the E1 pre-registered cut**. so-flowchart-size (byte-divergent): `{place Client, Msg Server, Server}` — matches E1's oracle-side cut.
+- **Byte gate**: byte-identical + differing traces → `TraceDiffError::DecisionOnly` ("decision-only diff — informational, run with --informational to see it"); byte-divergent → always adjudicates.
+- **EXCL-001**: 24 dumps iterated, 23 comparable (1 skip: dot-bare-scope-in-named's non-comparable `.observed` format), 4 byte-divergent classes (fan-layout, pod-anon-group, so-flowchart-size, so-start-port-index) all yield nonempty single-stage antichain cuts; PASS.
+- **Gates**: `ah check --run-tests` 79 passed, no-tests-ran 5→4; `cargo test` 220/0; `clippy --all-targets` 0 warnings; `just gates` green. p3 runs in ~0.01 s.
+- e1.sh header-noted as superseded; not closed, not pushed.

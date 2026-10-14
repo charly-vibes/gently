@@ -37,9 +37,7 @@ fn p2() {
 // predicate: cluster membership equals group membership and anonymous clusters get `cluster<N>` names in internal-id order
 #[test]
 fn p3() {
-    todo_predicate!(
-        "cluster membership equals group membership and anonymous clusters get `cluster<N>` names in internal-id order"
-    );
+    todo_predicate!("cluster membership equals group membership and anonymous clusters get `cluster<N>` names in internal-id order");
 }
 
 // id: p4
@@ -47,7 +45,5 @@ fn p3() {
 // predicate: the re-parsed model is isomorphic to the source model with full group identity — verbatim named group names and restored anonymity via the [[ge.dot_parser]] cluster convention (`cluster_<name>` re-parses as `<name>`, `cluster<N>` as an anonymous group); group membership itself round-trips; group-endpoint edges excluded
 #[test]
 fn p4() {
-    todo_predicate!(
-        "the re-parsed model is isomorphic to the source model with full group identity — verbatim named group names and restored anonymity via the [[ge.dot_parser]] cluster convention (`cluster_<name>` re-parses as `<name>`, `cluster<N>` as an anonymous group); group membership itself round-trips; group-endpoint edges excluded"
-    );
+    todo_predicate!("the re-parsed model is isomorphic to the source model with full group identity — verbatim named group names and restored anonymity via the [[ge.dot_parser]] cluster convention (`cluster_<name>` re-parses as `<name>`, `cluster<N>` as an anonymous group); group membership itself round-trips; group-endpoint edges excluded");
 }

@@ -37,9 +37,7 @@ fn p2() {
 // predicate: the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership
 #[test]
 fn p3() {
-    todo_predicate!(
-        "the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership"
-    );
+    todo_predicate!("the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership");
 }
 
 // id: p4
@@ -57,7 +55,5 @@ fn p4() {
 // predicate: `columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass
 #[test]
 fn p5() {
-    todo_predicate!(
-        "`columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass"
-    );
+    todo_predicate!("`columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass");
 }

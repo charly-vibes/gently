@@ -21,9 +21,7 @@ macro_rules! todo_predicate {
 // predicate: stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored
 #[test]
 fn p1() {
-    todo_predicate!(
-        "stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored"
-    );
+    todo_predicate!("stdin and the first file argument reach the parser with the same bytes; the second positional names the output file and further positionals are ignored");
 }
 
 // id: p2
@@ -31,9 +29,7 @@ fn p1() {
 // predicate: each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent
 #[test]
 fn p2() {
-    todo_predicate!(
-        "each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent"
-    );
+    todo_predicate!("each requested format renders through its renderer; the default is ascii; `--output` receives the rendered bytes instead of stdout and extension inference applies when `--as` is absent");
 }
 
 // id: p3
@@ -59,9 +55,7 @@ fn p4() {
 // predicate: dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry
 #[test]
 fn p5() {
-    todo_predicate!(
-        "dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry"
-    );
+    todo_predicate!("dispatch, verbosity, and format routing behave per the genesis Guide contract, and init writes the `.genesis/tools.toml` entry");
 }
 
 // id: p6
@@ -69,9 +63,7 @@ fn p5() {
 // predicate: json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output
 #[test]
 fn p6() {
-    todo_predicate!(
-        "json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output"
-    );
+    todo_predicate!("json mode wraps the result in a genesis Envelope; human mode emits raw bytes identical to non-wrapped output");
 }
 
 // id: p7
@@ -97,7 +89,5 @@ fn p8() {
 // predicate: a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF
 #[test]
 fn p9() {
-    todo_predicate!(
-        "a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF"
-    );
+    todo_predicate!("a terminal stdin fails fast with a diagnostic naming stdin and the input file; piped stdin is still read to EOF");
 }

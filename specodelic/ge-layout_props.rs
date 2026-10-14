@@ -60,9 +60,7 @@ fn p2() {
 // predicate: every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted
 #[test]
 fn p3() {
-    todo_predicate!(
-        "every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted"
-    );
+    todo_predicate!("every edge's source precedes its target along the flow axis, self-loops and the exempted shapes excepted");
 }
 
 proptest! {

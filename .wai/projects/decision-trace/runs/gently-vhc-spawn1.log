@@ -1,0 +1,13 @@
+Report:
+
+**Commits**
+- `9ade6cc` docs(decision-trace): known-hard-cases workflow row (gently-vhc)
+- `373fb61` chore(openspec): archive add-decision-trace (gently-vhc) — change → `openspec/changes/archive/2026-10-14-add-decision-trace/`, specodelic artifacts regenerated + rustfmt'd (specodelic#15). Note: `spec-drift-gate`'s redeploy clobbers the archive's openspec/spec mirror edits (corpus `specs/decision-trace.md` is source of truth); deltas preserved in the archived change copy.
+
+**Gates**
+- `just gates`: all ✔ (spk lint 13 files/0 findings, compile 13/0 failed, model-check 13/0 failed, ah check 0 structural)
+- `cargo test`: 7 suites, 220 passed / 0 failed; `clippy --all-targets` clean
+- `just examples-verify`: byte-identical
+- `ah check --run-tests`: 79 passed, 4 no-tests-ran backlog (decision-trace p2/p4/p5/p6 — pre-existing, matches brief)
+
+Worktree clean (excluding `.wai` churn). No push, no `bd close` — left to orchestrator.
