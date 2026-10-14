@@ -25,13 +25,13 @@
 
 ## 3. Oracle dump mode (D4 — extend the E2 pilot)
 
-- [ ] 3.1 Extend the `dump` mode in `tests/repro/probes.pl` from the
+- [x] 3.1 Extend the `dump` mode in `tests/repro/probes.pl` from the
       `_prepare_layout` pilot: pin header + explicit `PERL_HASH_SEED`
       field + per-stage observability marks on every dump.
-- [ ] 3.2 Commit the five E2 fixture dumps under `tests/repro/dumps/`
+- [x] 3.2 Commit the five E2 fixture dumps under `tests/repro/dumps/`
       (already committed by gently-8je — re-verify byte-stability after
       the schema lands; regenerate if the schema version bumps).
-- [ ] 3.3 Guard: tier-2 (hash-seed-dependent) fixture classes are
+- [x] 3.3 Guard: tier-2 (hash-seed-dependent) fixture classes are
       excluded from the committed-dump corpus — probe-enforced, not
       prose.
 
