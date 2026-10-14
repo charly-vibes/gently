@@ -24,6 +24,10 @@ macro_rules! todo_predicate {
 pub mod spec_gen {
     use super::*;
 
+    pub fn chains() -> impl Strategy<Value = String> {
+        Just("chains".into())
+    }
+
     pub fn style() -> impl Strategy<Value = String> {
         Just("style".into())
     }
@@ -49,15 +53,14 @@ pub mod spec_gen {
     }
 }
 
-// id: p1
-// generator: nodes with every border style
-// predicate: each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed
-#[test]
-fn p1() {
-    todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed");
-}
-
 proptest! {
+    // id: p1
+    // generator: nodes with every border style, plus the size-attributed chains (gently-awd: `size: W,H` / `rows` / `columns` spans)
+    // predicate: each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed, and a size-attributed node's box widens to the balanced span sum (11 for `size: 2,3`, 17 for `size: 3,1`/`columns: 3`) while `rows` spans stay standard 3-line boxes — byte-identical to the recorded oracle companions
+    #[test]
+    fn p1(v0 in spec_gen::chains()) {
+        todo_predicate!("each rendered box border matches its declared style, with bold/wide/broad sharing the same `#####` outline as observed, and a size-attributed node's box widens to the balanced span sum (11 for `size: 2,3`, 17 for `size: 3,1`/`columns: 3`) while `rows` spans stay standard 3-line boxes — byte-identical to the recorded oracle companions");
+    }
     // id: p2
     // generator: graphs with every edge style (bold/wide/broad as one aliased family), in straight gaps and chains, plus bidirectional (`<-->`, `<-- label -->`) and labeled-undirected edges straight and bent
     // predicate: each edge's glyph run matches the observed minimum-run style table byte-for-byte (arrowed and arrow-less), wide and broad alias the bold runs (`##>`/`###`), undirected runs shift with the gap's absolute column, dot-dot-dash widens its gap to 6, labeled undirected runs carry no head, bidirectional straight runs draw both outward heads at the widened gap with the label centered in [2, w-3), and a bent bidirectional edge stamps the start arrowhead into its source box; vertical runs attach at their edge cell's left+2 (the POD triangle's back-edge and every pinned wide-box vertical), a `minlen >= 2` straight edge fills its one-column-widened gap, an edge whose endpoint is a `shape: edge` node renders through the stripped endpoint flags (`--->` flush off the shape:edge source, the undirected `--------` chain through the edge cell, a directed `>` riding INTO the edge cell), and the vertical short cell heads its target-adjacent end (`^` into train's south)

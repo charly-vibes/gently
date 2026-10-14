@@ -17,8 +17,26 @@ use super::geometry::{
 use super::groups::{self, Frame};
 use super::labels::{Align, LabelLine};
 use super::styles::{self, border, byte_width, h_run, Shape};
-use crate::graph::Graph;
+use crate::graph::{Graph, Scope};
 use crate::layout::Layout;
+
+/// The grid-cell span of every node, in model order (gently-awd): the
+/// `columns`/`rows` attributes as grid cells — upstream `_calc_size`
+/// reads `abs($attr || 1)`, so an absent/empty/0 value is one cell.
+pub(super) fn node_spans(graph: &Graph) -> Vec<(usize, usize)> {
+    (0..graph.nodes.len())
+        .map(|i| {
+            let side = |key: &str| {
+                graph
+                    .get_attr(Scope::Node(i), key)
+                    .and_then(|v| v.parse::<usize>().ok())
+                    .filter(|&n| n > 0)
+                    .unwrap_or(1)
+            };
+            (side("columns"), side("rows"))
+        })
+        .collect()
+}
 
 /// Width in chars of a gap (edge-routing) grid column.
 pub(super) const GAP_WIDTH: usize = 5;
@@ -52,6 +70,8 @@ pub(super) struct Canvas {
     pub(super) edge_lines: Vec<Option<Vec<LabelLine>>>,
     /// Resolved render data per node, in model order.
     pub(super) node_style: Vec<(String, Shape)>,
+    /// Grid-cell span of every node, in model order (gently-awd).
+    pub(super) spans: Vec<(usize, usize)>,
     /// Resolved edge style per edge, in model order.
     pub(super) edge_style: Vec<String>,
     /// Target-side arrowhead presence per edge, in model order.
@@ -70,6 +90,15 @@ pub(super) struct Canvas {
     /// or the border:none blank beneath the label) — trailing blank lines
     /// beyond it are dropped (see `new`).
     last_band_floor: usize,
+}
+
+/// The drawn geometry of one node: its anchor offset and top line plus
+/// the summed width/height over its grid-cell span (gently-awd).
+pub(super) struct NodeGeom {
+    pub(super) x0: usize,
+    pub(super) top: usize,
+    pub(super) w: usize,
+    pub(super) h: usize,
 }
 
 /// The point node's label row: blank sides with a centered `*`.
@@ -118,13 +147,20 @@ fn last_band_floor(
     band_tops: &[usize],
     grid_len: usize,
     mt: usize,
+    spans: &[(usize, usize)],
 ) -> usize {
     layout
         .node_cells
         .iter()
         .zip(draws)
-        .filter(|&(_, &draws_something)| draws_something)
-        .map(|(&(_, r), _)| band_tops[r] + row_height[r] - 1 + mt)
+        .zip(spans)
+        .filter(|&((_, &draws_something), _)| draws_something)
+        .map(|((&(_, r), _), &(_, cy))| {
+            let h: usize = (r..r + cy)
+                .map(|rr| row_height.get(rr).copied().unwrap_or(0))
+                .sum();
+            band_tops[r] + h - 1 + mt
+        })
         .max()
         .map(|line| line.min(grid_len.saturating_sub(1)))
         .unwrap_or(0)
@@ -157,6 +193,7 @@ fn frame_grid(
     offsets: &[usize],
     band_tops: &[usize],
     row_height: &[usize],
+    spans: &[(usize, usize)],
 ) -> (Vec<Vec<u8>>, Vec<usize>, Vec<Frame>, usize, usize, usize) {
     let (frames, margins) =
         groups::frame_margins(graph, layout, col_width, offsets, band_tops, row_height);
@@ -166,7 +203,8 @@ fn frame_grid(
     let draws: Vec<bool> = (0..graph.nodes.len())
         .map(|i| !is_anon(&graph.nodes[i].name))
         .collect();
-    let last_band_floor = last_band_floor(layout, &draws, row_height, band_tops, grid.len(), mt);
+    let last_band_floor =
+        last_band_floor(layout, &draws, row_height, band_tops, grid.len(), mt, spans);
     (grid, offsets, frames, ml, mt, last_band_floor)
 }
 
@@ -193,9 +231,10 @@ impl Canvas {
         let selfloop_node = selfloops(graph);
         let node_style = node_styles(graph);
         let edge_style = edge_styles(graph);
+        let spans = node_spans(graph);
         // label lines resolve FIRST (gently-emd: the wrapped lines drive
         // the box widths), then the column geometry consumes them
-        let (node_lines, edge_lines) = label_lines(graph, layout);
+        let (node_lines, edge_lines) = label_lines(graph, layout, &spans);
         let col_width = column_geometry(
             graph,
             layout,
@@ -203,14 +242,28 @@ impl Canvas {
             &selfloop_node,
             &edge_style,
             &node_lines,
+            &spans,
         );
         let offsets = column_offsets(&col_width);
         // Row band heights + their unshifted start lines: every cell is
         // grown to the tallest cell of its row (upstream
         // `_prepare_layout` rewrites each cell's h to the row height).
-        let (row_height, band_tops) = band_layout(graph, layout, &node_lines, &edge_lines);
-        let (grid, offsets, frames, ml, mt, last_band_floor) =
-            frame_grid(graph, layout, &col_width, &offsets, &band_tops, &row_height);
+        let edge_rows: Vec<usize> = layout
+            .edge_paths
+            .iter()
+            .flat_map(|p| p.iter().map(|&(_, r)| r))
+            .collect();
+        let (row_height, band_tops) =
+            band_layout(graph, layout, &node_lines, &edge_lines, &spans, &edge_rows);
+        let (grid, offsets, frames, ml, mt, last_band_floor) = frame_grid(
+            graph,
+            layout,
+            &col_width,
+            &offsets,
+            &band_tops,
+            &row_height,
+            &spans,
+        );
         let (edge_arrow_end, edge_start_arrow, edge_bidir) = edge_arrow_flags(graph);
         Canvas {
             grid,
@@ -222,6 +275,7 @@ impl Canvas {
             col_width,
             node_style,
             edge_style,
+            spans,
             edge_arrow_end,
             edge_start_arrow,
             edge_bidir,
@@ -237,15 +291,29 @@ impl Canvas {
     /// (nothing).
     pub(super) fn draw_nodes(&mut self, _graph: &Graph, layout: &Layout) {
         for (idx, &(cx, cy)) in layout.node_cells.iter().enumerate() {
+            // The node's drawn geometry spans its whole grid-cell span
+            // (gently-awd): the box covers the summed column widths and
+            // row heights from its anchor cell.
+            let (span_c, span_r) = self.spans[idx];
+            let geom = NodeGeom {
+                x0: self.offsets[cx],
+                top: self.band_top(cy),
+                w: (cx..cx + span_c)
+                    .map(|c| self.col_width.get(c).copied().unwrap_or(0))
+                    .sum(),
+                h: (cy..cy + span_r)
+                    .map(|r| self.row_height.get(r).copied().unwrap_or(0))
+                    .sum(),
+            };
             let lines = self.node_lines[idx].clone();
             let (style, shp) = self.node_style[idx].clone();
             let b = border(&style);
             match shp {
                 Shape::Invisible => {}
-                Shape::Point => self.draw_point(cy, cx),
-                Shape::Rounded => self.draw_box(cy, cx, &lines, blank_corners(b), false),
-                Shape::Edge => self.draw_edge_cell(cy, cx, &lines),
-                Shape::Box => self.draw_box(cy, cx, &lines, b, style == "none"),
+                Shape::Point => self.draw_point(&geom),
+                Shape::Rounded => self.draw_box(&geom, &lines, blank_corners(b), false),
+                Shape::Edge => self.draw_edge_cell(&geom, &lines),
+                Shape::Box => self.draw_box(&geom, &lines, b, style == "none"),
             }
         }
     }
@@ -261,28 +329,25 @@ impl Canvas {
     /// `none` borders widen the field to `w-2` at `x0 = 1`); widths
     /// count UTF-8 bytes (gently-bvb). `none` is a `border: none` box:
     /// its field widens to `w-2` at `x0 = 1` (upstream `_draw_label`).
-    fn draw_box(
-        &mut self,
-        cy: usize,
-        cx: usize,
-        lines: &[LabelLine],
-        b: styles::Border,
-        none: bool,
-    ) {
-        let w = self.col_width[cx];
+    fn draw_box(&mut self, geom: &NodeGeom, lines: &[LabelLine], b: styles::Border, none: bool) {
+        let w = geom.w;
         let inner = w - 2;
         let run = h_run(&b, inner);
-        let top_line = self.band_top(cy);
-        let h = self.row_height[cy];
-        self.stamp(top_line, cx, &format!("{}{}{}", b.tl, run, b.tr));
-        self.stamp(top_line + h - 1, cx, &format!("{}{}{}", b.bl, run, b.br));
+        let top_line = geom.top;
+        let h = geom.h;
+        self.stamp_at(top_line, geom.x0, &format!("{}{}{}", b.tl, run, b.tr));
+        self.stamp_at(
+            top_line + h - 1,
+            geom.x0,
+            &format!("{}{}{}", b.bl, run, b.br),
+        );
         let (field_x, field_w, label_h, y_pad) = if none {
             (1, w - 2, h, 0)
         } else {
             (2, w - 4, h - 2, 1)
         };
         let start = top_line + y_pad + (label_h.saturating_sub(lines.len())) / 2;
-        let x0 = self.offsets[cx];
+        let x0 = geom.x0;
         // the box's side glyphs run the FULL grown height — every
         // interior row carries them (the oracle's box is drawn border
         // first, then the label over it)
@@ -308,9 +373,9 @@ impl Canvas {
     /// Stamp a point node: blank borders, a centered `*` (oracle bytes:
     /// blank, `  *`, blank for a width-5 point node) on the band's
     /// vertically centered line.
-    fn draw_point(&mut self, cy: usize, cx: usize) {
-        let mid = centered_point_row(self.col_width[cx] - 2);
-        self.stamp(self.mid(cy), cx, &mid);
+    fn draw_point(&mut self, geom: &NodeGeom) {
+        let mid = centered_point_row(geom.w - 2);
+        self.stamp_at(geom.top + (geom.h - 1) / 2, geom.x0, &mid);
     }
 
     /// Draw a selfloop: a small elbow over the box, departing through the
@@ -342,11 +407,23 @@ impl Canvas {
         self.band_top(r) + (self.row_height[r] - 1) / 2
     }
 
-    /// Char line one past row `r`'s bottom border line — the next band's
-    /// top border (for the standard 3-line band this is `top+3`, the
-    /// southern dip line).
-    pub(super) fn band_below(&self, r: usize) -> usize {
-        self.band_top(r) + self.row_height[r]
+    /// Char line of a node box's vertical middle over its row span
+    /// (gently-awd): `top + (Σ spanned heights − 1) / 2` — for a 1×1
+    /// node this is the anchor band's `mid`.
+    pub(super) fn box_mid(&self, r: usize, span_r: usize) -> usize {
+        let h: usize = (r..r + span_r)
+            .map(|rr| self.row_height.get(rr).copied().unwrap_or(0))
+            .sum();
+        self.band_top(r) + (h - 1) / 2
+    }
+
+    /// Char line one past a node box's bottom border over its row span
+    /// (gently-awd) — for a 1×1 node this is `band_below`.
+    pub(super) fn box_below(&self, r: usize, span_r: usize) -> usize {
+        let h: usize = (r..r + span_r)
+            .map(|rr| self.row_height.get(rr).copied().unwrap_or(0))
+            .sum();
+        self.band_top(r) + h
     }
 
     /// Char column of a vertical run through grid column `c`: offset +2

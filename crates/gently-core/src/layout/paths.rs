@@ -12,7 +12,7 @@
 //! Rationale: shaped by the recorded v0.69 @ ededa3d7 companions —
 //! ge.layout.c1 (pure function) and c4 (orthogonal routes).
 
-use super::{Cell, Placement, Route, Rows};
+use super::{node_span, Cell, Placement, Route, Rows};
 use crate::graph::Graph;
 use std::collections::HashSet;
 
@@ -22,6 +22,17 @@ use std::collections::HashSet;
 struct Ctx<'a> {
     occupied: &'a HashSet<Cell>,
     max_x: usize,
+}
+
+/// Both endpoints of one edge as the routing pass sees them: the
+/// placement slots, the grid cells, and the grid-cell spans (gently-awd).
+struct Endpoints {
+    su: Cell,
+    sv: Cell,
+    gu: Cell,
+    gv: Cell,
+    span_u: (usize, usize),
+    span_v: (usize, usize),
 }
 
 /// How many gap rows each boundary needs (boundary `k` is the gap above
@@ -87,8 +98,17 @@ fn mark_travel(slot: &mut [usize], pu: Cell, pv: Cell) {
 }
 
 /// Assemble the grid rows: `count` gap rows at each required boundary,
-/// node bands everywhere else, in band order.
-pub(super) fn assemble_rows(bands: usize, slots: &[usize]) -> Rows {
+/// node bands everywhere else, in band order, plus each band's row-span
+/// continuation rows (gently-awd): a multi-row node's `rows` span
+/// occupies the grid rows south of its band, so the bands below shift
+/// south by the band's tallest row span minus one (upstream places a
+/// node's span over the rows south of its band row; empty continuation
+/// rows collapse to height 0 in `_prepare_layout`, so they render
+/// invisibly — but they must EXIST so a tall node's box does not
+/// swallow the following bands' rows). One-celled bands reserve
+/// nothing, so plain graphs keep the recorded adjacency.
+pub(super) fn assemble_rows(graph: &Graph, placement: &Placement, slots: &[usize]) -> Rows {
+    let bands = placement.bands;
     let mut row_of_band = vec![0usize; bands];
     let mut gap_rows: Vec<Vec<usize>> = vec![Vec::new(); bands + 1];
     let mut row = 0usize;
@@ -96,6 +116,14 @@ pub(super) fn assemble_rows(bands: usize, slots: &[usize]) -> Rows {
         push_gaps(&mut gap_rows[b], slots[b], &mut row);
         row_of_band[b] = row;
         row += 1;
+        // Row-span continuation rows (gently-awd): the band's tallest
+        // multi-row node spans this many extra grid rows.
+        let cy = (0..graph.nodes.len())
+            .filter(|&i| placement.cell[i].is_some_and(|c| c.1 == b))
+            .map(|i| node_span(graph, i).1)
+            .max()
+            .unwrap_or(1);
+        row += cy - 1;
     }
     push_gaps(&mut gap_rows[bands], slots[bands], &mut row);
     Rows {
@@ -114,14 +142,26 @@ fn push_gaps(gaps: &mut Vec<usize>, count: usize, row: &mut usize) {
 }
 
 /// Realize each edge's travel as a cell path over the assembled rows.
+/// `spans` carries every node's (column, row) grid-cell span (gently-awd):
+/// the occupied set covers a multi-celled node's WHOLE span (the walks
+/// never enter any of its cells), and the straight-gap detection uses
+/// the span to find the single gap column east/west of a node.
 pub(super) fn route_edges(
     graph: &Graph,
     placement: &Placement,
     node_cells: &[Cell],
     rows: &Rows,
     max_x: usize,
+    spans: &[(usize, usize)],
 ) -> Vec<Vec<Cell>> {
-    let occupied: HashSet<Cell> = node_cells.iter().copied().collect();
+    let mut occupied: HashSet<Cell> = HashSet::new();
+    for (&(c, r), &(cx, cy)) in node_cells.iter().zip(spans) {
+        for dc in 0..cx {
+            for dr in 0..cy {
+                occupied.insert((c + dc, r + dr));
+            }
+        }
+    }
     let ctx = Ctx {
         occupied: &occupied,
         max_x,
@@ -135,10 +175,14 @@ pub(super) fn route_edges(
             let sv = placement.cell[e.to].unwrap();
             edge_path(
                 placement.route[ei],
-                su,
-                sv,
-                node_cells[e.from],
-                node_cells[e.to],
+                &Endpoints {
+                    su,
+                    sv,
+                    gu: node_cells[e.from],
+                    gv: node_cells[e.to],
+                    span_u: spans[e.from],
+                    span_v: spans[e.to],
+                },
                 rows,
                 &ctx,
             )
@@ -154,18 +198,18 @@ pub(super) fn route_edges(
 /// c->d); west-going bends out of the source's north/south first and runs
 /// along the gap row adjacent to the target band (oracle: bg-edge-node's
 /// Ulm->car — the source-band walk would drive through the nodes between).
-fn edge_path(
-    route: Route,
-    su: Cell,
-    sv: Cell,
-    gu: Cell,
-    gv: Cell,
-    rows: &Rows,
-    ctx: &Ctx,
-) -> Vec<Cell> {
+fn edge_path(route: Route, ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
+    let (su, gu) = (ep.su, ep.gu);
+    let (gv, span_u, span_v) = (ep.gv, ep.span_u, ep.span_v);
     match route {
         Route::Selfloop => selfloop_path(su, gu, rows),
-        Route::Parallel(_) => bend_path(gu, gv, bend_gap_row(route, su.1, rows, gu.1)),
+        Route::Parallel(_) => bend_path(
+            gu,
+            gv,
+            span_u,
+            span_v,
+            bend_gap_row(route, su.1, rows, gu.1),
+        ),
         // The port dips run one gap row, all the way between the two node
         // columns — straight through under (or over) everything between.
         Route::PortBelow | Route::PortAbove => {
@@ -180,15 +224,31 @@ fn edge_path(
                 .and_then(|v| v.first())
                 .copied()
                 .unwrap_or(gu.1);
-            bend_path(gu, gv, g)
+            bend_path(gu, gv, span_u, span_v, g)
         }
         Route::Grew | Route::Around => {
-            if gu.1 == gv.1 && gu.0.abs_diff(gv.0) == 2 {
-                vec![(gu.0.min(gv.0) + 1, gu.1)]
-            } else if gu.1 == gv.1 {
-                bend_path(gu, gv, bend_gap_row(route, su.1, rows, gu.1))
+            // Straight through the single gap column between the two
+            // nodes — east of the source's column span or west of the
+            // target's (gently-awd: a multi-celled node's east border
+            // sits at `col + cx - 1`, so the gap column shifts east).
+            let gap = if gu.0 < gv.0 {
+                (gv.0 == gu.0 + span_u.0 + 1).then_some(gu.0 + span_u.0)
             } else {
-                multiband_path(su, sv, gu, gv, rows, ctx)
+                (gu.0 == gv.0 + span_v.0 + 1).then_some(gv.0 + span_v.0)
+            };
+            if gu.1 == gv.1 {
+                match gap {
+                    Some(c) => vec![(c, gu.1)],
+                    None => bend_path(
+                        gu,
+                        gv,
+                        span_u,
+                        span_v,
+                        bend_gap_row(route, su.1, rows, gu.1),
+                    ),
+                }
+            } else {
+                multiband_path(ep, rows, ctx)
             }
         }
     }
@@ -218,16 +278,29 @@ fn bend_gap_row(route: Route, band: usize, rows: &Rows, fallback: usize) -> usiz
 }
 
 /// Cell path of a same-band bend through the gap row `g`: out of the
-/// source's column, across, and down/up into the target's column.
-fn bend_path(gu: Cell, gv: Cell, g: usize) -> Vec<Cell> {
-    let mut path = vec![(gu.0, g)];
+/// source's border column, across, and down/up into the target's
+/// border column — the east/west border of a multi-celled node sits at
+/// `col + cx - 1` (gently-awd; the anchor column is its west border).
+fn bend_path(
+    gu: Cell,
+    gv: Cell,
+    span_u: (usize, usize),
+    span_v: (usize, usize),
+    g: usize,
+) -> Vec<Cell> {
     if gu.0 < gv.0 {
-        path.extend((gu.0 + 1..gv.0).map(|c| (c, g)));
+        let out = gu.0 + span_u.0 - 1;
+        let mut path = vec![(out, g)];
+        path.extend((out + 1..gv.0).map(|c| (c, g)));
+        path.push((gv.0, g));
+        path
     } else {
-        path.extend((gv.0 + 1..gu.0).rev().map(|c| (c, g)));
+        let into = gv.0 + span_v.0 - 1;
+        let mut path = vec![(gu.0, g)];
+        path.extend((into + 1..gu.0).rev().map(|c| (c, g)));
+        path.push((into, g));
+        path
     }
-    path.push((gv.0, g));
-    path
 }
 
 /// Cell path of a multi-band route. East-going: along the source band to
@@ -240,7 +313,10 @@ fn bend_path(gu: Cell, gv: Cell, g: usize) -> Vec<Cell> {
 /// Both vertical walks jog east around band rows occupied by a stacked
 /// node (gently-4ga) — the gap-only walk jumped the occupied band row
 /// between two reserved gap rows, rendering non-adjacent paths.
-fn multiband_path(su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
+fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
+    let (su, sv) = (ep.su, ep.sv);
+    let (gu, gv) = (ep.gu, ep.gv);
+    let (span_u, span_v) = (ep.span_u, ep.span_v);
     if gu.0 > gv.0 {
         let north = sv.1 < su.1;
         // The gap row adjacent to the target band hosts the horizontal
@@ -250,14 +326,14 @@ fn multiband_path(su: Cell, sv: Cell, gu: Cell, gv: Cell, rows: &Rows, ctx: &Ctx
         return match rows.gap_rows.get(home).and_then(|v| v.first()) {
             Some(&g) => {
                 let mut path = walk_column(gu.0, gu.1, g, ctx);
-                path.extend((gv.0..=gu.0).rev().map(|c| (c, g)));
+                path.extend((gv.0 + span_v.0 - 1..=gu.0).rev().map(|c| (c, g)));
                 path
             }
             None => Vec::new(),
         };
     }
     let mut path: Vec<Cell> = if gu.0 < gv.0 {
-        (gu.0 + 1..=gv.0).map(|c| (c, gu.1)).collect()
+        (gu.0 + span_u.0..=gv.0).map(|c| (c, gu.1)).collect()
     } else {
         Vec::new()
     };

@@ -87,6 +87,32 @@ fn p1() {
     }
 }
 
+/// ge.ascii_render.p1 (c1, gently-awd): a size-attributed node's box
+/// spans its `columns` grid columns — the spanned columns balance
+/// smallest-first (upstream `_balance_sizes`) until their sum reaches
+/// the node's own label width — while `rows` spans collapse: the empty
+/// continuation rows are 0 tall, so `size: 1,2` / `rows: 3` stay
+/// standard 3-line boxes. The bytes are the recorded oracle companions
+/// (tests/fixtures/graph-easy/size-attr.ascii.expected, stripped of the
+/// pin header).
+#[test]
+fn p1_size_attr_spans() {
+    let src = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/graph-easy/size-attr.txt"
+    ))
+    .expect("size-attr fixture");
+    let g = text::parse(&src).expect("size-attr must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).expect("size-attr must render");
+    let want = "+----+     +----+\n| A  | --> | B  |\n+----+     +----+\
+\n+---------+      +----+\n|   A2    | ---> | B2 |\n+---------+      +----+\
+\n+---------------+      +----+\n|      A3       | ---> | B3 |\
+\n+---------------+      +----+\n+----+     +----+\n| A4 | --> | B4 |\
+\n+----+     +----+\n+---------------+      +----+\n|      A5       | ---> | B5 |\
+\n+---------------+      +----+\n";
+    assert_eq!(art, want);
+}
+
 /// ge.ascii_render.p2 (c2): each edge's glyph run matches the style table
 /// byte-for-byte, arrowed and arrow-less (probed oracle bytes).
 #[test]

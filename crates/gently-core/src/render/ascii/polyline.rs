@@ -27,12 +27,16 @@ enum Dir {
 type Pt = (usize, usize);
 
 /// The polyline-drawing context for one edge: its routed cell path, the
-/// target cell it must reach, and its model index (for typed errors).
+/// target cell it must reach, its model index (for typed errors), and
+/// both endpoints' grid-cell spans (gently-awd — attachments and side
+/// detection judge against the whole span, not just the anchor cell).
 struct Ctx<'a> {
     path: &'a [Cell],
     tc: usize,
     tr: usize,
     edge_index: usize,
+    span_s: (usize, usize),
+    span_t: (usize, usize),
 }
 
 /// Draw one bent or multi-band edge as a char polyline through its routed
@@ -52,16 +56,20 @@ pub(super) fn draw(
     canvas: &mut Canvas,
     layout: &Layout,
     edge_index: usize,
-    (sc, sr): Cell,
-    (tc, tr): Cell,
+    from: usize,
+    to: usize,
     start_arrow: bool,
     ends: EdgeNodeEnds,
 ) -> Result<(), RenderError> {
+    let (sc, sr) = layout.node_cells[from];
+    let (tc, tr) = layout.node_cells[to];
     let ctx = Ctx {
         path: &layout.edge_paths[edge_index],
         tc,
         tr,
         edge_index,
+        span_s: canvas.spans[from],
+        span_t: canvas.spans[to],
     };
     let Some(&first) = ctx.path.first() else {
         return Err(RenderError::unsupported(format!(
@@ -71,8 +79,8 @@ pub(super) fn draw(
     let last = *ctx.path.last().expect("path has a first cell");
     let exit = exit_dir(&ctx, first, sc, sr)?;
     let (entry, _) = entry_dir(&ctx, last)?;
-    let a0 = exit_attachment(canvas, exit, sc, sr, edge_index)?;
-    let a_end = entry_attachment(canvas, entry, tc, tr, edge_index)?;
+    let a0 = exit_attachment(canvas, exit, sc, sr, ctx.span_s, edge_index)?;
+    let a_end = entry_attachment(canvas, entry, tc, tr, ctx.span_t, edge_index)?;
     let (waypoints, arrow) = final_waypoints(canvas, &ctx, exit, entry, a0, a_end, ends)?;
     // The start arrowhead points into the source box — opposite the exit
     // travel direction, the same glyph an end arrowhead arriving through
@@ -172,13 +180,17 @@ fn start_glyph(exit: Dir) -> char {
 /// How the path leaves the source box, judged from the first path cell's
 /// position relative to the source cell.
 fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderError> {
+    // A multi-celled source is left through any column of its span
+    // (gently-awd): east of the anchor leaves east, west leaves west,
+    // same-column rows leave north/south.
+    let span_c = ctx.span_s.0;
     if first.1 == sr {
         match first.0.cmp(&sc) {
             std::cmp::Ordering::Greater => Ok(Dir::East),
             std::cmp::Ordering::Less => Ok(Dir::West),
             std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "leaves")),
         }
-    } else if first.0 == sc {
+    } else if first.0 >= sc && first.0 < sc + span_c {
         Ok(if first.1 < sr { Dir::North } else { Dir::South })
     } else {
         Err(unsupported_side(ctx, "leaves"))
@@ -189,13 +201,14 @@ fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderE
 /// char, judged from the last path cell's position.
 fn entry_dir(ctx: &Ctx, last: Cell) -> Result<(Dir, char), RenderError> {
     let (tc, tr) = (ctx.tc, ctx.tr);
+    let span_c = ctx.span_t.0;
     if last.1 == tr {
         match last.0.cmp(&tc) {
             std::cmp::Ordering::Less => Ok((Dir::East, '>')),
             std::cmp::Ordering::Greater => Ok((Dir::West, '<')),
             std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "enters")),
         }
-    } else if last.0 == tc {
+    } else if last.0 >= tc && last.0 < tc + span_c {
         if last.1 < tr {
             // Moving south arrives through the target's north side.
             Ok((Dir::South, 'v'))
@@ -218,13 +231,23 @@ fn exit_attachment(
     dir: Dir,
     c: usize,
     r: usize,
+    span: (usize, usize),
     ei: usize,
 ) -> Result<Pt, RenderError> {
     let pt = match dir {
-        Dir::East => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
-        Dir::West => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
+        // The east border of a multi-column node sits one char west of
+        // the column after its span (gently-awd); the vertical middle is
+        // the grown box's middle line, not the anchor band's.
+        Dir::East => (
+            Some(canvas.offsets[c + span.0]),
+            Some(canvas.box_mid(r, span.1)),
+        ),
+        Dir::West => (
+            canvas.offsets[c].checked_sub(1),
+            Some(canvas.box_mid(r, span.1)),
+        ),
         Dir::North => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::South => (Some(canvas.vert_x(c)), Some(canvas.band_below(r))),
+        Dir::South => (Some(canvas.vert_x(c)), Some(canvas.box_below(r, span.1))),
     };
     attachment(canvas, pt, ei, "leaves")
 }
@@ -237,13 +260,20 @@ fn entry_attachment(
     dir: Dir,
     c: usize,
     r: usize,
+    span: (usize, usize),
     ei: usize,
 ) -> Result<Pt, RenderError> {
     let pt = match dir {
-        Dir::East => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(r))),
-        Dir::West => (Some(canvas.offsets[c + 1]), Some(canvas.mid(r))),
+        Dir::East => (
+            canvas.offsets[c].checked_sub(1),
+            Some(canvas.box_mid(r, span.1)),
+        ),
+        Dir::West => (
+            Some(canvas.offsets[c + span.0]),
+            Some(canvas.box_mid(r, span.1)),
+        ),
         Dir::South => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::North => (Some(canvas.vert_x(c)), Some(canvas.band_below(r))),
+        Dir::North => (Some(canvas.vert_x(c)), Some(canvas.box_below(r, span.1))),
     };
     attachment(canvas, pt, ei, "enters")
 }

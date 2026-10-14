@@ -31,6 +31,10 @@ pub mod spec_gen {
     pub fn fans() -> impl Strategy<Value = String> {
         Just("fans".into())
     }
+
+    pub fn chain() -> impl Strategy<Value = String> {
+        Just("chain".into())
+    }
 }
 
 proptest! {
@@ -61,11 +65,11 @@ fn p3() {
 
 proptest! {
     // id: p4
-    // generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges, plus the stacked-column fans (comma-chain fan-out, fan-in star)
-    // predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; structurally (any scale): every model edge receives a routed path
+    // generator: within-envelope graphs with labelled, self-loop, and parallel multi-edges, plus the stacked-column fans (comma-chain fan-out, fan-in star) and the size-span chain (gently-awd)
+    // predicate: each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; a size-attributed source's straight edge routes through the single gap column east of its span and enters no spanned cell (gently-awd); structurally (any scale): every model edge receives a routed path
     #[test]
-    fn p4(v0 in spec_gen::fans()) {
-        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; structurally (any scale): every model edge receives a routed path");
+    fn p4(v0 in spec_gen::fans(), v1 in spec_gen::chain()) {
+        todo_predicate!("each edge's routed path is orthogonal, connected, passes through its label, and parallel edges never share a path cell; the fans' stacked-column walks jog around occupied band rows (gently-4ga) and stay grid-adjacent source cell to target cell; a size-attributed source's straight edge routes through the single gap column east of its span and enters no spanned cell (gently-awd); structurally (any scale): every model edge receives a routed path");
     }
 }
 

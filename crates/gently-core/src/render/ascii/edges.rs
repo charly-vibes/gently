@@ -9,7 +9,7 @@
 //! rules live in styles.rs, pinned by the recorded claims
 //! (pod-bidir*.observed, pod-label-attr.observed).
 
-use super::canvas::{centered, Canvas};
+use super::canvas::{centered, Canvas, NodeGeom};
 use super::labels::{Align, LabelLine};
 use super::polyline;
 use super::styles::Shape;
@@ -307,12 +307,12 @@ impl Canvas {
     /// align (center) is not consulted (probed oracle: `car` and `train`
     /// sit at the cell's offset 1, upstream `_insert_label`'s `xs = 1`).
     /// The cell draws no borders.
-    pub(super) fn draw_edge_cell(&mut self, cy: usize, cx: usize, lines: &[LabelLine]) {
-        let w = self.col_width[cx];
-        self.stamp(self.mid(cy), cx, &"-".repeat(w));
-        let start = self.band_top(cy) + self.row_height[cy].saturating_sub(2 + lines.len());
+    pub(super) fn draw_edge_cell(&mut self, geom: &NodeGeom, lines: &[LabelLine]) {
+        let w = geom.w;
+        self.stamp_at(geom.top + (geom.h - 1) / 2, geom.x0, &"-".repeat(w));
+        let start = geom.top + geom.h.saturating_sub(2 + lines.len());
         for (i, line) in lines.iter().enumerate() {
-            self.stamp_at(start + i, self.offsets[cx] + 1, &line.text);
+            self.stamp_at(start + i, geom.x0 + 1, &line.text);
         }
     }
 
@@ -333,7 +333,8 @@ impl Canvas {
             return Ok(());
         }
         if path.len() == 1 {
-            if sr == tr && sc.abs_diff(tc) == 2 {
+            let (span_f, span_t) = (self.spans[edge.from], self.spans[edge.to]);
+            if sr == tr && (tc == sc + span_f.0 + 1 || sc == tc + span_t.0 + 1) {
                 self.draw_gap_column(sr, path[0].0, tc < sc, edge_index, edge.from, edge.to);
                 return Ok(());
             }
@@ -347,8 +348,8 @@ impl Canvas {
             self,
             layout,
             edge_index,
-            (sc, sr),
-            (tc, tr),
+            edge.from,
+            edge.to,
             edge.arrows.start,
             ends,
         )

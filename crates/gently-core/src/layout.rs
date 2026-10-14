@@ -128,6 +128,52 @@ pub(super) struct Rows {
     pub(super) height: usize,
 }
 
+/// Grid-cell span of node `idx` in columns and rows (gently-awd):
+/// the `columns`/`rows` attributes — derived from `size: W,H` in the
+/// attribute store — parsed as grid cells. Upstream `_calc_size` reads
+/// `abs($attr || 1)`, so an absent, empty, or `0` value is one cell.
+fn node_span(graph: &Graph, idx: usize) -> (usize, usize) {
+    let side = |key: &str| {
+        graph
+            .get_attr(Scope::Node(idx), key)
+            .and_then(|v| v.parse::<usize>().ok())
+            .filter(|&n| n > 0)
+            .unwrap_or(1)
+    };
+    (side("columns"), side("rows"))
+}
+
+/// Grid columns of every node: upstream places multi-celled nodes at
+/// absolute grid coordinates, so the rank→column map must accumulate
+/// each same-band predecessor's column span (gently-awd:
+/// `col(r) = col(r-1) + cx(r-1) + 1`, which generalizes the even-column
+/// `2r` mapping — every 1×1 node contributes no extra). Per-band ranks
+/// are already east-ordered by placement, so the extra east shift of a
+/// node is the summed `cx - 1` of the band's westward nodes:
+/// `col(rank, band) = 2·rank + Σ(cx(n) - 1)` over same-band nodes with
+/// smaller rank.
+fn node_columns(graph: &Graph, placement: &Placement) -> Vec<usize> {
+    let spans: Vec<(usize, usize)> = (0..graph.nodes.len())
+        .map(|i| node_span(graph, i))
+        .collect();
+    let mut cols = vec![0usize; graph.nodes.len()];
+    for band in 0..placement.bands {
+        // Same-band nodes in east (rank) order — index breaks rank ties
+        // deterministically (ge.layout.c1: pure function of the model).
+        let mut band_nodes: Vec<(usize, usize)> = (0..graph.nodes.len())
+            .filter(|&i| placement.cell[i].is_some_and(|c| c.1 == band))
+            .map(|i| (placement.cell[i].unwrap().0, i))
+            .collect();
+        band_nodes.sort_unstable();
+        let mut extra = 0usize;
+        for &(rank, i) in &band_nodes {
+            cols[i] = 2 * rank + extra;
+            extra += spans[i].0.saturating_sub(1);
+        }
+    }
+    cols
+}
+
 /// Lay out `graph` deterministically.
 ///
 /// Column ranks grow eastward with one gap column between neighbours;
@@ -149,24 +195,30 @@ pub fn layout(graph: &Graph) -> Layout {
         };
     };
     let slots = required_slots(graph, &placement);
-    let rows = assemble_rows(placement.bands, &slots);
+    let rows = assemble_rows(graph, &placement, &slots);
+    let cols = node_columns(graph, &placement);
+    let spans: Vec<(usize, usize)> = (0..graph.nodes.len())
+        .map(|i| node_span(graph, i))
+        .collect();
     let node_cells: Vec<Cell> = placement
         .cell
         .iter()
-        .map(|c| {
-            let (col, band) = c.unwrap();
-            (2 * col, rows.row_of_band[band])
+        .enumerate()
+        .map(|(i, c)| {
+            let (_, band) = c.unwrap();
+            (cols[i], rows.row_of_band[band])
         })
         .collect();
-    let max_col = placement
-        .cell
+    // The eastmost occupied column: a multi-celled node sticks out
+    // east over its whole column span (gently-awd).
+    let max_x = cols
         .iter()
-        .filter_map(|c| c.map(|p| p.0))
+        .zip(&spans)
+        .map(|(&c, &(cx, _))| c + cx - 1)
         .max()
         .unwrap_or(0);
-    let max_x = 2 * max_col;
     let width = max_x + 1;
-    let edge_paths = route_edges(graph, &placement, &node_cells, &rows, max_x);
+    let edge_paths = route_edges(graph, &placement, &node_cells, &rows, max_x, &spans);
     let labels = label_cells(graph, &edge_paths);
     let grid = Layout {
         node_cells,
