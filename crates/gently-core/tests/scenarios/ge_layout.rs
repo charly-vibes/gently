@@ -388,6 +388,46 @@ fn p4_fan_stack_routes_jog_not_jump() {
     }
 }
 
+/// ge.layout.p4 (c4, gently-a6g): the fan-in star's placement matches the
+/// pinned oracle (tests/repro/claims/fan-layout.observed, example 2 —
+/// hash-stable across 12 seeds, tier-1): the hub GROWS to a 3-row span
+/// (four same-side attachments), the first attaching source takes the
+/// east ring slot at the hub's top row, the second slots two rows south
+/// (the adjacent row is cleared against the first attachment), the third
+/// hangs below the hub on its own band, and the chain head stays west.
+#[test]
+fn p4_fanin_star_places_east_ring_slots_on_grown_hub() {
+    let g = fanin_star_graph();
+    let l = layout::layout(&g);
+    // n1=0, n2=1, n3=2, n4=3, hub=4 — the oracle's absolute grid cells:
+    // hub at (2,0) grown to 3 rows, n1 west, n4/n2 on the east column at
+    // the hub's top/bottom rows, n3 below the hub's bottom row + 1 gap.
+    assert_eq!(l.node_cells[0], (0, 0), "n1 west of the hub");
+    assert_eq!(l.node_cells[1], (4, 2), "n2 east ring slot at row 2");
+    assert_eq!(l.node_cells[2], (2, 4), "n3 below the hub band");
+    assert_eq!(l.node_cells[3], (4, 0), "n4 east ring slot at row 0");
+    assert_eq!(l.node_cells[4], (2, 0), "hub chained east of n1");
+    assert_eq!(l.spans[4], (1, 3), "hub grown to a 3-row span");
+    assert_all_routed(&l, g.edges.len());
+    let art = gently_core::render::ascii::render(&g, &l).expect("star must render");
+    assert_eq!(
+        art,
+        "+----+     +-----+     +----+\n\
+         | n1 | --> |     | <-- | n4 |\n\
+         +----+     | hub |     +----+\n\
+                    |     |     +----+\n\
+                    |     | <-- | n2 |\n\
+                    +-----+     +----+\n\
+                      ^\n\
+                      |\n\
+                      |\n\
+                    +-----+\n\
+                    | n3  |\n\
+                    +-----+\n",
+        "the star's oracle bytes (fan-layout.observed example 2)"
+    );
+}
+
 /// ge.layout.p4 (c4, gently-awd): parallel channels between MULTI-ROW
 /// node pairs stack as grid ROWS through the boxes' row span — the
 /// pair's first edge keeps the straight band-row run, channel k rides
