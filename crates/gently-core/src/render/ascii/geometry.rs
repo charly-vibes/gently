@@ -327,19 +327,39 @@ pub(super) fn column_geometry(
         }
     }
     // Edge cells are single-celled and record their columns' widths
-    // (upstream pass 1): every routed cell raises its column to the
-    // gap floor, and a straight single-cell path's column takes the
-    // style/label widening.
+    // (upstream pass 1): a cell on a horizontal run raises its column to
+    // the 5-char gap floor; a VERTICAL-run cell only needs the 3-char
+    // VER floor (gently-byq: the dodge channel column renders 3 wide —
+    // `53..55`, pipe at offset 2 — where the oracle's EDGE_VER cells
+    // sit). Orientation per cell: vertical when a path neighbor shares
+    // its column.
     for path in &layout.edge_paths {
-        for &(c, _) in path {
+        for (i, &(c, _)) in path.iter().enumerate() {
+            let vertical = path
+                .get(i.wrapping_sub(1))
+                .is_some_and(|&p| p.0 == c && i > 0)
+                || path.get(i + 1).is_some_and(|&n| n.0 == c);
             if c < col_width.len() {
-                col_width[c] = col_width[c].max(GAP_WIDTH);
+                let floor = if vertical { 3 } else { GAP_WIDTH };
+                col_width[c] = col_width[c].max(floor);
             }
         }
     }
     for (ei, path) in layout.edge_paths.iter().enumerate() {
         if path.len() == 1 {
             widen_edge_column(graph, layout, edge_style, &mut col_width, ei, path, spans);
+        }
+    }
+    // A slot-routed edge's label rides the ARROW-END cell (gently-byq):
+    // its column grows to the label demand — the label+5 cell width
+    // (the SO fixture's Client column grows 10→13 for `3. X Msg`).
+    for (ei, cell) in layout.slot_labels.iter().enumerate() {
+        if let Some(&(c, _)) = cell.as_ref() {
+            if let Some(label) = object_attr(graph, Scope::Edge(ei), ObjectKind::Edge, "label") {
+                if c < col_width.len() {
+                    col_width[c] = col_width[c].max(label_cell_width(graph, ei, label));
+                }
+            }
         }
     }
     // A structural gap column — no node anchors there and no multi-celled

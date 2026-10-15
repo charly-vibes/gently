@@ -69,6 +69,7 @@ where
         .map(|path| path.into_iter().map(&f).collect())
         .collect();
     g.label_cells = g.label_cells.into_iter().map(|c| c.map(&f)).collect();
+    g.slot_labels = g.slot_labels.into_iter().map(|c| c.map(&f)).collect();
     g
 }
 
@@ -96,6 +97,9 @@ fn transposed(grid: Layout) -> Layout {
     let mut g = remap(grid, |(x, y)| (y, x));
     g.width = h;
     g.height = w;
+    // The transpose swaps the column and row axes, so the spans swap
+    // with them.
+    g.spans = g.spans.into_iter().map(|(cx, cy)| (cy, cx)).collect();
     g
 }
 
@@ -122,6 +126,8 @@ mod tests {
             label_cells: vec![None],
             width: 3,
             height: 1,
+            spans: vec![(1, 1)],
+            slot_labels: vec![None],
         }
     }
 

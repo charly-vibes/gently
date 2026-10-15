@@ -60,6 +60,9 @@ fn raise(slot: &mut [usize], boundary: usize, count: usize) {
 fn mark_slot(slot: &mut [usize], route: Route, pu: Cell, pv: Cell) {
     match route {
         Route::Selfloop => raise(slot, pu.1, 1),
+        // A slot route rides the slotted node's own continuation rows
+        // (grown to `N+1` by the port, gently-byq) — no gap rows.
+        Route::Slot { .. } => {}
         // A south-port dip takes the first gap row below the band; a
         // north-port bend the first gap row above it.
         Route::PortBelow => raise(slot, pu.1 + 1, 1),
@@ -169,6 +172,10 @@ pub(super) fn route_edges(
         occupied: &occupied,
         max_x,
     };
+    // The cells earlier edges' paths took (model order): an indexed
+    // end-slot edge dodges EAST when its drop column is taken by one of
+    // them (gently-byq).
+    let mut used: HashSet<Cell> = HashSet::new();
     graph
         .edges
         .iter()
@@ -176,7 +183,7 @@ pub(super) fn route_edges(
         .map(|(ei, e)| {
             let su = placement.cell[e.from].unwrap();
             let sv = placement.cell[e.to].unwrap();
-            edge_path(
+            let path = edge_path(
                 placement.route[ei],
                 &Endpoints {
                     su,
@@ -188,7 +195,10 @@ pub(super) fn route_edges(
                 },
                 rows,
                 &ctx,
-            )
+                &used,
+            );
+            used.extend(path.iter().copied());
+            path
         })
         .collect()
 }
@@ -201,7 +211,13 @@ pub(super) fn route_edges(
 /// c->d); west-going bends out of the source's north/south first and runs
 /// along the gap row adjacent to the target band (oracle: bg-edge-node's
 /// Ulm->car — the source-band walk would drive through the nodes between).
-fn edge_path(route: Route, ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
+fn edge_path(
+    route: Route,
+    ep: &Endpoints,
+    rows: &Rows,
+    ctx: &Ctx,
+    used: &HashSet<Cell>,
+) -> Vec<Cell> {
     let (su, gu) = (ep.su, ep.gu);
     let (gv, span_u, span_v) = (ep.gv, ep.span_u, ep.span_v);
     match route {
@@ -246,6 +262,8 @@ fn edge_path(route: Route, ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> 
                 _ => multiband_path(ep, rows, ctx),
             }
         }
+        // An indexed port slot (gently-byq): the decoded upstream routes.
+        Route::Slot { end, n } => slot_path(ep, ctx, used, end, n),
         // A stacked channel (gently-awd): straight through the gap
         // column at grid row `band + k` — the pair's boxes' row span
         // hosts the channel rows (the so-flowchart-size oracle shape);
@@ -403,4 +421,77 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
         }
     }
     path
+}
+
+/// The cell path of an indexed-port slot edge (gently-byq, the decoded
+/// upstream routes). `end == false` (a start slot `N`): the horizontal
+/// ride at grid row `band + N` from the first gap column east of the
+/// source's span to the target's column, then the vertical north at the
+/// target column down-to-up into the target's south — the arrow-end `^`
+/// cell sits on the first grid row south of the target box (its span's
+/// bottom row + 1), `band + cy_v`. `end == true` (an end slot `N`): the
+/// attachment row is `target_band + N`; the route drops south from the
+/// source at the source column (rows `src_band + cy_s ..= att_row`),
+/// then runs west at the attachment row into the target's east — WHEN
+/// the drop cells are free; if another edge's path already took one, the
+/// route dodges EAST instead: out of the source's east side at the band
+/// row through the east-gap channel column, down to the attachment row,
+/// then west (the SO fixture's shape, where e2's vertical occupies the
+/// drop column).
+fn slot_path(ep: &Endpoints, ctx: &Ctx, used: &HashSet<Cell>, end: bool, n: usize) -> Vec<Cell> {
+    let (gu, gv) = (ep.gu, ep.gv);
+    let (span_u, span_v) = (ep.span_u, ep.span_v);
+    if !end {
+        // (B) start slot: east at the slot row, then north into the
+        // target's south. The first cell is the gap column east of the
+        // source's span (the node's own span covers the slot row).
+        let att_row = gu.1 + n;
+        let out = gu.0 + span_u.0;
+        let mut path: Vec<Cell> = (out..=gv.0).map(|c| (c, att_row)).collect();
+        // The vertical north: rows att_row-1 ..= band+cy_v (the first row
+        // south of the target's box), descending — the last cell carries
+        // the `^` arrow-end.
+        let low = gv.1 + span_v.1;
+        let mut r = att_row;
+        while r > low {
+            r -= 1;
+            path.push((gv.0, r));
+        }
+        path
+    } else {
+        // (C) end slot: drop south at the source column, then west.
+        let att_row = gv.1 + n;
+        let top = gu.1 + span_u.1;
+        let drop: Vec<Cell> = if top <= att_row {
+            (top..=att_row).map(|r| (gu.0, r)).collect()
+        } else {
+            vec![(gu.0, att_row)]
+        };
+        let free = drop
+            .iter()
+            .all(|c| !ctx.occupied.contains(c) && !used.contains(c));
+        if free {
+            let mut path = drop;
+            let east = gv.0 + span_v.0;
+            let mut c = gu.0;
+            while c > east {
+                c -= 1;
+                path.push((c, att_row));
+            }
+            path
+        } else {
+            // Dodge EAST: out of the source's east at the band row
+            // through the east-gap channel column, down to the
+            // attachment row, then west.
+            let channel = gu.0 + span_u.0;
+            let mut path: Vec<Cell> = ((gu.1)..=att_row).map(|r| (channel, r)).collect();
+            let east = gv.0 + span_v.0;
+            let mut c = channel;
+            while c > east {
+                c -= 1;
+                path.push((c, att_row));
+            }
+            path
+        }
+    }
 }

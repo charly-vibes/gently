@@ -56,6 +56,13 @@ pub fn render(graph: &Graph, layout: &Layout) -> Result<String, RenderError> {
     for edge_index in 0..graph.edges.len() {
         canvas.draw_edge(graph, layout, edge_index)?;
     }
+    // Indexed-port slot edges ride their label on the arrow-end cell and
+    // crossings stamp `+` junctions (gently-byq) — both after every run
+    // is down, so runs cannot overwrite them.
+    for edge_index in 0..graph.edges.len() {
+        canvas.stamp_slot_label(graph, layout, edge_index);
+    }
+    canvas.stamp_crossings(layout);
     canvas.stamp_frames();
     Ok(canvas.into_string())
 }

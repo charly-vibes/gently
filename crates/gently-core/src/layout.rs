@@ -49,6 +49,15 @@ pub struct Layout {
     pub width: usize,
     /// Grid extent: `height` rows.
     pub height: usize,
+    /// Grid-cell span of each node, by node index (gently-awd) — grown by
+    /// the indexed ports attached to it (gently-byq: an indexed
+    /// `front,N`-style port on a node grows its row span to `N+1`, so the
+    /// render must see the grown span, not re-derive it from the attrs).
+    pub spans: Vec<(usize, usize)>,
+    /// The label cell of each slot-routed edge (gently-byq): the
+    /// arrow-end cell — the cell the edge's label rides, when the edge
+    /// carries a `label` and an indexed port routes it. `None` otherwise.
+    pub slot_labels: Vec<Option<Cell>>,
 }
 
 /// How an edge travels — decided at placement time, realized as cell paths
@@ -83,6 +92,18 @@ pub(super) enum Route {
     /// A port names a north side: the edge bends through the gap row above
     /// the band, entering the target's north (`v`).
     PortAbove,
+    /// An indexed horizontal port slot (gently-byq, upstream Node.pm +
+    /// Path.pm): the edge attaches at grid row `band + N` of the slotted
+    /// end's node — rendered as that row band's middle line (`band_top +
+    /// 3N + 1`). A START slot rides the source band east at the slot row
+    /// to the target's column, then bends north into the target's south
+    /// (arrow-end `^`, the label cell). An END slot drops south from the
+    /// source at the source column, then runs west at the attachment row
+    /// into the target's east (`<`); when the drop cells are taken by
+    /// another edge's path, it dodges EAST first — exits the source's
+    /// east at the band row through the east-gap channel column, down to
+    /// the attachment row, then west.
+    Slot { end: bool, n: usize },
 }
 
 /// Which way a port-constrained edge must dip (gently-89r). Upstream
@@ -138,6 +159,14 @@ pub(super) struct Rows {
 /// the `columns`/`rows` attributes — derived from `size: W,H` in the
 /// attribute store — parsed as grid cells. Upstream `_calc_size` reads
 /// `abs($attr || 1)`, so an absent, empty, or `0` value is one cell.
+/// An INDEXED port attached to the node grows the span (gently-byq,
+/// upstream Node.pm ~1170 + Path.pm): an indexed `front,N`-style slot on
+/// one of the node's horizontal sides (start port on an edge leaving it,
+/// end port on an edge entering it) needs row `N` of the node, so the
+/// row span grows to `max(cy, N+1)` — the max-side rule `min_y =
+/// max(need.west, need.east)`. Vertical sides (`right,left,south,north`)
+/// would grow the column span — no recorded fixture pins them, so they
+/// contribute nothing here.
 fn node_span(graph: &Graph, idx: usize) -> (usize, usize) {
     let side = |key: &str| {
         graph
@@ -146,7 +175,33 @@ fn node_span(graph: &Graph, idx: usize) -> (usize, usize) {
             .filter(|&n| n > 0)
             .unwrap_or(1)
     };
-    (side("columns"), side("rows"))
+    let mut cy = side("rows");
+    for (ei, e) in graph.edges.iter().enumerate() {
+        let slot = if e.from == idx {
+            indexed_slot(graph, ei, false)
+        } else if e.to == idx {
+            indexed_slot(graph, ei, true)
+        } else {
+            None
+        };
+        if let Some(n) = slot {
+            cy = cy.max(n + 1);
+        }
+    }
+    (side("columns"), cy)
+}
+
+/// The indexed port slot one edge carries: `start: <side>,N` (on the
+/// edge's start, `end: false`) or `end: <side>,N` (on its end, `end:
+/// true`) — the side must be a horizontal spelling (flow front/back,
+/// east/west; upstream Attributes.pm `_flow_as_side`) and `N` a number.
+/// Unindexed spellings and vertical sides give `None`.
+pub(crate) fn indexed_slot(graph: &Graph, ei: usize, end: bool) -> Option<usize> {
+    let raw = graph.get_attr(Scope::Edge(ei), if end { "end" } else { "start" })?;
+    let (side, n) = raw.split_once(',')?;
+    let horizontal = matches!(side, "front" | "forward" | "east" | "back" | "west");
+    let n = n.trim().parse::<usize>().ok()?;
+    horizontal.then_some(n)
 }
 
 /// Grid columns of every node: upstream places multi-celled nodes at
@@ -198,6 +253,8 @@ pub fn layout(graph: &Graph) -> Layout {
             label_cells: Vec::new(),
             width: 0,
             height: 0,
+            spans: Vec::new(),
+            slot_labels: Vec::new(),
         };
     };
     let slots = required_slots(graph, &placement);
@@ -216,15 +273,23 @@ pub fn layout(graph: &Graph) -> Layout {
         })
         .collect();
     // The eastmost occupied column: a multi-celled node sticks out
-    // east over its whole column span (gently-awd).
+    // east over its whole column span (gently-awd). A dodge channel
+    // (gently-byq) can lie east of every node — the routed edge cells
+    // must be covered too, so the paths are realized first.
     let max_x = cols
         .iter()
         .zip(&spans)
         .map(|(&c, &(cx, _))| c + cx - 1)
         .max()
         .unwrap_or(0);
-    let width = max_x + 1;
     let edge_paths = route_edges(graph, &placement, &node_cells, &rows, max_x, &spans);
+    let width = edge_paths
+        .iter()
+        .flatten()
+        .map(|&(c, _)| c + 1)
+        .max()
+        .unwrap_or(0)
+        .max(max_x + 1);
     // Env-gated decision-trace prototype (gently-asc): `layout.place` —
     // the grid cell and span each node occupies; `render.route` — the
     // per-edge path cell walk with its bend count. No effect when
@@ -264,12 +329,15 @@ pub fn layout(graph: &Graph) -> Layout {
         }
     }
     let labels = label_cells(graph, &edge_paths);
+    let slot_labels = slot_label_cells(graph, &placement.route, &edge_paths);
     let grid = Layout {
         node_cells,
         label_cells: labels,
         edge_paths,
         width,
         height: rows.height,
+        spans: spans.clone(),
+        slot_labels,
     };
     flow::realize(grid, flow)
 }
@@ -291,6 +359,29 @@ fn label_cells(graph: &Graph, edge_paths: &[Vec<Cell>]) -> Vec<Option<Cell>> {
             if labelled {
                 let path = &edge_paths[ei];
                 Some(path[(path.len() - 1) / 2])
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// The label cell of each slot-routed edge (gently-byq): the ARROW-END
+/// cell — the decoded upstream rule for indexed-port edges (route B's
+/// `^` cell, route C's `<` cell). `None` for unlabelled edges and every
+/// non-slot route.
+fn slot_label_cells(graph: &Graph, route: &[Route], edge_paths: &[Vec<Cell>]) -> Vec<Option<Cell>> {
+    graph
+        .edges
+        .iter()
+        .enumerate()
+        .map(|(ei, _)| {
+            let labelled = graph.get_attr(Scope::Edge(ei), "label").is_some()
+                || graph
+                    .get_attr(Scope::Class(ObjectKind::Edge, String::new()), "label")
+                    .is_some();
+            if labelled && matches!(route[ei], Route::Slot { .. }) {
+                Some(*edge_paths[ei].last().expect("slot paths are non-empty"))
             } else {
                 None
             }

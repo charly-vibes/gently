@@ -79,8 +79,20 @@ pub(super) fn draw(
     let last = *ctx.path.last().expect("path has a first cell");
     let exit = exit_dir(&ctx, first, sc, sr)?;
     let (entry, _) = entry_dir(&ctx, last)?;
-    let a0 = exit_attachment(canvas, exit, sc, sr, ctx.span_s, edge_index)?;
-    let a_end = entry_attachment(canvas, entry, tc, tr, ctx.span_t, edge_index)?;
+    let a0 = exit_attachment(canvas, exit, sc, sr, ctx.span_s, edge_index, first.1)?;
+    // An indexed-port slot entry arrives one char east of the target's
+    // east border — inside the adjacent gap column, mirroring the
+    // west-side rule's one-char offset (gently-byq: the SO fixture's
+    // `<` at the gap column's second char). Ordinary east-side entries
+    // stay flush (the recorded bent westward shapes).
+    let side = EntrySide {
+        c: tc,
+        r: tr,
+        span: ctx.span_t,
+        row: last.1,
+        shift: usize::from(last.0 >= tc + ctx.span_t.0 && last.1 > tr),
+    };
+    let a_end = entry_attachment(canvas, entry, &side, edge_index)?;
     let (waypoints, arrow) = final_waypoints(canvas, &ctx, exit, entry, a0, a_end, ends)?;
     // The start arrowhead points into the source box — opposite the exit
     // travel direction, the same glyph an end arrowhead arriving through
@@ -182,7 +194,10 @@ fn start_glyph(exit: Dir) -> char {
 fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderError> {
     // A multi-celled source is left through any column of its span
     // (gently-awd): east of the anchor leaves east, west leaves west,
-    // same-column rows leave north/south.
+    // same-column rows leave north/south. An INDEXED port slot leaves
+    // through the span's east side on the slot's continuation row
+    // (gently-byq): the first path cell sits strictly east of the span,
+    // on a row inside the source's row span below the band.
     let span_c = ctx.span_s.0;
     if first.1 == sr {
         match first.0.cmp(&sc) {
@@ -190,6 +205,8 @@ fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderE
             std::cmp::Ordering::Less => Ok(Dir::West),
             std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "leaves")),
         }
+    } else if first.0 >= sc + span_c && first.1 > sr && first.1 < sr + ctx.span_s.1.max(1) {
+        Ok(Dir::East)
     } else if first.0 >= sc && first.0 < sc + span_c {
         Ok(if first.1 < sr { Dir::North } else { Dir::South })
     } else {
@@ -208,6 +225,11 @@ fn entry_dir(ctx: &Ctx, last: Cell) -> Result<(Dir, char), RenderError> {
             std::cmp::Ordering::Greater => Ok((Dir::West, '<')),
             std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "enters")),
         }
+    } else if last.0 >= tc + span_c && last.1 > tr && last.1 < tr + ctx.span_t.1.max(1) {
+        // An INDEXED port slot arrives through the span's east side on
+        // the slot's continuation row (gently-byq): moving west into the
+        // target's east, arrowhead `<`.
+        Ok((Dir::West, '<'))
     } else if last.0 >= tc && last.0 < tc + span_c {
         if last.1 < tr {
             // Moving south arrives through the target's north side.
@@ -233,23 +255,31 @@ fn exit_attachment(
     r: usize,
     span: (usize, usize),
     ei: usize,
+    exit_row: usize,
 ) -> Result<Pt, RenderError> {
     let pt = match dir {
         // The east border of a multi-column node sits one char west of
-        // the column after its span (gently-awd); the vertical middle is
-        // the grown box's middle line, not the anchor band's.
-        Dir::East => (
-            Some(canvas.offsets[c + span.0]),
-            Some(canvas.box_mid(r, span.1)),
-        ),
-        Dir::West => (
-            canvas.offsets[c].checked_sub(1),
-            Some(canvas.box_mid(r, span.1)),
-        ),
+        // the column after its span (gently-awd); the attachment line is
+        // the exit cell's row band's middle line — the band's own for a
+        // band-row exit, the slot's continuation row for an indexed-port
+        // slot exit (gently-byq: line `band_top + 3N + 1`).
+        Dir::East => (Some(canvas.offsets[c + span.0]), Some(canvas.mid(exit_row))),
+        Dir::West => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(exit_row))),
         Dir::North => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
         Dir::South => (Some(canvas.vert_x(c)), Some(canvas.box_below(r, span.1))),
     };
     attachment(canvas, pt, ei, "leaves")
+}
+
+/// The box side a path arrives at: the target anchor cell, span, the
+/// entry cell's row band (gently-byq: the slot's continuation row), and
+/// the extra char shift for an indexed-port east-side entry.
+struct EntrySide {
+    c: usize,
+    r: usize,
+    span: (usize, usize),
+    row: usize,
+    shift: usize,
 }
 
 /// The attachment point where the path arrives at a box moving `dir`:
@@ -258,19 +288,18 @@ fn exit_attachment(
 fn entry_attachment(
     canvas: &Canvas,
     dir: Dir,
-    c: usize,
-    r: usize,
-    span: (usize, usize),
+    s: &EntrySide,
     ei: usize,
 ) -> Result<Pt, RenderError> {
+    let (c, r, span) = (s.c, s.r, s.span);
     let pt = match dir {
-        Dir::East => (
-            canvas.offsets[c].checked_sub(1),
-            Some(canvas.box_mid(r, span.1)),
-        ),
+        // The attachment line is the entry cell's row band's middle line
+        // (gently-byq: an indexed-port slot entry lands on the slot's
+        // continuation row, line `band_top + 3N + 1`).
+        Dir::East => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(s.row))),
         Dir::West => (
-            Some(canvas.offsets[c + span.0]),
-            Some(canvas.box_mid(r, span.1)),
+            Some(canvas.offsets[c + span.0] + s.shift),
+            Some(canvas.mid(s.row)),
         ),
         Dir::South => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
         Dir::North => (Some(canvas.vert_x(c)), Some(canvas.box_below(r, span.1))),

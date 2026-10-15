@@ -17,8 +17,9 @@ use super::geometry::{
 use super::groups::{self, Frame};
 use super::labels::{Align, LabelLine};
 use super::styles::{self, border, byte_width, h_run, Shape};
-use crate::graph::{Graph, Scope};
-use crate::layout::Layout;
+use crate::graph::{Graph, ObjectKind, Scope};
+use crate::layout::{Cell, Layout};
+use std::collections::HashMap;
 
 /// The grid-cell span of every node, in model order (gently-awd): the
 /// `columns`/`rows` attributes as grid cells — upstream `_calc_size`
@@ -231,7 +232,14 @@ impl Canvas {
         let selfloop_node = selfloops(graph);
         let node_style = node_styles(graph);
         let edge_style = edge_styles(graph);
-        let spans = node_spans(graph);
+        // The layout's own spans (gently-byq): the grown row spans of
+        // indexed-port nodes live on the Layout — re-deriving them from
+        // the attrs would shrink the boxes back.
+        let spans = if layout.spans.len() == graph.nodes.len() {
+            layout.spans.clone()
+        } else {
+            node_spans(graph)
+        };
         // label lines resolve FIRST (gently-emd: the wrapped lines drive
         // the box widths), then the column geometry consumes them
         let (node_lines, edge_lines) = label_lines(graph, layout, &spans);
@@ -407,16 +415,6 @@ impl Canvas {
         self.band_top(r) + (self.row_height[r] - 1) / 2
     }
 
-    /// Char line of a node box's vertical middle over its row span
-    /// (gently-awd): `top + (Σ spanned heights − 1) / 2` — for a 1×1
-    /// node this is the anchor band's `mid`.
-    pub(super) fn box_mid(&self, r: usize, span_r: usize) -> usize {
-        let h: usize = (r..r + span_r)
-            .map(|rr| self.row_height.get(rr).copied().unwrap_or(0))
-            .sum();
-        self.band_top(r) + (h - 1) / 2
-    }
-
     /// Char line one past a node box's bottom border over its row span
     /// (gently-awd) — for a 1×1 node this is `band_below`.
     pub(super) fn box_below(&self, r: usize, span_r: usize) -> usize {
@@ -424,6 +422,82 @@ impl Canvas {
             .map(|rr| self.row_height.get(rr).copied().unwrap_or(0))
             .sum();
         self.band_top(r) + h
+    }
+
+    /// Stamp an INDEXED-port slot edge's label onto its arrow-end cell
+    /// (gently-byq, the decoded upstream `_insert_label` placement): a
+    /// vertical label cell rides the pipe's east side — 2 chars right of
+    /// the `vert_x` glyph, on the cell row's middle line; a horizontal
+    /// label cell rides one line above its run line, at offset +2 from
+    /// the column start. The SO fixture pins `3. X Msg` at (44,4) — the
+    /// `^` cell's east — and `2. read X` at (16,6) — above the `<` run.
+    pub(super) fn stamp_slot_label(&mut self, graph: &Graph, layout: &Layout, ei: usize) {
+        let Some(&(c, r)) = layout.slot_labels[ei].as_ref() else {
+            return;
+        };
+        let Some(label) = graph.get_attr(Scope::Edge(ei), "label").map(str::to_owned) else {
+            return;
+        };
+        // Orientation: vertical when a path neighbour shares the cell's
+        // column (the same rule the column widths use).
+        let path = &layout.edge_paths[ei];
+        let idx = path.iter().position(|&p| p == (c, r)).unwrap_or(0);
+        let vertical =
+            (idx > 0 && path[idx - 1].0 == c) || path.get(idx + 1).is_some_and(|&n| n.0 == c);
+        let lines = super::labels::object_label_lines(
+            graph,
+            Scope::Edge(ei),
+            ObjectKind::Edge,
+            &label,
+            super::labels::default_align(graph, Scope::Edge(ei), ObjectKind::Edge),
+        );
+        let base_y = if vertical {
+            self.mid(r)
+        } else {
+            self.mid(r).saturating_sub(1)
+        };
+        let start = base_y + 1 - lines.len();
+        let field_w = self.col_width[c] - usize::from(vertical) * 2 - 2;
+        for (i, line) in lines.iter().enumerate() {
+            let len = super::styles::byte_width(&line.text);
+            let off = match line.align {
+                super::labels::Align::Left => 0,
+                super::labels::Align::Center => field_w.saturating_sub(len) / 2,
+                super::labels::Align::Right => field_w.saturating_sub(len),
+            };
+            let x = self.offsets[c] + 2 + usize::from(vertical) * 2 + off;
+            self.stamp_at(start + i, x, &line.text);
+        }
+    }
+
+    /// Stamp the shared CROSS cells (gently-byq): where two edges' paths
+    /// share a cell and traverse it on different axes — one run
+    /// horizontal, the other vertical — the oracle draws a `+` junction
+    /// at their intersection (the SO fixture's cell (2,2): the `^`
+    /// vertical and the `<` run cross, rendered `+` at char 42, line 7).
+    pub(super) fn stamp_crossings(&mut self, layout: &Layout) {
+        let mut at: HashMap<Cell, [bool; 2]> = HashMap::new();
+        for path in &layout.edge_paths {
+            for (i, &(c, r)) in path.iter().enumerate() {
+                let vertical =
+                    (i > 0 && path[i - 1].0 == c) || path.get(i + 1).is_some_and(|&n| n.0 == c);
+                let slot = at.entry((c, r)).or_insert([false, false]);
+                if vertical {
+                    slot[1] = true;
+                } else {
+                    slot[0] = true;
+                }
+            }
+        }
+        for ((c, r), &[h, v]) in at.iter() {
+            if !h || !v {
+                continue;
+            }
+            let (x, y) = (self.vert_x(*c), self.mid(*r));
+            if y < self.grid.len() && x < self.grid[0].len() {
+                self.grid[y][x] = b'+';
+            }
+        }
     }
 
     /// Char column of a vertical run through grid column `c`: offset +2

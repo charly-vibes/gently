@@ -255,7 +255,8 @@ fn claims_seed0_ascii(path: &PathBuf) -> String {
         !block.is_empty(),
         "claims file must carry a seed-0 as_ascii block"
     );
-    block.join("\n")
+    // The renderer emits one trailing newline (the oracle's as_ascii).
+    block.join("\n") + "\n"
 }
 
 fixture_pin!(port_start_right_renders_oracle_ascii, "port-start-right");

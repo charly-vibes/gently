@@ -315,7 +315,24 @@ impl Placer {
             if pu.1 != pv.1 {
                 continue;
             }
-            if let Some(port) = super::port_dip(graph, ei) {
+            // An INDEXED horizontal port slot (gently-byq) overrides the
+            // parallel/stacked classification too: the slot names the
+            // attachment row, whatever the unported travel would be. A
+            // slot on BOTH ends is unpinned — the start slot wins. Slot 0
+            // is the default attachment (no route change).
+            let slot = super::indexed_slot(graph, ei, false)
+                .filter(|&n| n > 0)
+                .map(|n| Route::Slot { end: false, n })
+                .or_else(|| {
+                    super::indexed_slot(graph, ei, true)
+                        .filter(|&n| n > 0)
+                        .map(|n| Route::Slot { end: true, n })
+                });
+            if let Some(slot) = slot {
+                if !matches!(self.route[ei], Route::Selfloop) {
+                    self.route[ei] = slot;
+                }
+            } else if let Some(port) = super::port_dip(graph, ei) {
                 if matches!(self.route[ei], Route::Grew | Route::Around) {
                     self.route[ei] = port;
                 }
