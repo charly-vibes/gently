@@ -11,9 +11,7 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => {
-        todo!("{}", $reason)
-    };
+    ($reason:expr) => { todo!("{}", $reason) };
 }
 
 // id: p1
@@ -21,7 +19,7 @@ macro_rules! todo_predicate {
 // predicate: every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin
 #[test]
 fn p1() {
-    todo_predicate!("every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin");
+        todo_predicate!("every header names the pinned version and commit, and every recording metadata line names the perl version and seed; none carries a foreign pin");
 }
 
 // id: p2
@@ -29,9 +27,7 @@ fn p1() {
 // predicate: every input/format pair has exactly one recorded expected output and no orphans
 #[test]
 fn p2() {
-    todo_predicate!(
-        "every input/format pair has exactly one recorded expected output and no orphans"
-    );
+        todo_predicate!("every input/format pair has exactly one recorded expected output and no orphans");
 }
 
 // id: p3
@@ -39,7 +35,7 @@ fn p2() {
 // predicate: identical outputs pass; a single byte difference fails with input, format, and first differing line
 #[test]
 fn p3() {
-    todo_predicate!("identical outputs pass; a single byte difference fails with input, format, and first differing line");
+        todo_predicate!("identical outputs pass; a single byte difference fails with input, format, and first differing line");
 }
 
 // id: p4
@@ -47,7 +43,7 @@ fn p3() {
 // predicate: each case yields a typed error naming the missing piece and the remediation
 #[test]
 fn p4() {
-    todo_predicate!("each case yields a typed error naming the missing piece and the remediation");
+        todo_predicate!("each case yields a typed error naming the missing piece and the remediation");
 }
 
 // id: p5
@@ -55,9 +51,7 @@ fn p4() {
 // predicate: new inputs are recorded and headers updated atomically; pin-less re-recording is rejected
 #[test]
 fn p5() {
-    todo_predicate!(
-        "new inputs are recorded and headers updated atomically; pin-less re-recording is rejected"
-    );
+        todo_predicate!("new inputs are recorded and headers updated atomically; pin-less re-recording is rejected");
 }
 
 // id: p6
@@ -65,9 +59,7 @@ fn p5() {
 // predicate: every style, shape, group, direction, and label class appears in at least one fixture
 #[test]
 fn p6() {
-    todo_predicate!(
-        "every style, shape, group, direction, and label class appears in at least one fixture"
-    );
+        todo_predicate!("every style, shape, group, direction, and label class appears in at least one fixture");
 }
 
 // id: p7
@@ -75,5 +67,6 @@ fn p6() {
 // predicate: each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness
 #[test]
 fn p7() {
-    todo_predicate!("each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness");
+        todo_predicate!("each fixture is classified hash-stable or hash-dependent and inside or outside the envelope; every byte-compat claim references only the stable, in-scope class, and the classification is machine-checkable by the repro-probe harness");
 }
+

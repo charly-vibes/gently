@@ -11,9 +11,7 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => {
-        todo!("{}", $reason)
-    };
+    ($reason:expr) => { todo!("{}", $reason) };
 }
 
 // id: p1
@@ -21,7 +19,7 @@ macro_rules! todo_predicate {
 // predicate: every named bracket token yields a model node with that name, reused by later references; every bare `[ ]` yields an anonymous node named `#N` (odd counter) that `node('#N')` finds and that a later escaped `[ \#N ]` reference reuses as the same node
 #[test]
 fn p1() {
-    todo_predicate!("every named bracket token yields a model node with that name, reused by later references; every bare `[ ]` yields an anonymous node named `#N` (odd counter) that `node('#N')` finds and that a later escaped `[ \\#N ]` reference reuses as the same node");
+        todo_predicate!("every named bracket token yields a model node with that name, reused by later references; every bare `[ ]` yields an anonymous node named `#N` (odd counter) that `node('#N')` finds and that a later escaped `[ \\#N ]` reference reuses as the same node");
 }
 
 // id: p2
@@ -29,7 +27,7 @@ fn p1() {
 // predicate: each valid operator maps to the documented style; `<`-prefixed operators map to the same style with the edge marked bidirectional; a `<` without a closing `>` and an operator with a missing endpoint node are rejected; style-only styles are accepted via the attribute and rejected as operators
 #[test]
 fn p2() {
-    todo_predicate!("each valid operator maps to the documented style; `<`-prefixed operators map to the same style with the edge marked bidirectional; a `<` without a closing `>` and an operator with a missing endpoint node are rejected; style-only styles are accepted via the attribute and rejected as operators");
+        todo_predicate!("each valid operator maps to the documented style; `<`-prefixed operators map to the same style with the edge marked bidirectional; a `<` without a closing `>` and an operator with a missing endpoint node are rejected; style-only styles are accepted via the attribute and rejected as operators");
 }
 
 // id: p9
@@ -37,7 +35,7 @@ fn p2() {
 // predicate: the style follows the last unit token; single-unit arrow-less `.-`/`..-` are accepted; plain units are rejected below two repetitions
 #[test]
 fn p9() {
-    todo_predicate!("the style follows the last unit token; single-unit arrow-less `.-`/`..-` are accepted; plain units are rejected below two repetitions");
+        todo_predicate!("the style follows the last unit token; single-unit arrow-less `.-`/`..-` are accepted; plain units are rejected below two repetitions");
 }
 
 // id: p3
@@ -45,7 +43,7 @@ fn p9() {
 // predicate: the parsed model has exactly one edge per adjacent pair and shared endpoints for repeated names
 #[test]
 fn p3() {
-    todo_predicate!("the parsed model has exactly one edge per adjacent pair and shared endpoints for repeated names");
+        todo_predicate!("the parsed model has exactly one edge per adjacent pair and shared endpoints for repeated names");
 }
 
 // id: p4
@@ -53,7 +51,7 @@ fn p3() {
 // predicate: valid labelled arrows set the edge label; mismatched flanks and arrow-less inline labels are rejected
 #[test]
 fn p4() {
-    todo_predicate!("valid labelled arrows set the edge label; mismatched flanks and arrow-less inline labels are rejected");
+        todo_predicate!("valid labelled arrows set the edge label; mismatched flanks and arrow-less inline labels are rejected");
 }
 
 // id: p5
@@ -61,9 +59,7 @@ fn p4() {
 // predicate: each attribute lands on exactly the nearest preceding object or the declared class
 #[test]
 fn p5() {
-    todo_predicate!(
-        "each attribute lands on exactly the nearest preceding object or the declared class"
-    );
+        todo_predicate!("each attribute lands on exactly the nearest preceding object or the declared class");
 }
 
 // id: p6
@@ -71,7 +67,7 @@ fn p5() {
 // predicate: the group name includes the colon; a node's membership equals the directly declared group it was last declared in; nested inner nodes belong only to the inner group; anonymous groups are named `Group #N`
 #[test]
 fn p6() {
-    todo_predicate!("the group name includes the colon; a node's membership equals the directly declared group it was last declared in; nested inner nodes belong only to the inner group; anonymous groups are named `Group #N`");
+        todo_predicate!("the group name includes the colon; a node's membership equals the directly declared group it was last declared in; nested inner nodes belong only to the inner group; anonymous groups are named `Group #N`");
 }
 
 // id: p7
@@ -79,7 +75,7 @@ fn p6() {
 // predicate: an unescaped `#` truncates the line to a parse error even inside quotes; `\#` survives into attribute values; a hex colour token after an attribute separator is accepted
 #[test]
 fn p7() {
-    todo_predicate!("an unescaped `#` truncates the line to a parse error even inside quotes; `\\#` survives into attribute values; a hex colour token after an attribute separator is accepted");
+        todo_predicate!("an unescaped `#` truncates the line to a parse error even inside quotes; `\\#` survives into attribute values; a hex colour token after an attribute separator is accepted");
 }
 
 // id: p8
@@ -87,9 +83,7 @@ fn p7() {
 // predicate: each error names a line number and a reason and aborts without producing a graph
 #[test]
 fn p8() {
-    todo_predicate!(
-        "each error names a line number and a reason and aborts without producing a graph"
-    );
+        todo_predicate!("each error names a line number and a reason and aborts without producing a graph");
 }
 
 // id: p10
@@ -97,7 +91,7 @@ fn p8() {
 // predicate: single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\"`, `\'`, `\;`, and `\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive; printable-band `%XX` entities decode (`%41` → `A`), exploit-band escapes (`%00`-`%1f`, `%7f`, high-bit) strip, and a bare `%` with no hex-pair tail stays literal
 #[test]
 fn p10() {
-    todo_predicate!("single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\\\"`, `\\'`, `\\;`, and `\\\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive; printable-band `%XX` entities decode (`%41` → `A`), exploit-band escapes (`%00`-`%1f`, `%7f`, high-bit) strip, and a bare `%` with no hex-pair tail stays literal");
+        todo_predicate!("single-quoted and mixed-end values lose their outer quotes; an unterminated quoted value keeps its quotes and ends at the first unescaped `;`; `\\\"`, `\\'`, `\\;`, and `\\\\` become their bare characters; mid-value quotes and `;` inside properly closed quotes survive; printable-band `%XX` entities decode (`%41` → `A`), exploit-band escapes (`%00`-`%1f`, `%7f`, high-bit) strip, and a bare `%` with no hex-pair tail stays literal");
 }
 
 // id: p11
@@ -105,7 +99,7 @@ fn p10() {
 // predicate: fan-out reuses the operator's remembered left side for each follower and fan-in links every list element; trailing and bare attribute blocks land on every listed node; the stack and remembered operator survive line breaks and are reset by a new bare node statement; bidirectional operators mark both arrows on every created edge
 #[test]
 fn p11() {
-    todo_predicate!("fan-out reuses the operator's remembered left side for each follower and fan-in links every list element; trailing and bare attribute blocks land on every listed node; the stack and remembered operator survive line breaks and are reset by a new bare node statement; bidirectional operators mark both arrows on every created edge");
+        todo_predicate!("fan-out reuses the operator's remembered left side for each follower and fan-in links every list element; trailing and bare attribute blocks land on every listed node; the stack and remembered operator survive line breaks and are reset by a new bare node statement; bidirectional operators mark both arrows on every created edge");
 }
 
 // id: p12
@@ -113,7 +107,7 @@ fn p11() {
 // predicate: the statement parses and links the group; the group keeps its members and name (`Group #N` for anonymous); no edge is recorded (group endpoints are not representable); body attributes still land on the nodes
 #[test]
 fn p12() {
-    todo_predicate!("the statement parses and links the group; the group keeps its members and name (`Group #N` for anonymous); no edge is recorded (group endpoints are not representable); body attributes still land on the nodes");
+        todo_predicate!("the statement parses and links the group; the group keeps its members and name (`Group #N` for anonymous); no edge is recorded (group endpoints are not representable); body attributes still land on the nodes");
 }
 
 // id: p13
@@ -121,5 +115,6 @@ fn p12() {
 // predicate: the trailing block lands on the node; the canonical txt form keeps name + attribute; the ascii render displays the label value, falling back to the name when absent
 #[test]
 fn p13() {
-    todo_predicate!("the trailing block lands on the node; the canonical txt form keeps name + attribute; the ascii render displays the label value, falling back to the name when absent");
+        todo_predicate!("the trailing block lands on the node; the canonical txt form keeps name + attribute; the ascii render displays the label value, falling back to the name when absent");
 }
+

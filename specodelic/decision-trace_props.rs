@@ -11,9 +11,7 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => {
-        todo!("{}", $reason)
-    };
+    ($reason:expr) => { todo!("{}", $reason) };
 }
 
 // id: p1
@@ -21,7 +19,7 @@ macro_rules! todo_predicate {
 // predicate: every event carries the schema version and its governing spec id; route-classification events use only the `Route` seed vocabulary; with `GENTLY_TRACE` unset the full fixture corpus renders byte-identical (E1 regression pin)
 #[test]
 fn p1() {
-    todo_predicate!("every event carries the schema version and its governing spec id; route-classification events use only the `Route` seed vocabulary; with `GENTLY_TRACE` unset the full fixture corpus renders byte-identical (E1 regression pin)");
+        todo_predicate!("every event carries the schema version and its governing spec id; route-classification events use only the `Route` seed vocabulary; with `GENTLY_TRACE` unset the full fixture corpus renders byte-identical (E1 regression pin)");
 }
 
 // id: p2
@@ -29,7 +27,7 @@ fn p1() {
 // predicate: clause 1 (pairwise stage-difference preservation) and clause 2 (canonical-order insensitivity) hold; every normalization-table row N1–N8 is enforced by its named `row_nN_*` subtest
 #[test]
 fn p2() {
-    todo_predicate!("clause 1 (pairwise stage-difference preservation) and clause 2 (canonical-order insensitivity) hold; every normalization-table row N1–N8 is enforced by its named `row_nN_*` subtest");
+        todo_predicate!("clause 1 (pairwise stage-difference preservation) and clause 2 (canonical-order insensitivity) hold; every normalization-table row N1–N8 is enforced by its named `row_nN_*` subtest");
 }
 
 // id: p3
@@ -37,7 +35,7 @@ fn p2() {
 // predicate: every reported cut is a minimal antichain over the decision dependency poset with no unique "first"; byte-equal fixtures yield at most informational decision-only diffs; byte equality stays the CI gate
 #[test]
 fn p3() {
-    todo_predicate!("every reported cut is a minimal antichain over the decision dependency poset with no unique \"first\"; byte-equal fixtures yield at most informational decision-only diffs; byte equality stays the CI gate");
+        todo_predicate!("every reported cut is a minimal antichain over the decision dependency poset with no unique \"first\"; byte-equal fixtures yield at most informational decision-only diffs; byte equality stays the CI gate");
 }
 
 // id: p4
@@ -45,7 +43,7 @@ fn p3() {
 // predicate: every dump carries the pin header, an explicit hash-seed field, and per-stage observability marks; no tier-2 fixture is admitted, per [[ge.oracle.c7]]
 #[test]
 fn p4() {
-    todo_predicate!("every dump carries the pin header, an explicit hash-seed field, and per-stage observability marks; no tier-2 fixture is admitted, per [[ge.oracle.c7]]");
+        todo_predicate!("every dump carries the pin header, an explicit hash-seed field, and per-stage observability marks; no tier-2 fixture is admitted, per [[ge.oracle.c7]]");
 }
 
 // id: p5
@@ -53,7 +51,7 @@ fn p4() {
 // predicate: each case yields a typed error naming the defect and the remediation
 #[test]
 fn p5() {
-    todo_predicate!("each case yields a typed error naming the defect and the remediation");
+        todo_predicate!("each case yields a typed error naming the defect and the remediation");
 }
 
 // id: p6
@@ -61,5 +59,6 @@ fn p5() {
 // predicate: each classification carries per-item verdicts for all five checklist items; every (b) verdict has all five holding; the gently-58m precedent is recorded as a wai decision record
 #[test]
 fn p6() {
-    todo_predicate!("each classification carries per-item verdicts for all five checklist items; every (b) verdict has all five holding; the gently-58m precedent is recorded as a wai decision record");
+        todo_predicate!("each classification carries per-item verdicts for all five checklist items; every (b) verdict has all five holding; the gently-58m precedent is recorded as a wai decision record");
 }
+

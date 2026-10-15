@@ -149,7 +149,7 @@ gently — keeps x ungrouped (no group emitted, no group box).
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
 | `gently-awd` | RESOLVED (all slices committed): (1) txt merges `size: W,H` (ge.txt_render c5/p5); (2) column spans — `size: W,H` / `columns` / `rows` stretch nodes over their grid-cell span (rank→col accumulation `2·rank + Σ(cx−1)`, per-column/row sizing from single-celled cells only, balance smallest-first to the label width) — the 5-chain size-attr fixture renders byte-identically (tests/fixtures/graph-easy/size-attr.*); (3) span-aware edge attachments (straight gap east/west of the span, bends entering/leaving through span columns); (4) parallel-channel-as-rows (completion): a multi-row pair's parallel channels stack as grid ROWS through the boxes' row span — the pair's first edge keeps the straight band-row run, channel k rides grid row `band + k`, the channel rows carry edge cells so the boxes grow to their full row span (4+3+3 = the flowchart's 10 rows) — while one-row pairs keep the recorded bend shape (parallel.txt). Channel order is model order: the pinned oracle's is hash-driven (seed 0 assigns the pair's second model edge to the band row, seed 1 the first — so-flowchart-size.observed pins both), and gently byte-matches the seed-1 render (scenarios ge_ascii_render p1_parallel_channels_rows). Spec rows re-derived: ge.layout c4/p4, ge.ascii_render c1/p1. |
-| `gently-byq` | Indexed ports `{ start: front, N }`: the oracle honors the index and lands the edges at the indexed slots (bytes below), gently routes to the default slot. Unindexed side routing (`start: right` dips below, `left` bends above, `front` is the default) is PORTED byte-identically (`gently-89r`, `port-*` fixtures) — the index form needs variable node heights (the oracle stretches a 1-row box to 5 lines for a `front,1` slot) and the unprobed `back` (west) wrap runs outside the bounding box. |
+| `gently-byq` | RESOLVED (layout + render): indexed ports `{ start,end: front,N }` land the edges at the numbered slots — the port grows the attached node's row span to `max(cy, N+1)`, the slot attaches at grid row `band+N` (line `band_top+3N+1`), start slots ride east then bend north into the target's south, end slots drop south then run west into the target's east (dodging EAST through the east-gap channel column when the drop cells are taken), slot labels ride the arrow-end cell, and VER-only edge columns floor at 3 chars — the SO fixture (`so-start-port-index.observed`) renders byte-identically (scenarios ge_layout_ports p7; spec rows ge.layout c4, ge.ascii_render c4 re-derived). Unindexed side routing stays byte-identical (`gently-89r`, `port-*` fixtures); the `back` (west) wrap outside the bounding box remains an open divergence. |
 
 **`gently-awd`** — input and the divergence side-by-side:
 
@@ -227,17 +227,9 @@ rows so `front,0` and `front,3` are distinct slots (`as_ascii`):
 +------------+
 ```
 
-gently — routes all edges to the default slot (1-row node, wrap loop):
-
-```
-  +---------------------------------------+
-  |                                       v
-+------------+  1. Number X of unread   +--------+
-| Msg Server | -----------------------> | Client |
-+------------+                          +--------+
-  ^                                       |
-  +---------------------------------------+
-```
+gently — byte-identical to the oracle render above (growth to 4 row
+bands, slot attachments, route B/C with the east dodge, arrow-end
+labels, the CROSS junction, and the 3-wide dodge channel all match).
 
 The already-ported unindexed form renders byte-identically in both
 (`port-side-minimal.observed`, `start: right` dips below the node row):
