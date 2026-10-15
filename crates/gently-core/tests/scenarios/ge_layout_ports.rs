@@ -208,6 +208,56 @@ macro_rules! fixture_pin {
     };
 }
 
+/// p7 — INDEXED front ports (gently-byq, SO 47323345): `{start: front,3}`
+/// / `{end: front,2}` land the edges at the numbered slots — the indexed
+/// port grows the attached node's row span (`cy = max(cy, N+1)`: Msg
+/// Server renders 4 row bands), attaches each edge at grid row `band+N`
+/// (rendered line `band_top+3N+1`), and routes slot>0 edges B (start:
+/// east bend then north into the target's south) / C (end: drop south
+/// then west into the target's east, dodging EAST through the source's
+/// east-gap channel when the drop column is taken). Expected bytes:
+/// tests/repro/claims/so-start-port-index.observed seed 0 as_ascii.
+#[test]
+fn p7_indexed_front_ports_route_oracle_ascii() {
+    let input = "[ Msg Server ] -- 1. Number X of unread --> { start: front,0; } [ Client ]\n\
+                 [ Msg Server ] -- 3. X Msg --> { start: front,3; } [ Client ]\n\
+                 [ Client ] -- 2. read X --> { end: front,2; } [ Msg Server ]\n";
+    let g = gently_core::parse::text::parse(input).expect("the indexed ports must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).expect("must render");
+    let expected = claims_seed0_ascii(
+        &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/repro/claims/so-start-port-index.observed"),
+    );
+    assert_eq!(
+        art, expected,
+        "the indexed-port fixture must render byte-identically to the recorded oracle"
+    );
+}
+
+/// Seed-0 `as_ascii:` block of a claims file (the decision_trace.rs
+/// convention, local so the port scenarios stay self-contained).
+fn claims_seed0_ascii(path: &PathBuf) -> String {
+    let text = std::fs::read_to_string(path).expect("claims file must exist");
+    let mut lines = text
+        .lines()
+        .skip_while(|l| *l != "== seed 0 ==")
+        .skip(1)
+        .skip_while(|l| *l != "as_ascii:")
+        .skip(1);
+    let mut block = Vec::new();
+    for line in lines.by_ref() {
+        if line.trim_end() == "== seed 1 ==" {
+            break;
+        }
+        block.push(line);
+    }
+    assert!(
+        !block.is_empty(),
+        "claims file must carry a seed-0 as_ascii block"
+    );
+    block.join("\n")
+}
+
 fixture_pin!(port_start_right_renders_oracle_ascii, "port-start-right");
 fixture_pin!(port_end_right_renders_oracle_ascii, "port-end-right");
 fixture_pin!(port_start_left_renders_oracle_ascii, "port-start-left");
