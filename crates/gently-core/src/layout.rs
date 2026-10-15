@@ -175,20 +175,124 @@ fn node_span(graph: &Graph, idx: usize) -> (usize, usize) {
             .filter(|&n| n > 0)
             .unwrap_or(1)
     };
-    let mut cy = side("rows");
+    let (cx, cy) = (side("columns"), side("rows"));
+    grow_free_ports(graph, idx, cx, cy)
+}
+
+/// The free-ports growth loop (gently-a6g, upstream Node.pm `_grow`):
+/// a node carrying FOUR OR MORE unspecified edge-ends grows until every
+/// end has a free port. Free ports per side: `1 + (size - cnt - portnr)
+/// / 2`, summed over north/south (the column span) and east/west (the
+/// row span) — a pure sink skips its front side (east for the east
+/// flow), so the fan-in hub grows on its row span (four sources: 1+1+1
+/// = 3 < 4, then 1+1+2 = 4 → a 3-row span, the fan-layout.observed
+/// hub). Each grow step bumps the row span (then the column span) by
+/// two — upstream's grow_what order for the east flow. Fewer than four
+/// unspecified ends keep the base span (upstream's shortcut), so the
+/// two-parallel corpus pair stays 1×1.
+fn grow_free_ports(graph: &Graph, idx: usize, cx: usize, cy: usize) -> (usize, usize) {
+    // Per-side port counts over the ends attached to this node: side-
+    // constrained without a number (cnt), indexed (portnr + max slot).
+    // Horizontal spellings land on east/west (si 2), vertical on
+    // north/south (si 3); the scan mirrors node_span's single sweep —
+    // one branch pair per edge, port classification only at the ends
+    // that touch `idx` (a String per visit would dominate the layout,
+    // ge.layout.c6).
+    let mut cnt = [0usize; 4];
+    let mut portnr = [0usize; 4];
+    let mut max = [0usize; 4];
+    let mut unspecified = 0usize;
+    let mut outgoing = 0usize;
+    let mut slot_floor = 0usize;
     for (ei, e) in graph.edges.iter().enumerate() {
-        let slot = if e.from == idx {
-            indexed_slot(graph, ei, false)
-        } else if e.to == idx {
-            indexed_slot(graph, ei, true)
-        } else {
-            None
-        };
-        if let Some(n) = slot {
-            cy = cy.max(n + 1);
+        if e.from == idx {
+            outgoing += 1;
+            classify_port(
+                graph,
+                ei,
+                false,
+                &mut cnt,
+                &mut portnr,
+                &mut max,
+                &mut unspecified,
+                &mut slot_floor,
+            );
+        }
+        if e.to == idx {
+            classify_port(
+                graph,
+                ei,
+                true,
+                &mut cnt,
+                &mut portnr,
+                &mut max,
+                &mut unspecified,
+                &mut slot_floor,
+            );
         }
     }
-    (side("columns"), cy)
+    if unspecified < 4 {
+        // The port-growth floor still applies (gently-byq: an indexed
+        // slot needs row N+1).
+        return (cx, cy.max(slot_floor));
+    }
+    // Minimum spans demanded by the constrained ports (upstream min_x
+    // from north/south, min_y from east/west).
+    let mut cx = cx.max(max[0]).max(max[1]);
+    let mut cy = cy.max(max[2]).max(max[3]);
+    // Free ports: north/south spend the column span, east/west the row
+    // span; a pure sink skips its front side (east, east flow).
+    let free = |cx: usize, cy: usize| -> usize {
+        let mut free = 0;
+        for (si, size) in [(0, cx), (1, cx), (2, cy), (3, cy)] {
+            if outgoing == 0 && si == 2 {
+                continue;
+            }
+            free += 1 + (size.saturating_sub(cnt[si] + portnr[si])) / 2;
+        }
+        free
+    };
+    let mut grow_cy = true;
+    while free(cx, cy) < unspecified {
+        if grow_cy {
+            cy += 2;
+        } else {
+            cx += 2;
+        }
+        grow_cy = !grow_cy;
+    }
+    (cx, cy)
+}
+
+/// Classify one edge end attached to the growing node (start port when
+/// `end == false`): indexed horizontal slots count as east/west ports
+/// (plus the row floor), unindexed side spellings count on their side,
+/// anything else is an unspecified end.
+#[allow(clippy::too_many_arguments)]
+fn classify_port(
+    graph: &Graph,
+    ei: usize,
+    end: bool,
+    cnt: &mut [usize; 4],
+    portnr: &mut [usize; 4],
+    max: &mut [usize; 4],
+    unspecified: &mut usize,
+    slot_floor: &mut usize,
+) {
+    if let Some(n) = indexed_slot(graph, ei, end) {
+        portnr[2] += 1;
+        max[2] = max[2].max(n + 1);
+        *slot_floor = (*slot_floor).max(n + 1);
+        return;
+    }
+    let head = graph
+        .get_attr(Scope::Edge(ei), if end { "end" } else { "start" })
+        .map(|v| v.split(',').next().unwrap_or(""));
+    match head {
+        Some("front" | "forward" | "east" | "back" | "west") => cnt[2] += 1,
+        Some("right" | "south" | "down" | "left" | "north" | "up") => cnt[3] += 1,
+        _ => *unspecified += 1,
+    }
 }
 
 /// The indexed port slot one edge carries: `start: <side>,N` (on the
@@ -257,12 +361,15 @@ pub fn layout(graph: &Graph) -> Layout {
             slot_labels: Vec::new(),
         };
     };
-    let slots = required_slots(graph, &placement);
-    let rows = assemble_rows(graph, &placement, &slots);
-    let cols = node_columns(graph, &placement);
+    // One span pass serves the gap slots, the row assembly, the column
+    // map, and the router (node_span scans the edges — recomputing it
+    // per phase would be an O(n·e) multiplier, ge.layout.c6).
     let spans: Vec<(usize, usize)> = (0..graph.nodes.len())
         .map(|i| node_span(graph, i))
         .collect();
+    let slots = required_slots(graph, &placement, &spans);
+    let rows = assemble_rows(&placement, &spans, &slots);
+    let cols = node_columns(graph, &placement);
     let node_cells: Vec<Cell> = placement
         .cell
         .iter()

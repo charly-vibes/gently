@@ -12,7 +12,7 @@
 //! Rationale: shaped by the recorded v0.69 @ ededa3d7 companions —
 //! ge.layout.c1 (pure function) and c4 (orthogonal routes).
 
-use super::{node_span, Cell, Placement, Route, Rows};
+use super::{Cell, Placement, Route, Rows};
 use crate::graph::Graph;
 use std::collections::HashSet;
 
@@ -39,14 +39,73 @@ struct Endpoints {
 /// band `k`; `k == bands` trails the last band). Only edges that route
 /// vertically or bend need one; a plain chain row stays gap-free (oracle:
 /// mixed_isolated). Parallel multi-edges take one gap per extra channel.
-pub(super) fn required_slots(graph: &Graph, placement: &Placement) -> Vec<usize> {
+/// Span-aware (gently-a6g): a vertical travel whose endpoints' row spans
+/// overlap needs no gap at all (the fan-in star's east-row attachment —
+/// the hub's grown span hosts the attachment row), and one whose
+/// intermediate band rows are node-free at the walked column routes
+/// through those rows (the star's below-band stem rides the empty
+/// band between hub and leaf).
+pub(super) fn required_slots(
+    graph: &Graph,
+    placement: &Placement,
+    spans: &[(usize, usize)],
+) -> Vec<usize> {
     let mut slot = vec![0usize; placement.bands + 1];
     for (ei, e) in graph.edges.iter().enumerate() {
         let pu = placement.cell[e.from].unwrap();
         let pv = placement.cell[e.to].unwrap();
-        mark_slot(&mut slot, placement.route[ei], pu, pv);
+        mark_slot(
+            &mut slot,
+            placement.route[ei],
+            pu,
+            pv,
+            placement,
+            spans,
+            spans[e.from],
+            spans[e.to],
+        );
     }
     slot
+}
+
+/// A vertical travel needs no gap rows when its endpoints' band-row
+/// spans leave a clear corridor: either the spans overlap (the attachment
+/// row is hosted by the other node's grown span — the fan-in star's east
+/// ring), or the band rows strictly between the spans are node-free at
+/// BOTH endpoints' columns (the star's below-band stem rides the empty
+/// band between hub and leaf). Blocked corridors keep the packed
+/// stack's gap rows (the fan-out's below-attachments).
+fn corridor_clear(
+    placement: &Placement,
+    spans: &[(usize, usize)],
+    pu: Cell,
+    span_u: (usize, usize),
+    pv: Cell,
+    span_v: (usize, usize),
+) -> bool {
+    // Overlapping spans host each other's attachment rows outright.
+    let (u0, u1) = (pu.1, pu.1 + span_u.1 - 1);
+    let (v0, v1) = (pv.1, pv.1 + span_v.1 - 1);
+    if u0 <= v1 && v0 <= u1 {
+        return true;
+    }
+    let upper_end = u1.min(v1);
+    let lower_start = u0.max(v0);
+    // Adjacent extents (empty corridor) keep the packed stack's gap row.
+    if upper_end + 1 >= lower_start {
+        return false;
+    }
+    let free_at = |rank: usize, band: usize| {
+        !placement
+            .cell
+            .iter()
+            .enumerate()
+            .filter_map(|(i, c)| c.map(|c| (i, c)))
+            .any(|(i, (r, b))| {
+                r <= rank && rank < r + spans[i].0 && b <= band && band < b + spans[i].1
+            })
+    };
+    (upper_end + 1..lower_start).all(|b| free_at(pu.0, b) && free_at(pv.0, b))
 }
 
 /// Raise a boundary's gap count to `count` when lower.
@@ -57,7 +116,17 @@ fn raise(slot: &mut [usize], boundary: usize, count: usize) {
 }
 
 /// Mark the gap slots one edge needs.
-fn mark_slot(slot: &mut [usize], route: Route, pu: Cell, pv: Cell) {
+#[allow(clippy::too_many_arguments)]
+fn mark_slot(
+    slot: &mut [usize],
+    route: Route,
+    pu: Cell,
+    pv: Cell,
+    placement: &Placement,
+    spans: &[(usize, usize)],
+    span_u: (usize, usize),
+    span_v: (usize, usize),
+) {
     match route {
         Route::Selfloop => raise(slot, pu.1, 1),
         // A slot route rides the slotted node's own continuation rows
@@ -74,7 +143,7 @@ fn mark_slot(slot: &mut [usize], route: Route, pu: Cell, pv: Cell) {
         // A stacked channel rides the boxes' row-span continuation rows
         // (gently-awd) — no gap rows; the span reserves them.
         Route::Stacked(_) => {}
-        Route::Grew | Route::Around => mark_travel(slot, pu, pv),
+        Route::Grew | Route::Around => mark_travel(slot, pu, pv, placement, spans, span_u, span_v),
     }
 }
 
@@ -91,9 +160,22 @@ fn parallel_channel(prior: usize, band: usize) -> (usize, usize) {
 }
 
 /// Mark the gap slots one vertical or bending route needs.
-fn mark_travel(slot: &mut [usize], pu: Cell, pv: Cell) {
+fn mark_travel(
+    slot: &mut [usize],
+    pu: Cell,
+    pv: Cell,
+    placement: &Placement,
+    spans: &[(usize, usize)],
+    span_u: (usize, usize),
+    span_v: (usize, usize),
+) {
     let (b1, b2) = (pu.1.min(pv.1), pu.1.max(pv.1));
     if b1 != b2 {
+        // Span-aware skip (gently-a6g): a clear corridor needs no gap
+        // rows — the walk rides the existing band rows.
+        if corridor_clear(placement, spans, pu, span_u, pv, span_v) {
+            return;
+        }
         for boundary in b1 + 1..=b2 {
             raise(slot, boundary, 1);
         }
@@ -104,39 +186,109 @@ fn mark_travel(slot: &mut [usize], pu: Cell, pv: Cell) {
 }
 
 /// Assemble the grid rows: `count` gap rows at each required boundary,
-/// node bands everywhere else, in band order, plus each band's row-span
-/// continuation rows (gently-awd): a multi-row node's `rows` span
-/// occupies the grid rows south of its band, so the bands below shift
-/// south by the band's tallest row span minus one (upstream places a
-/// node's span over the rows south of its band row; empty continuation
-/// rows collapse to height 0 in `_prepare_layout`, so they render
-/// invisibly — but they must EXIST so a tall node's box does not
-/// swallow the following bands' rows). One-celled bands reserve
-/// nothing, so plain graphs keep the recorded adjacency.
-pub(super) fn assemble_rows(graph: &Graph, placement: &Placement, slots: &[usize]) -> Rows {
+/// node bands everywhere else, in band order. Bands map onto grid rows
+/// in sequence (upstream places nodes at absolute grid rows — a band's
+/// row IS its index plus the gap rows inserted before it); a multi-row
+/// node's span then covers the grid rows south of its band WITHOUT
+/// shifting the following bands (gently-a6g: the fan-in star's east-ring
+/// attachments sit inside the grown hub's span rows, so the span must
+/// not push them south — upstream's `_prepare_layout` collapses empty
+/// continuation rows to height 0, and nodes cleared at Chebyshev
+/// distance one never overlap a span). One-celled bands reserve nothing,
+/// so plain graphs keep the recorded adjacency; the grid height covers
+/// every node's full span extent.
+pub(super) fn assemble_rows(
+    placement: &Placement,
+    spans: &[(usize, usize)],
+    slots: &[usize],
+) -> Rows {
     let bands = placement.bands;
+    // Per-band anchored nodes, and per-band covering nodes (earlier
+    // bands' row spans that reach over b) — precomputed once so the
+    // walk stays linear (ge.layout.c6).
+    let mut anchored: Vec<Vec<usize>> = vec![Vec::new(); bands];
+    let mut covering: Vec<Vec<usize>> = vec![Vec::new(); bands];
+    for (i, c) in placement.cell.iter().enumerate() {
+        if let Some((_, bi)) = *c {
+            if bi < bands {
+                anchored[bi].push(i);
+            }
+            for cover in covering[bi + 1..(bi + spans[i].1).min(bands)].iter_mut() {
+                cover.push(i);
+            }
+        }
+    }
+    for list in covering.iter_mut() {
+        list.sort_by_key(|&i| placement.cell[i].map(|c| c.1).unwrap_or(0));
+    }
     let mut row_of_band = vec![0usize; bands];
     let mut gap_rows: Vec<Vec<usize>> = vec![Vec::new(); bands + 1];
     let mut row = 0usize;
     for b in 0..bands {
         push_gaps(&mut gap_rows[b], slots[b], &mut row);
-        row_of_band[b] = row;
-        row += 1;
-        // Row-span continuation rows (gently-awd): the band's tallest
-        // multi-row node spans this many extra grid rows.
-        let cy = (0..graph.nodes.len())
-            .filter(|&i| placement.cell[i].is_some_and(|c| c.1 == b))
-            .map(|i| node_span(graph, i).1)
-            .max()
-            .unwrap_or(1);
-        row += cy - 1;
+        row_of_band[b] = resolve_band(
+            placement,
+            spans,
+            &anchored,
+            &covering[b],
+            &row_of_band,
+            b,
+            row,
+        );
+        // The cursor stays south of every span anchored on this band.
+        let cy = anchored[b].iter().map(|&i| spans[i].1).max().unwrap_or(1);
+        row = row.max(row_of_band[b] + cy);
     }
     push_gaps(&mut gap_rows[bands], slots[bands], &mut row);
+    // A node's span extends south of its band's row: the grid height
+    // must cover the deepest span extent (the 10-row so-flowchart-size
+    // boxes; the star's 3-row hub).
+    let height = placement
+        .cell
+        .iter()
+        .enumerate()
+        .filter_map(|(i, c)| c.map(|c| (i, c)))
+        .map(|(i, (_, b))| row_of_band[b] + spans[i].1)
+        .chain(std::iter::once(row))
+        .max()
+        .unwrap_or(row);
     Rows {
         row_of_band,
         gap_rows,
-        height: row,
+        height,
     }
+}
+
+/// A band's grid row: the running cursor (south of every span so far),
+/// UNLESS the band's slot ring-rides inside an earlier band's grown span
+/// at disjoint columns (gently-a6g) — then it takes the offset row
+/// `row_of_band[b'] + (b - b')` (the fan-in star's east-ring attachment
+/// rides the hub's bottom span row). Same-column stacking keeps the
+/// cursor (the size-attr column stacks south of each tall box).
+fn resolve_band(
+    placement: &Placement,
+    spans: &[(usize, usize)],
+    anchored: &[Vec<usize>],
+    covering: &[usize],
+    row_of_band: &[usize],
+    b: usize,
+    cursor: usize,
+) -> usize {
+    if let Some(&i) = covering.first() {
+        let (ri, bi) = placement.cell[i].unwrap();
+        // The span hosts band b: column-disjoint from every node
+        // anchored on b? (rank space: one rank is two grid columns.)
+        let disjoint = anchored[b].iter().all(|&j| {
+            let (rj, _) = placement.cell[j].unwrap();
+            rj + spans[j].0 <= ri || ri + spans[i].0 <= rj
+        });
+        return if disjoint {
+            row_of_band[bi] + (b - bi)
+        } else {
+            cursor
+        };
+    }
+    cursor
 }
 
 /// Append `count` consecutive gap rows to one boundary's list.
@@ -251,7 +403,18 @@ fn edge_path(
             // target's (gently-awd: a multi-celled node's east border
             // sits at `col + cx - 1`, so the gap column shifts east).
             match straight_gap(gu, gv, span_u, span_v) {
-                Some(c) if gu.1 == gv.1 => vec![(c, gu.1)],
+                // Straight through the gap column when the pair shares a
+                // row — literally, or because one node's grown span hosts
+                // the other's row (gently-a6g: the fan-in star's east-ring
+                // attachment — n2's row IS the hub's bottom span row, the
+                // edge runs straight west into the hub's east face).
+                Some(c)
+                    if gu.1 == gv.1
+                        || (gu.1 >= gv.1 && gu.1 < gv.1 + span_v.1)
+                        || (gv.1 >= gu.1 && gv.1 < gu.1 + span_u.1) =>
+                {
+                    vec![(c, gu.1)]
+                }
                 _ if gu.1 == gv.1 => bend_path(
                     gu,
                     gv,
@@ -377,7 +540,15 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
     } else {
         Vec::new()
     };
-    path.extend(walk_column(gv.0, gu.1, gv.1, ctx));
+    // The walk stops at the target's face row nearest the source
+    // (gently-a6g): a grown target entered from the south is met at its
+    // bottom span row — the walk never crosses the target's own cells.
+    let face = if gu.1 > gv.1 {
+        gv.1 + span_v.1 - 1
+    } else {
+        gv.1
+    };
+    path.extend(walk_column(gv.0, gu.1, face, ctx));
     path
 }
 

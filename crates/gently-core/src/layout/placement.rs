@@ -206,7 +206,7 @@ impl Placer {
             }
             (None, Some(pv)) => {
                 self.route[ei] = Route::Grew;
-                self.attach_next_to(u, pv);
+                self.attach_next_to(u, v, pv);
             }
             (None, None) => {
                 self.route[ei] = Route::Grew;
@@ -280,20 +280,77 @@ impl Placer {
         }
     }
 
-    /// Attach next to the placed target: west slot first, then east
-    /// (oracle: shared-target's b east of c, the edge drawn westward),
-    /// else below on its own band.
-    fn attach_next_to(&mut self, node: usize, pv: (usize, usize)) {
-        let west_free = pv.0 >= 1 && !self.taken.contains(&(pv.0 - 1, pv.1));
-        let spot = if west_free {
-            (pv.0 - 1, pv.1)
-        } else if !self.taken.contains(&(pv.0 + 1, pv.1)) {
-            (pv.0 + 1, pv.1)
-        } else {
-            let band = self.fresh_band();
-            (pv.0, band)
-        };
-        self.claim(node, spot);
+    /// Attach next to the placed target (gently-a6g, upstream
+    /// _place_node + _near_places): walk the target's slot ring in the
+    /// oracle order — east side top-to-bottom, below, west side top-to-
+    /// bottom, above — at ring distance one (the single gap column/row
+    /// band), then distance two; the first slot clear of every placed
+    /// node's span (Chebyshev distance one: no corner-to-corner touch,
+    /// upstream _clear_tries) wins. The fan-in star: the first attacher
+    /// takes the east ring slot at the hub's top row, the second slots
+    /// two rows south (the adjacent row is cleared against the first),
+    /// the third hangs below the hub's grown span; a target whose west
+    /// slot is free takes an east-side attacher there (shared-target's
+    /// b east of c — the east side is tried first, the edge drawn
+    /// westward). When no ring slot clears, fall back to a fresh band
+    /// below (the recorded leaf-under-train attachment).
+    fn attach_next_to(&mut self, node: usize, target: usize, pv: (usize, usize)) {
+        let cy = self.spans[target].1;
+        for d in [1usize, 2] {
+            let mut ring = Vec::new();
+            // east side: one gap column east per ring step (a rank is
+            // two grid columns), every row of the span
+            for db in 0..cy {
+                ring.push((pv.0 + d, pv.1 + db));
+            }
+            // below: two band rows south of the span's last row per
+            // ring step (upstream d=2 cells from the border)
+            ring.push((pv.0, pv.1 + cy - 1 + 2 * d));
+            // west side
+            if pv.0 >= d {
+                for db in 0..cy {
+                    ring.push((pv.0 - d, pv.1 + db));
+                }
+            }
+            // above (negative bands have no grid row)
+            if pv.1 >= 2 * d {
+                ring.push((pv.0, pv.1 - 2 * d));
+            }
+            if let Some(&spot) = ring.iter().find(|&&s| self.clear_of_spans(s)) {
+                self.claim(node, spot);
+                return;
+            }
+        }
+        let band = self.fresh_band();
+        self.claim(node, (pv.0, band));
+    }
+
+    /// Is `spot` free of every placed node's span at Chebyshev distance
+    /// one in GRID cells (upstream _clear_tries: no shared cell, no side
+    /// adjacency, no corner touch)? Columns live on the even grid (one
+    /// rank is two grid columns), bands are grid rows; span arithmetic
+    /// stays keyed — a pure predicate (c1).
+    fn clear_of_spans(&self, spot: (usize, usize)) -> bool {
+        let sx = 2 * spot.0;
+        self.cell
+            .iter()
+            .enumerate()
+            .filter_map(|(i, c)| c.map(|c| (i, c)))
+            .all(|(i, (c, b))| {
+                let (cx, cy) = self.spans[i];
+                let (c0, c1) = (2 * c, 2 * c + cx.saturating_sub(1));
+                let dx = if sx < c0 {
+                    c0 - sx
+                } else {
+                    sx.saturating_sub(c1)
+                };
+                let dy = if spot.1 < b {
+                    b - spot.1
+                } else {
+                    spot.1.saturating_sub(b + cy - 1)
+                };
+                dx > 1 || dy > 1
+            })
     }
 
     /// Port-constrained same-band edges (gently-89r): a `start:`/`end:`
@@ -354,6 +411,9 @@ impl Placer {
     fn claim(&mut self, node: usize, spot: (usize, usize)) {
         self.cell[node] = Some(spot);
         self.taken.push(spot);
+        // Ring slots can land beyond the sequential band cursor (the
+        // fan-in star's east ring spans the grown hub's rows).
+        self.next_band = self.next_band.max(spot.1 + 1);
     }
 
     fn fresh_band(&mut self) -> usize {

@@ -381,8 +381,13 @@ fn p4_fan_stack_routes_jog_not_jump() {
         for (ei, e) in g.edges.iter().enumerate() {
             let path = &l.edge_paths[ei];
             let (su, sv) = (l.node_cells[e.from], l.node_cells[e.to]);
-            assert_adjacent(path[0], su, "edge {ei} first path cell");
-            assert_adjacent(path[path.len() - 1], sv, "edge {ei} last path cell");
+            assert_adjacent(path[0], su, l.spans[e.from], "edge {ei} first path cell");
+            assert_adjacent(
+                path[path.len() - 1],
+                sv,
+                l.spans[e.to],
+                "edge {ei} last path cell",
+            );
         }
         gently_core::render::ascii::render(g, &l).expect("fan must render");
     }
@@ -412,18 +417,20 @@ fn p4_fanin_star_places_east_ring_slots_on_grown_hub() {
     let art = gently_core::render::ascii::render(&g, &l).expect("star must render");
     assert_eq!(
         art,
-        "+----+     +-----+     +----+\n\
-         | n1 | --> |     | <-- | n4 |\n\
-         +----+     | hub |     +----+\n\
-                    |     |     +----+\n\
-                    |     | <-- | n2 |\n\
-                    +-----+     +----+\n\
-                      ^\n\
-                      |\n\
-                      |\n\
-                    +-----+\n\
-                    | n3  |\n\
-                    +-----+\n",
+        concat!(
+            "+----+     +-----+     +----+\n",
+            "| n1 | --> |     | <-- | n4 |\n",
+            "+----+     | hub |     +----+\n",
+            "           |     |     +----+\n",
+            "           |     | <-- | n2 |\n",
+            "           +-----+     +----+\n",
+            "             ^\n",
+            "             |\n",
+            "             |\n",
+            "           +-----+\n",
+            "           | n3  |\n",
+            "           +-----+\n",
+        ),
         "the star's oracle bytes (fan-layout.observed example 2)"
     );
 }
@@ -467,10 +474,25 @@ fn p4_parallel_channels_stack_rows() {
     gently_core::render::ascii::render(&g, &l).expect("flowchart must render");
 }
 
-/// The two cells differ by exactly one step on one axis.
-fn assert_adjacent(p: (usize, usize), q: (usize, usize), what: &str) {
-    let dist = (p.0 as isize - q.0 as isize).abs() + (p.1 as isize - q.1 as isize).abs();
-    assert_eq!(dist, 1, "{what} {p:?} not adjacent to {q:?}");
+/// The path cell orthogonally abuts the endpoint's whole span rect
+/// (gently-a6g: a grown endpoint is met at its span — the star's east
+/// attachment abuts the hub's bottom span row, not its anchor row).
+fn assert_adjacent(p: (usize, usize), q: (usize, usize), span: (usize, usize), what: &str) {
+    let dx = if p.0 < q.0 {
+        q.0 - p.0
+    } else if p.0 >= q.0 + span.0 {
+        p.0 - (q.0 + span.0 - 1)
+    } else {
+        0
+    };
+    let dy = if p.1 < q.1 {
+        q.1 - p.1
+    } else if p.1 >= q.1 + span.1 {
+        p.1 - (q.1 + span.1 - 1)
+    } else {
+        0
+    };
+    assert_eq!(dx + dy, 1, "{what} {p:?} not adjacent to {q:?}");
 }
 
 /// The layout publishes a complete grid-output contract: every node
