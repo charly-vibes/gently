@@ -9,6 +9,10 @@
 # This toml supplies the lease + repo mode so local runs match CI exactly.
 # renewal = push the date forward (reviewable diff) — ddl convention;
 # horizon matches wai + testaruda.
+# NOTE (gently-if4): pretender ≥0.9.0 adds `check --adopt` — a gate baseline
+# (pretender-baseline.json) so `--mode gate` fails only on genuinely new
+# findings. Not adopted here yet: the guidance lease is the current dated
+# decision; switching to gate + committing a baseline is a separate renewal.
 
 [pretender]
 mode = "guidance"

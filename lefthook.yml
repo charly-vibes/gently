@@ -27,6 +27,11 @@ pre-commit:
       # no --mode override: the toml's guidance lease governs (ddl parity —
       # "the toml supplies the lease + repo mode so local runs match CI
       # exactly"); --mode gate would defeat the dated advisory lease.
+      # NOTE (gently-if4): pretender ≥0.9.0 can now run gate mode without
+      # hard-blocking on mechanical reformats (`check --adopt` writes a
+      # stable-finding baseline; gate fails only on genuinely new findings —
+      # meter verified 2026-10-15). Switching is deferred to a dedicated
+      # dated-lease renewal, not slipped in here.
       run: pretender check
     ddl-spk-lint:
       run: spk lint openspec
