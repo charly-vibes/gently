@@ -13,7 +13,7 @@ when it is byte-identical to the oracle.
 
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
-| `gently-4ga` | RESOLVED for the render error (comma-chain fans and fan-in stars route contiguously and render — the stacked-column walk jogs around occupied band rows, specs/ge-layout.md c4 re-derived). Residual: the oracle's exact fan PLACEMENT differs (bytes below). |
+| `gently-4ga` | RESOLVED for the render error (comma-chain fans and fan-in stars route contiguously and render — the stacked-column walk jogs around occupied band rows, specs/ge-layout.md c4 re-derived) and for the fan-in star's placement (`gently-a6g` — `_near_places` slot rings over `_grow`-grown clusters; the star renders byte-exactly). Residual: the fan-OUT class's exact placement (hash-seed-dependent, scoped-off; bytes below). |
 
 **`gently-4ga`** — residual (exact fan placement; the render error itself is
 fixed — fans render, routes grid-adjacent):
@@ -62,12 +62,17 @@ children east/west of the source and hangs one below:
           +---+
 ```
 
-The hash-STABLE fan-in star (n1..n4 -> hub, 12 seeds) would be tier-1, but
-matching it needs upstream's multi-celled `_near_places` slot rings over
-grown node clusters plus the repair passes (hub grows two east-side
-attachment rows; the second source slots below the first east attachment)
-— a placement-engine port, not a router fix. gently renders the same star
-deterministically with the jogged-walk shape instead.
+RESOLVED for the hash-STABLE fan-in star (n1..n4 -> hub, 12 seeds —
+tier-1): gently-a6g ported the placement engine — upstream Node.pm
+`_grow`'s free-ports loop grows the hub to a 3-row span (four
+unspecified same-side ends), and `_near_places`/`_clear_tries` slot the
+attaching sources on the target's ring: east rows top-to-bottom, below,
+west, above, at ring distance one then two, first slot clear of every
+placed span at Chebyshev distance one. The star now renders
+byte-exactly against `fan-layout.observed` example 2
+(specs/ge-layout.md c4 re-derived). The fan-OUT class (comma-chain
+fans, pod-fan) stays hash-seed-dependent and scoped-off — its flanking
+children reorder per seed, same tier-2 class as before.
 
 ### Text parser
 
