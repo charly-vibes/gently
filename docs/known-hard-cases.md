@@ -2,256 +2,24 @@
 
 gently is gated byte-identically against the pinned Graph::Easy oracle
 (**v0.69** @ `ededa3d7…`). The cases below are where the two currently
-differ. This is a *compatibility status page*, not a to-do list: each row
-is tracked in the issue tracker ([beads](https://github.com/gastownhall/beads)), and gently is deliberately
-conservative — an example is only published in [`examples/`](../examples/)
-when it is byte-identical to the oracle.
+differ. Each row tells you *when you'll see it* — if your graph doesn't
+match one of these triggers, gently's output should be byte-identical to
+the oracle's. Resolved divergences and verification internals live in the
+maintainer history (`.wai/resources/maintainer-docs/compatibility-history.md`
+in the repository).
 
-## Divergences (open)
+## Open divergences
 
-### ASCII rendering
-
-| bead | behavior delta (oracle → gently) |
-|------|----------------------------------|
-| `gently-4ga` | RESOLVED for the render error (comma-chain fans and fan-in stars route contiguously and render — the stacked-column walk jogs around occupied band rows, specs/ge-layout.md c4 re-derived) and for the fan-in star's placement (`gently-a6g` — `_near_places` slot rings over `_grow`-grown clusters; the star renders byte-exactly). Residual: the fan-OUT class's exact placement (hash-seed-dependent, scoped-off; bytes below). |
-
-**`gently-4ga`** — residual (exact fan placement; the render error itself is
-fixed — fans render, routes grid-adjacent):
-
-input (`bg-comma-lists.observed`, example 1):
-
-```
-[ A ] -> [ B ], [ C ], [ D ]
-```
-
-gently (deterministic; the fan-in star n1..n4 -> hub renders with the same
-jogged-walk shape):
-
-```
-+---+     +---+
-| A | --> | B |
-+---+     +---+
-  |
-  +----+
-  v    |
-+---+  |
-| C |  |
-+---+  |
-       |
-  +----+
-  v
-+---+
-| D |
-+---+
-```
-
-oracle — the fan-out class is HASH-SEED-DEPENDENT (seed 2 reorders the
-flanking children, same class as the pod-fan probe), so its exact bytes
-are oracle-scoped-off ([[ge.oracle]] c7 tier 2); every seed flanks two
-children east/west of the source and hangs one below:
-
-```
-+---+     +---+     +---+
-| C | <-- | A | --> | D |
-+---+     +---+     +---+
-            |
-            |
-            v
-          +---+
-          | B |
-          +---+
-```
-
-RESOLVED for the hash-STABLE fan-in star (n1..n4 -> hub, 12 seeds —
-tier-1): gently-a6g ported the placement engine — upstream Node.pm
-`_grow`'s free-ports loop grows the hub to a 3-row span (four
-unspecified same-side ends), and `_near_places`/`_clear_tries` slot the
-attaching sources on the target's ring: east rows top-to-bottom, below,
-west, above, at ring distance one then two, first slot clear of every
-placed span at Chebyshev distance one. The star now renders
-byte-exactly against `fan-layout.observed` example 2
-(specs/ge-layout.md c4 re-derived). The fan-OUT class (comma-chain
-fans, pod-fan) stays hash-seed-dependent and scoped-off — its flanking
-children reorder per seed, same tier-2 class as before.
-
-### Text parser
-
-| bead | behavior delta (oracle → gently) |
-|------|----------------------------------|
-| `gently-58m` | Group-endpoint edges from the anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]`: the oracle's `as_txt` omits the group-only-connected node, gently lists Berlin as a plain node (bytes below). The parse itself is fixed (`gently-m4i`). |
-| `gently-278` | The same group-endpoint repro on the minimal one-liner `( [ Bonn ] ) -> [ Berlin ]` (no attrs, one group): oracle `as_txt` prints ONLY the `( [ Bonn ] )` group block — Berlin is gone — while oracle `as_ascii` renders BOTH boxes (self-inconsistent); gently lists the group block AND `[ Berlin ]`, and draws the dashed group border around Bonn with Berlin beside it. VERDICT: class (b) — ORACLE defect, gently is right(er); DECIDED NOT TO FILE upstream (user decision 2026-10-14; this bead is the item-3 evidence of the decision-trace E4 (b)-checklist). Evidence: gently's own bytes pinned in `tests/repro/claims/as-txt-group-endpoint-omission.observed` (scenario `ge.txt_render.p6`); the oracle's defect bytes are `pod-anon-group.observed`. Spec row: `ge.txt_render.c6`/`p6` (advisory). |
-
-**`gently-58m`** — input and the divergence side-by-side:
-
-input (`pod-anon-group.observed`):
-
-```
-( [ Bonn ] ) -> [ Berlin ]
-
-( [ Bonn ] { color: red; } )
-```
-
-oracle `as_txt` — Berlin is omitted (only reachable through the dropped
-group edge):
-
-```
-[ Bonn ] { color: red; }
-
-( )
-
-(
-  [ Bonn ]
-)
-```
-
-gently — same parse, but `as_txt` lists Berlin as a plain node (the
-edge-linked anon group renders empty as `( Group \#0 )`):
-
-```
-( Group \#0 )
-
-( Group \#1
-  [ Bonn ] { color: red; }
-)
-
-[ Berlin ]
-```
-
-(The `as_ascii` bytes for both — Bonn and Berlin as plain boxes — are in
-`pod-anon-group.observed`.)
-
-### Dot parser
-
-| bead | behavior delta (oracle → gently) |
-|------|----------------------------------|
-| `gently-fb1` | Bare scope nested in a named subgraph (`digraph G { subgraph outer { { x } } }`): the oracle's group_stack survives bare-scope boundaries, so x lands IN group `outer` (bytes below); gently keeps x ungrouped. Only diverges inside a named subgraph — top-level bare scopes are ungrouped in both (pinned p4); fix shape: track the enclosing named group separately from the bare-scope frame. |
-
-**`gently-fb1`** — input and the divergence side-by-side:
-
-input (`dot-bare-scope-in-named.observed`):
-
-```
-digraph G { subgraph outer { { x } } }
-```
-
-oracle — `groups: outer=[x]`; x renders inside the dashed `outer` group
-box (`as_ascii`):
-
-```
-+ - - - - +
-'  outer  '
-'         '
-' +-----+ '
-' |  x  | '
-' +-----+ '
-'         '
-+ - - - - +
-```
-
-gently — keeps x ungrouped (no group emitted, no group box).
-
-### Layout & edge attributes
-
-| bead | behavior delta (oracle → gently) |
-|------|----------------------------------|
-| `gently-awd` | RESOLVED (all slices committed): (1) txt merges `size: W,H` (ge.txt_render c5/p5); (2) column spans — `size: W,H` / `columns` / `rows` stretch nodes over their grid-cell span (rank→col accumulation `2·rank + Σ(cx−1)`, per-column/row sizing from single-celled cells only, balance smallest-first to the label width) — the 5-chain size-attr fixture renders byte-identically (tests/fixtures/graph-easy/size-attr.*); (3) span-aware edge attachments (straight gap east/west of the span, bends entering/leaving through span columns); (4) parallel-channel-as-rows (completion): a multi-row pair's parallel channels stack as grid ROWS through the boxes' row span — the pair's first edge keeps the straight band-row run, channel k rides grid row `band + k`, the channel rows carry edge cells so the boxes grow to their full row span (4+3+3 = the flowchart's 10 rows) — while one-row pairs keep the recorded bend shape (parallel.txt). Channel order is model order: the pinned oracle's is hash-driven (seed 0 assigns the pair's second model edge to the band row, seed 1 the first — so-flowchart-size.observed pins both), and gently byte-matches the seed-1 render (scenarios ge_ascii_render p1_parallel_channels_rows). Spec rows re-derived: ge.layout c4/p4, ge.ascii_render c1/p1. |
-| `gently-byq` | RESOLVED (layout + render): indexed ports `{ start,end: front,N }` land the edges at the numbered slots — the port grows the attached node's row span to `max(cy, N+1)`, the slot attaches at grid row `band+N` (line `band_top+3N+1`), start slots ride east then bend north into the target's south, end slots drop south then run west into the target's east (dodging EAST through the east-gap channel column when the drop cells are taken), slot labels ride the arrow-end cell, and VER-only edge columns floor at 3 chars — the SO fixture (`so-start-port-index.observed`) renders byte-identically (scenarios ge_layout_ports p7; spec rows ge.layout c4, ge.ascii_render c4 re-derived). Unindexed side routing stays byte-identical (`gently-89r`, `port-*` fixtures); the `back` (west) wrap outside the bounding box remains an open divergence. |
-
-**`gently-awd`** — input and the divergence side-by-side:
-
-input (`so-flowchart-size.observed`):
-
-```
-[ Client ] { size: 5,10; }
-[ Msg Server ] { size: 5,10; }
-
-[ Server ] -- put msg\n via http --> [ Msg Server ]
-[ Msg Server ] -- 1. Number X of unread --> [ Client ]
-[ Msg Server ] -- 3. X Msg --> [ Client ]
-[ Client ] -- 2. read X --> [ Msg Server ]
-```
-
-oracle — `{ size: 5,10; }` honored, taller/wider boxes, 2x2 layout
-(`so-flowchart-size.observed`, `as_ascii`):
-
-```
-+--------+  put msg    +------------+                          +--------+
-| Server |  via http   |            |  3. X Msg                |        |
-|        | ----------> |            | -----------------------> |        |
-+--------+             |            |                          |        |
-                       | Msg Server |  1. Number X of unread   | Client |
-                       |            | -----------------------> |        |
-                       |            |                          |        |
-                       |            |  2. read X               |        |
-                       |            | <----------------------- |        |
-                       +------------+                          +--------+
-```
-
-gently — same input, byte-identical to the oracle's seed-1 render
-(placement + box widths + stacked channels match; the channel ORDER is
-model order, so the two east-going labels sit one channel up vs the
-oracle's seed-0 render — its channel order is hash-driven):
-
-```
-+--------+  put msg    +------------+                          +--------+
-| Server |  via http   |            |  1. Number X of unread   |        |
-|        | ----------> |            | -----------------------> |        |
-+--------+             |            |                          |        |
-                       | Msg Server |  3. X Msg                | Client |
-                       |            | -----------------------> |        |
-                       |            |                          |        |
-                       |            |  2. read X               |        |
-                       |            | <----------------------- |        |
-                       +------------+                          +--------+
-```
-
-**`gently-byq`** — input and the divergence side-by-side:
-
-input (`so-start-port-index.observed`):
-
-```
-[ Msg Server ] -- 1. Number X of unread --> { start: front,0; } [ Client ]
-[ Msg Server ] -- 3. X Msg --> { start: front,3; } [ Client ]
-[ Client ] -- 2. read X --> { end: front,2; } [ Msg Server ]
-```
-
-oracle — edges land at the indexed ports; Msg Server stretched to 10
-rows so `front,0` and `front,3` are distinct slots (`as_ascii`):
-
-```
-+------------+  1. Number X of unread   +-----------+
-|            | -----------------------> |  Client   | -+
-|            |                          +-----------+  |
-|            |                            ^            |
-|            |                            | 3. X Msg   |
-| Msg Server |                            |            |
-|            |  2. read X                 |            |
-|            | <--------------------------+------------+
-|            |                            |
-|            |                            |
-|            | ---------------------------+
-+------------+
-```
-
-gently — byte-identical to the oracle render above (growth to 4 row
-bands, slot attachments, route B/C with the east dodge, arrow-end
-labels, the CROSS junction, and the 3-wide dodge channel all match).
-
-The already-ported unindexed form renders byte-identically in both
-(`port-side-minimal.observed`, `start: right` dips below the node row):
-
-```
-+---+     +---+
-| A |     | B |
-+---+     +---+
-  |         ^
-  +---------+
-```
+| you'll see this when | what differs (oracle → gently) | bead |
+|----------------------|--------------------------------|------|
+| you use an indexed port with the `back` direction, wrapping outside the bounding box (`{ end: back,N; }` on a west edge) | indexed `{ start,end: front,N }` ports render byte-identically; the `back` (west) wrap outside the bounding box does not yet | `gently-byq` (residual) |
+| you print a graph as Graph::Easy text (`--as txt`) where an edge starts or ends at an anonymous group, e.g. `( [ Bonn ] ) -> [ Berlin ]` | the oracle's `as_txt` omits the group-only-connected node; gently lists it as a plain node. (The minimal variant is adjudicated as an oracle defect — see the maintainer history.) | `gently-58m` |
+| you parse DOT with a bare scope nested inside a named subgraph, e.g. `digraph G { subgraph outer { { x } } }` | the oracle puts `x` inside group `outer` (dashed group box); gently keeps `x` ungrouped. Top-level bare scopes are ungrouped in both | `gently-fb1` |
 
 ## Byte-compat scope-off (deliberate, no divergence claims)
 
-Per the byte-compat scope contract (`specs/ge-oracle.md` c7/p7), three
-input classes are outside byte-equality with the oracle by design:
+Per the byte-compat scope contract, three input classes are outside
+byte-equality with the oracle by design:
 
 - **Hash-randomized inputs.** Upstream renders some inputs differently
   across Perl hash seeds even under a pinned seed; those classes (e.g.
@@ -267,18 +35,13 @@ input classes are outside byte-equality with the oracle by design:
   these is unsatisfiable by construction, so round-trip claims are
   worded per upstream behavior instead.
 
-## Verification layers
+## How this is verified
 
-- `just oracle-verify` — differential gate over the fixture corpus
-  (pinned oracle, `tests/fixtures/graph-easy/`)
-- `just examples-verify` — the published examples in `examples/` must
-  stay byte-identical to their committed expected output
-- `tests/repro/` — falsifiable probe harness (`probes.pl`) computing
-  tier-1 admission and recording oracle-observed behavior for the
-  divergences above
-- `tests/repro/dumps/` — committed oracle dumps for the decision-trace
-  pipeline: when a new divergence shows up, run the reproducer under
-  `GENTLY_TRACE=<stage>` for a stage trace, diff it against the committed
-  oracle dump (trace-diff driver, EXCL-001 exclusions), reduce to a
-  minimal antichain cut, then adjudicate via the committed registry
-  (a/b/c) before opening a bead
+- `just oracle-verify` — differential gate over the pinned-oracle
+  fixture corpus (`tests/fixtures/graph-easy/`)
+- `just examples-verify` — every published [example](../examples/) stays
+  byte-identical to its committed expected output
+
+Each divergence is tracked in the issue tracker; the full resolved
+history and the reproduction/adjudication pipeline are documented in the
+maintainer history (`.wai/resources/maintainer-docs/compatibility-history.md`).

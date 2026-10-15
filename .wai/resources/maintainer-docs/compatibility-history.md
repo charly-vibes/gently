@@ -1,0 +1,190 @@
+# Compatibility history — resolved divergences & verification machinery
+
+> **Maintainer reference.** The user-facing status page is
+> `docs/known-hard-cases.md`; this file holds the resolved-divergence
+> history and the verification-pipeline narration that was moved out of
+> the book (Rule-of-5 docs review, 2026-10-15). Everything here is
+> additionally sourced in the spec corpus (`specs/`) and the bead tracker.
+
+gently is gated byte-identically against the pinned Graph::Easy oracle
+(**v0.69** @ `ededa3d7…`, `PERL_HASH_SEED=0`).
+
+## Resolved divergences
+
+### `gently-4ga` — fan rendering (render error + fan-in star placement)
+
+RESOLVED for the render error (comma-chain fans and fan-in stars route
+contiguously and render — the stacked-column walk jogs around occupied
+band rows, specs/ge-layout.md c4 re-derived) and for the fan-in star's
+placement (`gently-a6g` — `_near_places` slot rings over `_grow`-grown
+clusters; the star renders byte-exactly). Residual: the fan-OUT class's
+exact placement (hash-seed-dependent, scoped-off).
+
+Input (`bg-comma-lists.observed`, example 1):
+
+```
+[ A ] -> [ B ], [ C ], [ D ]
+```
+
+gently (deterministic; the fan-in star n1..n4 -> hub renders with the same
+jogged-walk shape):
+
+```
++---+     +---+
+| A | --> | B |
++---+     +---+
+  |
+  +----+
+  v    |
++---+  |
+| C |  |
++---+  |
+       |
+  +----+
+  v
++---+
+| D |
++---+
+```
+
+oracle — the fan-out class is HASH-SEED-DEPENDENT (seed 2 reorders the
+flanking children, same class as the pod-fan probe), so its exact bytes
+are oracle-scoped-off (`specs/ge-oracle.md` c7 tier 2); every seed flanks
+two children east/west of the source and hangs one below:
+
+```
++---+     +---+     +---+
+| C | <-- | A | --> | D |
++---+     +---+     +---+
+            |
+            |
+            v
+          +---+
+          | B |
+          +---+
+```
+
+RESOLVED for the hash-STABLE fan-in star (n1..n4 -> hub, 12 seeds —
+tier-1): gently-a6g ported the placement engine — upstream Node.pm
+`_grow`'s free-ports loop grows the hub to a 3-row span (four
+unspecified same-side ends), and `_near_places`/`_clear_tries` slot the
+attaching sources on the target's ring: east rows top-to-bottom, below,
+west, above, at ring distance one then two, first slot clear of every
+placed span at Chebyshev distance one. The star now renders byte-exactly
+against `fan-layout.observed` example 2 (specs/ge-layout.md c4
+re-derived). The fan-OUT class (comma-chain fans, pod-fan) stays
+hash-seed-dependent and scoped-off — its flanking children reorder per
+seed, same tier-2 class as before.
+
+### `gently-278` — minimal group-endpoint `as_txt` repro (oracle defect)
+
+The minimal one-liner `( [ Bonn ] ) -> [ Berlin ]` (no attrs, one group):
+oracle `as_txt` prints ONLY the `( [ Bonn ] )` group block — Berlin is
+gone — while oracle `as_ascii` renders BOTH boxes (self-inconsistent);
+gently lists the group block AND `[ Berlin ]`, and draws the dashed group
+border around Bonn with Berlin beside it.
+
+VERDICT: class (b) — ORACLE defect, gently is right(er); DECIDED NOT TO
+FILE upstream (user decision 2026-10-14; this bead is the item-3 evidence
+of the decision-trace E4 (b)-checklist). Evidence: gently's own bytes
+pinned in `tests/repro/claims/as-txt-group-endpoint-omission.observed`
+(scenario `ge.txt_render.p6`); the oracle's defect bytes are
+`pod-anon-group.observed`. Spec row: `ge.txt_render.c6`/`p6` (advisory).
+
+### `gently-awd` — `{ size: W,H; }` node attribute placement
+
+RESOLVED (all slices committed):
+
+1. txt merges `size: W,H` (ge.txt_render c5/p5);
+2. column spans — `size: W,H` / `columns` / `rows` stretch nodes over
+   their grid-cell span (rank→col accumulation `2·rank + Σ(cx−1)`,
+   per-column/row sizing from single-celled cells only, balance
+   smallest-first to the label width) — the 5-chain size-attr fixture
+   renders byte-identically (`tests/fixtures/graph-easy/size-attr.*`);
+3. span-aware edge attachments (straight gap east/west of the span,
+   bends entering/leaving through span columns);
+4. parallel-channel-as-rows (completion): a multi-row pair's parallel
+   channels stack as grid ROWS through the boxes' row span — the pair's
+   first edge keeps the straight band-row run, channel k rides grid row
+   `band + k`, the channel rows carry edge cells so the boxes grow to
+   their full row span (4+3+3 = the flowchart's 10 rows) — while
+   one-row pairs keep the recorded bend shape (parallel.txt). Channel
+   order is model order: the pinned oracle's is hash-driven (seed 0
+   assigns the pair's second model edge to the band row, seed 1 the
+   first — so-flowchart-size.observed pins both), and gently
+   byte-matches the seed-1 render (scenario
+   `ge_ascii_render.p1_parallel_channels_rows`). Spec rows re-derived:
+   ge.layout c4/p4, ge.ascii_render c1/p1.
+
+Input (`so-flowchart-size.observed`):
+
+```
+[ Client ] { size: 5,10; }
+[ Msg Server ] { size: 5,10; }
+
+[ Server ] -- put msg\n via http --> [ Msg Server ]
+[ Msg Server ] -- 1. Number X of unread --> [ Client ]
+[ Msg Server ] -- 3. X Msg --> [ Client ]
+[ Client ] -- 2. read X --> [ Msg Server ]
+```
+
+gently — byte-identical to the oracle's seed-1 render (placement + box
+widths + stacked channels match; the channel ORDER is model order, so
+the two east-going labels sit one channel up vs the oracle's seed-0
+render — its channel order is hash-driven):
+
+```
++--------+  put msg    +------------+                          +--------+
+| Server |  via http   |            |  1. Number X of unread   |        |
+|        | ----------> |            | -----------------------> |        |
++--------+             |            |                          |        |
+                       | Msg Server |  3. X Msg                | Client |
+                       |            | -----------------------> |        |
+                       |            |                          |        |
+                       |            |  2. read X               |        |
+                       |            | <----------------------- |        |
+                       +------------+                          +--------+
+```
+
+### `gently-byq` — indexed ports `{ start,end: front,N }` (layout + render)
+
+RESOLVED: indexed ports land the edges at the numbered slots — the port
+grows the attached node's row span to `max(cy, N+1)`, the slot attaches
+at grid row `band+N` (line `band_top+3N+1`), start slots ride east then
+bend north into the target's south, end slots drop south then run west
+into the target's east (dodging EAST through the east-gap channel column
+when the drop cells are taken), slot labels ride the arrow-end cell, and
+VER-only edge columns floor at 3 chars — the SO fixture
+(`so-start-port-index.observed`) renders byte-identically (scenario
+`ge_layout_ports.p7`; spec rows ge.layout c4, ge.ascii_render c4
+re-derived). Unindexed side routing stays byte-identical (`gently-89r`,
+`port-*` fixtures).
+
+**Open residual:** the `back` (west) wrap outside the bounding box —
+tracked on the open page.
+
+The already-ported unindexed form renders byte-identically in both
+(`port-side-minimal.observed`, `start: right` dips below the node row):
+
+```
++---+     +---+
+| A |     | B |
++---+     +---+
+  |         ^
+  +---------+
+```
+
+## Verification machinery (maintainer detail)
+
+- `just oracle-verify` — differential gate over the fixture corpus
+  (pinned oracle, `tests/fixtures/graph-easy/`)
+- `just examples-verify` — the published examples in `examples/` must
+  stay byte-identical to their committed expected output
+- `tests/repro/` — falsifiable probe harness (`probes.pl`) computing
+  tier-1 admission and recording oracle-observed behavior
+- `tests/repro/dumps/` — committed oracle dumps for the decision-trace
+  pipeline: when a new divergence shows up, run the reproducer under
+  `GENTLY_TRACE=<stage>` for a stage trace, diff it against the committed
+  oracle dump (trace-diff driver, EXCL-001 exclusions), reduce to a
+  minimal antichain cut, then adjudicate via the committed registry
+  (a/b/c) before opening a bead

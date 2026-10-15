@@ -174,8 +174,7 @@ SVG: ![](gallery/simple-chain.svg)
 
 ## Where the truth lives
 
-- The ASCII renders above are the committed, byte-verified
-  `examples/<name>/expected.txt` files — `just examples-verify` keeps them
-  honest.
-- Known rendering gaps and hard cases are tracked in
-  [docs/known-hard-cases.md](known-hard-cases.md).
+The ASCII renders above are the committed, byte-verified
+`examples/<name>/expected.txt` files, kept honest by `just
+examples-verify`; known gaps are tracked in
+[docs/known-hard-cases.md](known-hard-cases.md).
