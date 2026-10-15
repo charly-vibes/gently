@@ -1,0 +1,16 @@
+# observed: gently (this workspace) — class-b raw-scaling pin: gently's own bytes, NOT the Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499 oracle — probe: as-txt-group-endpoint-omission
+-- as_txt:
+( Group \#0
+  [ Bonn ]
+)
+
+[ Berlin ]
+-- as_ascii:
++ - - - - - -+
+' Group #0   '
+'            '
+' +--------+ '   +--------+
+' |  Bonn  | '   | Berlin |
+' +--------+ '   +--------+
+'            '
++ - - - - - -+

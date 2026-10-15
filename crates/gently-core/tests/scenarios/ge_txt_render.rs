@@ -6,6 +6,7 @@
 
 use gently_core::graph::{Graph, ObjectKind, Scope};
 use gently_core::parse::text;
+use gently_core::render::ascii;
 use gently_core::render::txt;
 
 /// Add two nodes and a live edge between them; returns the edge index.
@@ -413,5 +414,44 @@ fn p5() {
         node_attrs("[ A ] { columns: 1; rows: 1; }"),
         "[ A ]\n",
         "columns 1,1 collapses to no attribute"
+    );
+}
+
+/// ge.txt_render.p6 (c6, gently-278): the group-endpoint ORACLE defect —
+/// class (b), gently is right(er); recorded upstream, DECIDED NOT TO FILE
+/// (user decision 2026-10-14 — this bead is the item-3 evidence). The
+/// repro `( [ Bonn ] ) -> [ Berlin ]` makes the closed group the edge's
+/// endpoint; upstream as_txt prints only the group block and DROPS
+/// Berlin (its declaration pass never reaches a node whose only edge
+/// predecessor is the group) while upstream as_ascii renders BOTH boxes
+/// — upstream self-inconsistent. gently lists Berlin in both renderers.
+/// Expected bytes are gently's own CURRENT bytes — the class-b
+/// raw-scaling pin tests/repro/claims/as-txt-group-endpoint-omission.observed
+/// (verified against gently's invariants under ge.layout c1, NOT the
+/// pinned oracle; the oracle's defect bytes live in
+/// pod-anon-group.observed). Each example its OWN graph.
+#[test]
+fn p6() {
+    // as_txt: the group block AND [ Berlin ]
+    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").expect("the repro must parse");
+    let expected_txt = "( Group \\#0\n  [ Bonn ]\n)\n\n[ Berlin ]\n";
+    assert_eq!(
+        txt::render(&g),
+        expected_txt,
+        "as_txt must list the group-endpoint-connected node"
+    );
+
+    // as_ascii: the dashed group border with both boxes — own graph
+    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").expect("the repro must parse");
+    let expected_ascii = concat!(
+        "+ - - - - - -+\n' Group #0   '\n'            '\n",
+        "' +--------+ '   +--------+\n' |  Bonn  | '   | Berlin |\n",
+        "' +--------+ '   +--------+\n'            '\n+ - - - - - -+\n"
+    );
+    let laid = gently_core::layout::layout(&g);
+    assert_eq!(
+        ascii::render(&g, &laid).expect("the repro must render"),
+        expected_ascii,
+        "as_ascii must draw the dashed group border with both boxes"
     );
 }

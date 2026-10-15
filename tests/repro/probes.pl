@@ -168,6 +168,7 @@ my %SERVES = (
     'bg-comma-lists'         => 'gently-m4i (bloodgate mining — syntax.html comma-chained node lists; gently parse-errors → bug bead)',
     'bg-trailing-node-attr'  => 'gently-8xd (bloodgate mining — syntax.html trailing node attr block silently dropped → bug bead)',
     'pod-anon-group'         => 'gently-58m (POD mining — Parser.pm anonymous-group example; gently parse-errors on the following edge → bug bead)',
+    'as-txt-group-endpoint-omission' => 'gently-278 (the as_txt group-endpoint ORACLE defect — class (b), gently is right(er), not filed upstream per user decision; RAW-SCALING pin of gently\'s own bytes — pod-anon-group.observed holds the oracle\'s defect bytes)',
     'bg-anon-chain'          => 'gently-ni9.2 (bloodgate mining — syntax.html anon nodes in chain; gently renders boxed #N, oracle hides them → bug bead)',
     'bg-minlen-bypass'       => 'gently-ni9.2 (bloodgate mining — tutorial_bypass.html minlen:3; the bypass SHAPE diverges — ranking, see re-derivation note; minlen is incidental, gently-bg-minlen-bypass-shape; re-derived as the shared-middle bypass ranking bug gently-jrr)',
     'bg-minlen-stretch'      => 'gently-ni9.2 + gently-yhg (re-derivation probe — minlen >= 2 widens the straight gap exactly one column; minlen 2..5 identical, 4-seed stable)',
@@ -269,6 +270,38 @@ pod_probe_body('pod-anon-group', <<'EXAMPLE')
 
 ( [ Bonn ] { color: red; } )
 EXAMPLE
+PROBE
+
+    'as-txt-group-endpoint-omission' => <<'PROBE',
+# serves: gently-278
+# claim probed: the as_txt group-endpoint ORACLE defect — class (b),
+# oracle defect, gently is right(er); DECIDED NOT TO FILE upstream (user
+# decision 2026-10-14; this beads ticket IS the item-3 evidence of the
+# decision-trace E4 (b)-checklist, gently-btf). RAW-SCALING PIN: this
+# probe records GENTLY'S OWN CURRENT BYTES, verified against gently's
+# invariants (renderable and deterministic under ge.layout c1) — NOT the
+# pinned oracle. The oracle IS the defect here: upstream as_txt prints
+# only the `( [ Bonn ] )` group block and DROPS Berlin (the group-end
+# handler makes the closed group the node stack, so the edge links
+# GROUP→Berlin and as_txt's declaration pass never reaches Berlin),
+# while upstream as_ascii renders BOTH boxes — upstream is
+# self-inconsistent; the oracle's defect bytes are already recorded in
+# pod-anon-group.observed (serves gently-58m). Observed (gently, this
+# workspace): as_txt lists the group block AND [ Berlin ]; as_ascii
+# draws the dashed group border around Bonn with Berlin beside it.
+# Each example its OWN graph (one parse per render).
+my $bin = dirname($0) . '/../../target/debug/gently';
+die "probes: $bin not built (run: cargo build -p gently-cli)\n" unless -x $bin;
+my $tmp = File::Temp->newdir('g278-probe-XXXXXX', TMPDIR => 1, CLEANUP => 1);
+my $file = "$tmp/example.txt";
+open my $fh, '>', $file or die "probes: cannot write example: $!\n";
+print $fh "( [ Bonn ] ) -> [ Berlin ]\n";
+close $fh;
+for my $fmt (qw(txt ascii)) {
+    my $out = `$bin --as $fmt $file`;
+    die "probes: gently --as $fmt failed (status $?)\n" if $?;
+    print "-- as_$fmt:\n", $out;
+}
 PROBE
 
     'bg-comma-lists' => <<'PROBE',
@@ -1948,6 +1981,12 @@ if ($mode eq 'claims') {
     exit 0;
 }
 
+# Claims whose .observed bytes are GENTLY'S OWN (class-b raw-scaling
+# pins — the oracle is the defect, so the recorded bytes are verified
+# against gently's invariants, never the pinned oracle). The .observed
+# header names the source honestly instead of the oracle pin.
+my %GENTLY_PIN = map { $_ => 1 } qw(as-txt-group-endpoint-omission);
+
 # claims dir for recorded observations
 use POSIX qw(WNOHANG);
 use File::Path qw(make_path);
@@ -2025,7 +2064,10 @@ if ($mode eq 'claim') {
     print $observed;
     my $outfile = "$CLAIMS_DIR/$name.observed";
     open my $fh, '>', $outfile or die "probes: cannot write '$outfile': $!\n";
-    print $fh "# observed: $PIN — probe: $name\n", $observed;
+    my $source = $GENTLY_PIN{$name}
+        ? "gently (this workspace) — class-b raw-scaling pin: gently's own bytes, NOT the $PIN oracle"
+        : $PIN;
+    print $fh "# observed: $source — probe: $name\n", $observed;
     close $fh;
     print "\nrecorded: $outfile\n";
     exit 0;

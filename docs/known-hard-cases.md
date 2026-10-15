@@ -79,6 +79,7 @@ children reorder per seed, same tier-2 class as before.
 | bead | behavior delta (oracle → gently) |
 |------|----------------------------------|
 | `gently-58m` | Group-endpoint edges from the anonymous-group syntax `( [ Bonn ] ) -> [ Berlin ]`: the oracle's `as_txt` omits the group-only-connected node, gently lists Berlin as a plain node (bytes below). The parse itself is fixed (`gently-m4i`). |
+| `gently-278` | The same group-endpoint repro on the minimal one-liner `( [ Bonn ] ) -> [ Berlin ]` (no attrs, one group): oracle `as_txt` prints ONLY the `( [ Bonn ] )` group block — Berlin is gone — while oracle `as_ascii` renders BOTH boxes (self-inconsistent); gently lists the group block AND `[ Berlin ]`, and draws the dashed group border around Bonn with Berlin beside it. VERDICT: class (b) — ORACLE defect, gently is right(er); DECIDED NOT TO FILE upstream (user decision 2026-10-14; this bead is the item-3 evidence of the decision-trace E4 (b)-checklist). Evidence: gently's own bytes pinned in `tests/repro/claims/as-txt-group-endpoint-omission.observed` (scenario `ge.txt_render.p6`); the oracle's defect bytes are `pod-anon-group.observed`. Spec row: `ge.txt_render.c6`/`p6` (advisory). |
 
 **`gently-58m`** — input and the divergence side-by-side:
 

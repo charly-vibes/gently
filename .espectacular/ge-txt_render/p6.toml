@@ -1,0 +1,9 @@
+id = "p6"
+description = "gently-278: the as_txt group-endpoint oracle defect (class b) — gently's own bytes pinned via tests/repro/claims/as-txt-group-endpoint-omission.observed"
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.3"
+
+[tests]
+cargo = [{flags = "ge_txt_render::p6"}]

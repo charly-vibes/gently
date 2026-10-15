@@ -57,3 +57,11 @@ fn p4() {
 fn p5() {
     todo_predicate!("`columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass");
 }
+
+// id: p6
+// generator: the group-endpoint repro `( [ Bonn ] ) -> [ Berlin ]` (pinned oracle v0.69 @ ededa3d7; the class-b raw-scaling pin's source input)
+// predicate: gently's as_txt emits the group block AND `[ Berlin ]` (scenario ge_txt_render::p6, bytes = tests/repro/claims/as-txt-group-endpoint-omission.observed), and gently's as_ascii draws the dashed group border around Bonn with Berlin beside it — the oracle renders the former without Berlin and the latter without the group border
+#[test]
+fn p6() {
+    todo_predicate!("gently's as_txt emits the group block AND `[ Berlin ]` (scenario ge_txt_render::p6, bytes = tests/repro/claims/as-txt-group-endpoint-omission.observed), and gently's as_ascii draws the dashed group border around Bonn with Berlin beside it — the oracle renders the former without Berlin and the latter without the group border");
+}

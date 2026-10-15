@@ -29,3 +29,9 @@ id = "c5"
 kind = "invariant"
 expr = "Multi-cell size attributes emit in the upstream As_txt canonical form: whenever `columns` is stored, the emitted attribute set merges `columns`/`rows` into the shorter `size: W,H;` form (rows defaulting to 1) and never outputs the default `1,1`; a lone `rows` attribute is already shorter and stays `rows: N;`. A node whose every attribute collapses to nothing (e.g. `size: 1,1`) is not attribute-bearing — it is declared in the isolated-node pass, not the declaration pass. Re-derived (gently-awd): tests/repro/claims/size-attr.observed."
 traces_to = "[[ge.txt_render]]"
+
+[[constraints]]
+id = "c6"
+kind = "advisory"
+expr = "A node whose only edge-predecessor is a group-endpoint edge (the `( [ Bonn ] ) -> [ Berlin ]` repro, pinned oracle Graph::Easy v0.69 @ ededa3d7) is still listed by gently's as_txt in the isolated-node pass, beside the group block. Upstream's as_txt omits the node entirely — its group-end handler makes the closed group the edge endpoint, so the declaration pass never reaches the node — while upstream's own as_ascii renders BOTH boxes: upstream is self-inconsistent between the two renderers. Adjudicated class (b) — ORACLE defect, gently is right(er); recorded upstream, DECIDED NOT TO FILE per user decision (gently-278 is the durable record, the item-3 evidence of the decision-trace E4 (b)-checklist). Evidence: gently's own bytes are pinned by tests/repro/claims/as-txt-group-endpoint-omission.observed (class-b raw-scaling pin — verified against gently's invariants under [[ge.layout.c1]], NOT the oracle); the oracle's defect bytes are tests/repro/claims/pod-anon-group.observed (gently-58m)."
+traces_to = "[[ge.txt_render]]"
