@@ -1,0 +1,13 @@
+ticket: gently-a6g
+branch: main
+brief_path:
+steps:
+claim (47b1d57)
+brief_path: .wai/projects/graph-easy-port/briefs/gently-a6g.md
+brief committed (8baf3a0)
+spawn (8baf3a0) session=gently-a6g-impl log=.wai/projects/graph-easy-port/runs/gently-a6g.spawn.log pid=840730
+spawn-resume (ee5da4f) session=gently-a6g-impl log=.wai/projects/graph-easy-port/runs/gently-a6g.t2.spawn.log pid=876404 — t1 timeout after RED ee5da4f
+spawn-resume-3 (ee5da4f) session=gently-a6g-impl log=.wai/projects/graph-easy-port/runs/gently-a6g.t3.spawn.log pid=921488 — t2 timeout left tree non-compiling mid-edit
+verify (170ccd2) — orchestrator re-ran: ah check 87/0, cargo 7 suites ok, oracle-verify green; bd CLOSED; pushed
+ship (170ccd2) — 4 commits (00cd11c, ee5da4f, cc20a69, 170ccd2) on origin/main; closed
+stop (170ccd2) — run complete

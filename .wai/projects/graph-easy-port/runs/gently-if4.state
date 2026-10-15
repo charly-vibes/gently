@@ -1,0 +1,11 @@
+ticket: gently-if4
+branch: main (gently) + main (pretender)
+brief_path:
+steps:
+claim (170ccd2)
+brief_path: .wai/projects/graph-easy-port/briefs/gently-if4.md
+brief committed (1303f3b)
+spawn (1303f3b) session=gently-if4-impl log=.wai/projects/graph-easy-port/runs/gently-if4.spawn.log pid=961920
+verify (53c28fc) — orchestrator re-ran: pretender check --mode gate exit 0 (baselined), cargo 7 suites ok, just gates 0; bd CLOSED; both repos pushed
+ship (53c28fc) — pretender d6c4904/9a9d896/585357b (branch security/remediation-tickets-2026-10-09) + gently 53c28fc; closed
+stop (53c28fc) — run complete

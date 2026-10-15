@@ -1,0 +1,12 @@
+ticket: gently-fb1
+branch: main
+brief_path:
+steps:
+claim (a4c5748)
+gates (a4c5748) — baseline green
+brief_path: .wai/projects/graph-easy-port/briefs/gently-fb1.md
+brief committed (b7905b7)
+spawn (b7905b7) session=gently-fb1-impl log=.wai/projects/graph-easy-port/runs/gently-fb1.spawn.log pid=568531
+verify (26ee861) — gates re-run by orchestrator: cargo 7 suites ok, ah check --run-tests 87/0, just gates 13/13, examples+oracle byte-identical, spk lint 0; bd CLOSED; pushed
+ship (26ee861) — single feat commit on origin/main; gently-fb1 closed
+stop (26ee861) — run complete

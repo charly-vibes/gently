@@ -1,0 +1,14 @@
+ticket: gently-byq
+branch: main
+brief_path:
+steps:
+claim (26ee861)
+brief_path: .wai/projects/graph-easy-port/briefs/gently-byq.md
+brief committed (8518b10)
+spawn (8518b10) session=gently-byq-impl log=.wai/projects/graph-easy-port/runs/gently-byq.spawn.log pid=590225
+spawn-retry (8518b10) session=gently-byq-impl-retry log=.wai/projects/graph-easy-port/runs/gently-byq.retry.spawn.log pid=733455 — first spawn timed out at 1800s with zero commits; clean retry per doctrine
+spawn-3 (decode pre-loaded, 60min budget) session=8518b10 log=gently-byq-impl-3 pid=.wai/projects/graph-easy-port/runs/gently-byq.t3.spawn.log — attempt-2 decoded rule into bead but landed no commits
+spawn-resume (57bb8d1) session=gently-byq-impl-3 log=.wai/projects/graph-easy-port/runs/gently-byq.t3-resume.spawn.log pid=798609 — t3 timeout after RED commit 57bb8d1; manual resume per doctrine
+verify (47b1d57) — orchestrator re-ran: ah check 87/0, cargo 7 suites ok, oracle byte-identical, spk lint 0; bd CLOSED; pushed
+ship (47b1d57) — 3 commits (57bb8d1 RED, ac2839f GREEN, 47b1d57 spec) on origin/main; closed
+stop (47b1d57) — run complete

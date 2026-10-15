@@ -1,0 +1,11 @@
+ticket: gently-278
+branch: main
+brief_path:
+steps:
+claim (53c28fc)
+brief_path: .wai/projects/graph-easy-port/briefs/gently-278.md
+brief committed (ace1f83)
+spawn (ace1f83) session=gently-278-impl log=.wai/projects/graph-easy-port/runs/gently-278.spawn.log pid=1002998
+verify (ca0faf8) — orchestrator re-ran: ah check 88/0, cargo 7 suites ok, oracle-verify green, spk lint 0; bd CLOSED; bd list empty
+ship (ca0faf8) — single docs commit on origin/main; closed
+stop (ca0faf8) — run complete — all 5 tickets of this wave done
