@@ -11,7 +11,9 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 // id: p1
@@ -19,7 +21,7 @@ macro_rules! todo_predicate {
 // predicate: class sections appear first, sorted, with sorted attributes
 #[test]
 fn p1() {
-        todo_predicate!("class sections appear first, sorted, with sorted attributes");
+    todo_predicate!("class sections appear first, sorted, with sorted attributes");
 }
 
 // id: p2
@@ -27,7 +29,7 @@ fn p1() {
 // predicate: every object appears exactly once with a correct operator form
 #[test]
 fn p2() {
-        todo_predicate!("every object appears exactly once with a correct operator form");
+    todo_predicate!("every object appears exactly once with a correct operator form");
 }
 
 // id: p3
@@ -35,7 +37,7 @@ fn p2() {
 // predicate: the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership
 #[test]
 fn p3() {
-        todo_predicate!("the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership");
+    todo_predicate!("the re-parsed model is equal to the source model under the model-equality predicate for the parser-supported subset — group membership included: members emitted inside their group section re-parse into the same named membership");
 }
 
 // id: p4
@@ -43,7 +45,9 @@ fn p3() {
 // predicate: every fixture's expected canonical text matches gently's output byte-for-byte
 #[test]
 fn p4() {
-        todo_predicate!("every fixture's expected canonical text matches gently's output byte-for-byte");
+    todo_predicate!(
+        "every fixture's expected canonical text matches gently's output byte-for-byte"
+    );
 }
 
 // id: p5
@@ -51,6 +55,5 @@ fn p4() {
 // predicate: `columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass
 #[test]
 fn p5() {
-        todo_predicate!("`columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass");
+    todo_predicate!("`columns` merges into `size: W,H` (rows default 1), `columns` + `rows` merge together, a lone `rows` stays `rows: N`, the default `1,1` is dropped, and a fully collapsed node renders attribute-less in the isolated-node pass");
 }
-

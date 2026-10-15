@@ -11,7 +11,9 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 // id: p1
@@ -19,7 +21,7 @@ macro_rules! todo_predicate {
 // predicate: each border style yields its Unicode glyph set, one character per cell
 #[test]
 fn p1() {
-        todo_predicate!("each border style yields its Unicode glyph set, one character per cell");
+    todo_predicate!("each border style yields its Unicode glyph set, one character per cell");
 }
 
 // id: p2
@@ -27,7 +29,7 @@ fn p1() {
 // predicate: every junction cell equals the combined glyph for its exact neighbourhood
 #[test]
 fn p2() {
-        todo_predicate!("every junction cell equals the combined glyph for its exact neighbourhood");
+    todo_predicate!("every junction cell equals the combined glyph for its exact neighbourhood");
 }
 
 // id: p3
@@ -35,7 +37,7 @@ fn p2() {
 // predicate: each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream
 #[test]
 fn p3() {
-        todo_predicate!("each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream");
+    todo_predicate!("each edge renders with the exact upstream Unicode glyphs, repeat units spanning the same column counts as upstream");
 }
 
 // id: p4
@@ -43,6 +45,7 @@ fn p3() {
 // predicate: each shape's outline matches the upstream Unicode shape table glyph for glyph
 #[test]
 fn p4() {
-        todo_predicate!("each shape's outline matches the upstream Unicode shape table glyph for glyph");
+    todo_predicate!(
+        "each shape's outline matches the upstream Unicode shape table glyph for glyph"
+    );
 }
-

@@ -13,7 +13,9 @@ use proptest::prelude::*;
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 /// Generated strategies — one per generator named in the spec rows.
@@ -29,7 +31,6 @@ pub mod spec_gen {
     pub fn constructs() -> impl Strategy<Value = String> {
         Just("constructs".into())
     }
-
 }
 
 // id: p1
@@ -37,7 +38,7 @@ pub mod spec_gen {
 // predicate: a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`
 #[test]
 fn p1() {
-        todo_predicate!("a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`");
+    todo_predicate!("a `graph` header yields a model graph with `type: undirected` set and a `digraph` header yields one with `type` unset; a named header yields `title` verbatim and an unnamed header yields `unnamed`");
 }
 
 // id: p2
@@ -45,7 +46,7 @@ fn p1() {
 // predicate: one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header
 #[test]
 fn p2() {
-        todo_predicate!("one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header");
+    todo_predicate!("one model edge per arrow, directed exactly when the operator is `->` and undirected when it is `--`, independently of the header");
 }
 
 proptest! {
@@ -63,7 +64,7 @@ proptest! {
 // predicate: a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped at TOP level, while one nested inside a named subgraph joins the innermost enclosing named group — transitively through nested bare scopes — and is ungrouped again once that group's scope has closed; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error
 #[test]
 fn p4() {
-        todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped at TOP level, while one nested inside a named subgraph joins the innermost enclosing named group — transitively through nested bare scopes — and is ungrouped again once that group's scope has closed; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error");
+    todo_predicate!("a named subgraph becomes a group with the name verbatim containing only its directly declared nodes (nested nodes belong to the innermost group), with the graphviz cluster convention pinned — `cluster_x` re-parses as group `x` and a bare `cluster0` as an anonymous group — and a bare `{ }` scope keeps its nodes ungrouped at TOP level, while one nested inside a named subgraph joins the innermost enclosing named group — transitively through nested bare scopes — and is ungrouped again once that group's scope has closed; as an edge-chain endpoint a bare scope or named subgraph links every node on the surviving stack — leaked earlier entries first, no node for a subgraph's name — a scope with no inner edge links nothing and its `}` cuts the leak, and an operator over an empty stack is the oracle's not-recognized error");
 }
 
 proptest! {
@@ -81,6 +82,5 @@ proptest! {
 // predicate: the defaults land exactly as observed — `flow: south`, `colorscheme: x11`, and edge-class `arrowstyle: filled` always; group-class `align: center` and `fill: inherit` only once a group exists; an explicit statement wins over the default it overrides
 #[test]
 fn p6() {
-        todo_predicate!("the defaults land exactly as observed — `flow: south`, `colorscheme: x11`, and edge-class `arrowstyle: filled` always; group-class `align: center` and `fill: inherit` only once a group exists; an explicit statement wins over the default it overrides");
+    todo_predicate!("the defaults land exactly as observed — `flow: south`, `colorscheme: x11`, and edge-class `arrowstyle: filled` always; group-class `align: center` and `fill: inherit` only once a group exists; an explicit statement wins over the default it overrides");
 }
-

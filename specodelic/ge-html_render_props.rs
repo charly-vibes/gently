@@ -11,7 +11,9 @@
 /// opting in with **rust:** compiles as a real assertion instead
 /// (executable predicate fragment, specodelic.md Revision 15).
 macro_rules! todo_predicate {
-    ($reason:expr) => { todo!("{}", $reason) };
+    ($reason:expr) => {
+        todo!("{}", $reason)
+    };
 }
 
 // id: p1
@@ -19,7 +21,7 @@ macro_rules! todo_predicate {
 // predicate: td count equals grid size (the documented one-td-per-cell simplification, not the oracle's colspan=4 rowspan=4 span) and each td carries the right content class
 #[test]
 fn p1() {
-        todo_predicate!("td count equals grid size (the documented one-td-per-cell simplification, not the oracle's colspan=4 rowspan=4 span) and each td carries the right content class");
+    todo_predicate!("td count equals grid size (the documented one-td-per-cell simplification, not the oracle's colspan=4 rowspan=4 span) and each td carries the right content class");
 }
 
 // id: p2
@@ -27,7 +29,7 @@ fn p1() {
 // predicate: labels render HTML-escaped and links follow the observed escaping rule (space→+, '→%27, raw `&`)
 #[test]
 fn p2() {
-        todo_predicate!("labels render HTML-escaped and links follow the observed escaping rule (space→+, '→%27, raw `&`)");
+    todo_predicate!("labels render HTML-escaped and links follow the observed escaping rule (space→+, '→%27, raw `&`)");
 }
 
 // id: p3
@@ -35,7 +37,7 @@ fn p2() {
 // predicate: edge cells carry the documented CSS classes
 #[test]
 fn p3() {
-        todo_predicate!("edge cells carry the documented CSS classes");
+    todo_predicate!("edge cells carry the documented CSS classes");
 }
 
 // id: p4
@@ -43,7 +45,7 @@ fn p3() {
 // predicate: the table renders bare (no CSS, as upstream `as_html`) and every class referenced in the table has a matching CSS rule in the document's `<style>` block
 #[test]
 fn p4() {
-        todo_predicate!("the table renders bare (no CSS, as upstream `as_html`) and every class referenced in the table has a matching CSS rule in the document's `<style>` block");
+    todo_predicate!("the table renders bare (no CSS, as upstream `as_html`) and every class referenced in the table has a matching CSS rule in the document's `<style>` block");
 }
 
 // id: p5
@@ -51,6 +53,7 @@ fn p4() {
 // predicate: colors appear as the upstream CSS declarations and shapes carry their documented classes
 #[test]
 fn p5() {
-        todo_predicate!("colors appear as the upstream CSS declarations and shapes carry their documented classes");
+    todo_predicate!(
+        "colors appear as the upstream CSS declarations and shapes carry their documented classes"
+    );
 }
-
