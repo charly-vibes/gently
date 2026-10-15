@@ -56,7 +56,10 @@ pre-commit:
 pre-push:
   commands:
     bd:
-      run: bd hooks run pre-push
+      # bd blocks reading stdin until EOF; git/lefthook keep the pre-push
+      # pipe open, so close it (bd needs no ref payload) — see bead for the
+      # reproduction (open pipe → hang, EOF → clean exit).
+      run: bd hooks run pre-push < /dev/null
     # ddl:managed:start (pre-push)
     ddl-ah-check:
       run: ah check
