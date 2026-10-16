@@ -19,6 +19,7 @@
 use gently_core::graph::{Graph, Scope};
 use gently_core::layout::{self, Layout};
 use gently_core::parse::text;
+use std::path::PathBuf;
 
 /// The chain a -> b -> c, optionally carrying a graph-level `flow`.
 fn chain_with_flow(flow: Option<&str>) -> Graph {
@@ -281,6 +282,28 @@ fn p2() {
         assert_inside(&l.node_cells, l.width, l.height);
         assert_eq!(l.node_cells.len(), g.nodes.len(), "every node placed");
     }
+}
+
+/// ge.layout.p2 (c2, gently-0is): the raw-scale case — the specodelic
+/// whole-corpus DOT projection (1311 nodes, 1634 edges, tier-3 per
+/// [[ge.oracle]] c7: gently-only invariants, no oracle pin). At corpus
+/// scale the fan-in ring-ride resolved four bands onto two grid rows:
+/// two nodes shared the hub's cell and the render died with 'edge 70
+/// enters its box through an unsupported side'. c2 must hold at any
+/// scale, and the render that consumes the grid must succeed.
+#[test]
+fn p2_corpus_scale_no_overlap() {
+    let dot = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/corpus/specodelic-corpus.dot"),
+    )
+    .expect("fixture tests/fixtures/corpus/specodelic-corpus.dot");
+    let g = gently_core::parse::dot::parse(&dot).expect("corpus projection must parse");
+    let l = layout::layout(&g);
+    assert_disjoint_cells(&l);
+    assert_inside(&l.node_cells, l.width, l.height);
+    gently_core::render::ascii::render(&g, &l)
+        .expect("the corpus render that consumes the grid must succeed");
 }
 
 /// ge.layout.p3 (c3): the configured flow direction maps source nodes to
