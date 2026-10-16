@@ -550,10 +550,51 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
         let north = sv.1 < su.1;
         // The gap row adjacent to the target band hosts the horizontal
         // run; the vertical walk covers every row between the source and
-        // that gap row at the source column.
-        let home = if north { sv.1 + 1 } else { sv.1 };
-        return match rows.gap_rows.get(home).and_then(|v| v.first()) {
-            Some(&g) => {
+        // that gap row at the source column. Primary candidate (north):
+        // one band south of the target — the recorded Ulm->car oracle
+        // bend (the row just south of the TARGET band can sit inside a
+        // stacked node's span, as with Hof's box). But once earlier
+        // bands reserved gap rows, that boundary's first row can fall
+        // INSIDE a later stacked node (gently-hpd: edge 25's primary
+        // run rode row 8 straight through nodes 11 and 29) — so the
+        // run is validated against the occupied set, and a dirty
+        // primary falls back to the target band's own boundary gap row
+        // (gap_rows[sv.1]: the rows between the target band and the
+        // next, the geometrically adjacent corridor).
+        let candidates: &[usize] = if north { &[sv.1 + 1, sv.1] } else { &[sv.1] };
+        let mut primary: Option<usize> = None;
+        for (attempt, &home) in candidates.iter().enumerate() {
+            let Some(&g) = rows.gap_rows.get(home).and_then(|v| v.first()) else {
+                continue;
+            };
+            let run: Vec<Cell> = ((gv.0 + span_v.0 - 1)..=gu.0)
+                .rev()
+                .map(|c| (c, g))
+                .collect();
+            if attempt == 0 {
+                primary = Some(g);
+            }
+            if run.iter().all(|&c| !ctx.occupied.contains(&c)) {
+                let mut path = walk_column(gu.0, gu.1, g, ctx);
+                if run.is_empty() {
+                    // The target's east face can lie EAST of the source
+                    // (the source sits below the target's own column
+                    // span — gently-hpd edge 33): the westward run is
+                    // then EMPTY, and the walk (exclusive of its
+                    // endpoint) ends one row short of the gap row with
+                    // nothing bridging it. Close the final cell at the
+                    // source column so the path abuts the target's face.
+                    if !ctx.occupied.contains(&(gu.0, g)) {
+                        path.push((gu.0, g));
+                    }
+                } else {
+                    path.extend(run);
+                }
+                return path;
+            }
+        }
+        return match primary {
+            Some(g) => {
                 let mut path = walk_column(gu.0, gu.1, g, ctx);
                 path.extend((gv.0 + span_v.0 - 1..=gu.0).rev().map(|c| (c, g)));
                 path
@@ -625,13 +666,31 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
         } else {
             ((gv.0..walk_col).rev().map(|c| (c, approach))).collect()
         };
-        // An empty walk (the face row IS the source's row) leaves the
-        // path one row short of the approach row: connect vertically
-        // through the walk column first.
-        if path.last().is_some_and(|&l| l.1 != approach)
-            && !ctx.occupied.contains(&(walk_col, approach))
-        {
-            cells.insert(0, (walk_col, approach));
+        // Connect vertically through the walk column from the walk's
+        // last row to the approach row. The walk is exclusive of its
+        // endpoint rows, so a SOUTH walk (source north of the face but
+        // below the target's top row) stops at face-1 while the
+        // approach row is face+1 — the face row itself still separates
+        // them, and a single-cell insert jumped it (gently-hpd: edge 5
+        // walked to (5,3), inserted only (5,5), and the orthogonality
+        // gate rejected (5,3) -> (5,5)). Fill EVERY row between the
+        // walk's last row and the approach row at walk_col — the
+        // column lies strictly west of the target (walk_col < gv.0),
+        // so the intermediate rows are outside the box. Any blocked
+        // intermediate leaves the connect out entirely: the renderer
+        // reports the shape as a typed error rather than drawing
+        // through a node.
+        if let Some(&(_, last_y)) = path.last() {
+            if last_y != approach && !ctx.occupied.contains(&(walk_col, approach)) {
+                let connect: Vec<Cell> = if last_y < approach {
+                    (last_y + 1..=approach).map(|r| (walk_col, r)).collect()
+                } else {
+                    ((approach..last_y).rev().map(|r| (walk_col, r))).collect()
+                };
+                if connect.iter().all(|&c| !ctx.occupied.contains(&c)) {
+                    cells.splice(0..0, connect);
+                }
+            }
         }
         if cells.iter().all(|&c| !ctx.occupied.contains(&c)) {
             path.extend(cells);

@@ -632,3 +632,85 @@ fn p6() {
         "bounded stages stay deterministic"
     );
 }
+
+/// ge.layout.p4 (c4, gently-hpd): the dense specodelic `graph` spec
+/// projection — a 33-edge digraph with long labelled nodes and dotted/
+/// dashed guard edges — must route and render as ascii. The failure
+/// needs the FULL edge set (removing any single edge renders — the
+/// graph is 1-minimal on edge removal), so the test pins the whole
+/// projection; edge 5's realized path stepped (5,3) -> (5,5), a
+/// two-row jump the orthogonality gate rejects.
+const GENTLY_HPD_DOT: &str = r#"
+digraph spec {
+  rankdir=LR;
+  node [shape=ellipse, fontsize=10];
+  "graph → [[specodelic.parsed]]" [shape=box, color=red, style=dashed];
+  "graph.blast_radius_bidirectional" -> "graph.blast_radius_is_transitive_closure" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.blast_radius_is_transitive_closure" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.blast_radius_transitive" -> "graph.blast_radius_is_transitive_closure" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.boundary_tracks_extension_points" -> "graph.external_boundary_derived" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.deterministic_derivation" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.edge_kind_matches_typing" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.every_edge_extracted" -> "graph.total_extraction" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.external_boundary_derived" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.extract" -> "graph.extracting" [label="transitions.to"];
+  "graph.extract" -> "graph.unindexed" [label="transitions.from"];
+  "graph.extract_fail" -> "graph.edge_kind_matches_typing" [label="transitions.guard", style=dashed];
+  "graph.extract_fail" -> "graph.extracting" [label="transitions.from"];
+  "graph.extract_fail" -> "graph.failed" [label="transitions.to"];
+  "graph.extract_fail" -> "graph.total_extraction" [label="transitions.guard", style=dashed];
+  "graph.extract_ok" -> "graph.edge_kind_matches_typing" [label="transitions.guard", style=dashed];
+  "graph.extract_ok" -> "graph.extracting" [label="transitions.from"];
+  "graph.extract_ok" -> "graph.indexed" [label="transitions.to"];
+  "graph.extract_ok" -> "graph.total_extraction" [label="transitions.guard", style=dashed];
+  "graph.extraction_failure (satisfies) → [[errors.envelope_error_kind]]: no published contract row errors.envelope_error_kind exists — publish it in the producer's file or fix the id" [shape=box, color=red, style=dashed];
+  "graph.extraction_failure (satisfies) → [[errors.exit_code_mapping]]: no published contract row errors.exit_code_mapping exists — publish it in the producer's file or fix the id" [shape=box, color=red, style=dashed];
+  "graph.extraction_failure (satisfies) → [[errors.remediation_hint_present]]: no published contract row errors.remediation_hint_present exists — publish it in the producer's file or fix the id" [shape=box, color=red, style=dashed];
+  "graph.extraction_failure" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.extraction_failure_label_asserted" -> "graph.extraction_failure" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.failed" -> "graph.extraction_failure" [label="states.emits", penwidth=2];
+  "graph.graph_is_derived_not_authored" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.hand_authored_edge_rejected" -> "graph.graph_is_derived_not_authored" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.invalidate" -> "graph.queryable" [label="transitions.from"];
+  "graph.invalidate" -> "graph.stale_graph_detected" [label="transitions.guard", style=dashed];
+  "graph.invalidate" -> "graph.unindexed" [label="transitions.to"];
+  "graph.observes_edge_extracted" -> "graph.total_extraction" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.publish" -> "graph.deterministic_derivation" [label="transitions.guard", style=dashed];
+  "graph.publish" -> "graph.graph_is_derived_not_authored" [label="transitions.guard", style=dashed];
+  "graph.publish" -> "graph.indexed" [label="transitions.from"];
+  "graph.publish" -> "graph.queryable" [label="transitions.to"];
+  "graph.rerun_deterministic" -> "graph.deterministic_derivation" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.stale_detected_on_edit" -> "graph.stale_graph_detected" [label="properties.derives_from", style=dotted, color=gray50];
+  "graph.stale_graph_detected" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.total_extraction" -> "graph" [label="constraints.traces_to", style=dotted];
+  "graph.wrongly_typed_edge_rejected" -> "graph.edge_kind_matches_typing" [label="properties.derives_from", style=dotted, color=gray50];
+}
+"#;
+
+#[test]
+fn p4_dense_spec_projection_routes_and_renders() {
+    let g = gently_core::parse::dot::parse(GENTLY_HPD_DOT).expect("dense projection must parse");
+    // 36 edge statements today — the ticket's "33 edges" was filed against
+    // the corpus before three later spec rows landed; the failing error
+    // (edge 5 path cells (5, 3) -> (5, 5)) is byte-identical to the filed
+    // one, so the dense-set shape is the same.
+    assert_eq!(
+        g.edges.len(),
+        36,
+        "the full dense set — ticket is 1-minimal"
+    );
+    let l = layout::layout(&g);
+    assert_all_routed(&l, g.edges.len());
+    for (ei, e) in g.edges.iter().enumerate() {
+        let path = &l.edge_paths[ei];
+        let (su, sv) = (l.node_cells[e.from], l.node_cells[e.to]);
+        assert_adjacent(path[0], su, l.spans[e.from], "edge {ei} first path cell");
+        assert_adjacent(
+            path[path.len() - 1],
+            sv,
+            l.spans[e.to],
+            "edge {ei} last path cell",
+        );
+    }
+    gently_core::render::ascii::render(&g, &l).expect("dense spec projection must render");
+}
