@@ -5,6 +5,23 @@ All notable changes to gently are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-10-16
+
+### Fixed
+
+- **Fan-star routing family** (gently-n0d, gently-206) — labelled fan graphs
+  (edges converging on or leaving one node) no longer panic or error:
+  the `label_cells` subtract-with-overflow panic on zero-cell routed paths is
+  gone, and the router now realizes valid orthogonal paths for the shapes
+  that produced them — span-hosted west-going attachments, dodge columns
+  between stacked nodes (no 180° backtrack), terminal-blocked walks closing
+  to the face row, span rides honouring reserved gap rows, and east runs
+  truncated at occupied cells with a face-adjacent approach. The ASCII
+  renderer also classifies span west-side entries on continuation rows.
+  Every edge of the specodelic corpus projection (337 edges, 333 labelled)
+  now routes and renders in ascii and html; the pinned oracle renders are
+  unchanged.
+
 ## [0.2.1] - 2026-10-16
 
 ### Fixed
