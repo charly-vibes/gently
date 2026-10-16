@@ -223,6 +223,9 @@ pub(super) fn assemble_rows(
     }
     let mut row_of_band = vec![0usize; bands];
     let mut gap_rows: Vec<Vec<usize>> = vec![Vec::new(); bands + 1];
+    // Occupied rectangles of every resolved node, in (rank r0, rank r1,
+    // row y0, row y1) form — the ride-collision ledger (gently-0is).
+    let mut occupied: Vec<(usize, usize, usize, usize)> = Vec::new();
     let mut row = 0usize;
     for b in 0..bands {
         push_gaps(&mut gap_rows[b], slots[b], &mut row);
@@ -235,10 +238,22 @@ pub(super) fn assemble_rows(
             slots,
             b,
             row,
+            &occupied,
+            &gap_rows,
         );
         // The cursor stays south of every span anchored on this band.
         let cy = anchored[b].iter().map(|&i| spans[i].1).max().unwrap_or(1);
         row = row.max(row_of_band[b] + cy);
+        for &i in &anchored[b] {
+            let (r, _) = placement.cell[i].unwrap();
+            let (cx, cy) = spans[i];
+            occupied.push((
+                r,
+                r + cx.saturating_sub(1),
+                row_of_band[b],
+                row_of_band[b] + cy - 1,
+            ));
+        }
     }
     push_gaps(&mut gap_rows[bands], slots[bands], &mut row);
     // A node's span extends south of its band's row: the grid height
@@ -266,6 +281,16 @@ pub(super) fn assemble_rows(
 /// `row_of_band[b'] + (b - b')` (the fan-in star's east-ring attachment
 /// rides the hub's bottom span row). Same-column stacking keeps the
 /// cursor (the size-attr column stacks south of each tall box).
+/// The ride must ALSO be valid (gently-0is): at corpus scale
+/// several bands ride earlier spans and their offset rows landed on
+/// each other's and on their hosts' cells (two nodes shared the hub's
+/// cell, ge.layout c2 violated), and — after collision fallbacks
+/// re-packed the cursor — on the boundaries' reserved gap rows or south
+/// of the host span itself. The ride is therefore taken only when its
+/// whole row extent (a) overlaps no already-resolved node rectangle,
+/// (b) touches no reserved gap row, and (c) stays inside the host
+/// span's rows; otherwise the band falls back to the cursor — south of
+/// every resolved span, always free.
 #[allow(clippy::too_many_arguments)]
 fn resolve_band(
     placement: &Placement,
@@ -276,8 +301,10 @@ fn resolve_band(
     slots: &[usize],
     b: usize,
     cursor: usize,
+    occupied: &[(usize, usize, usize, usize)],
+    gap_rows: &[Vec<usize>],
 ) -> usize {
-    if let Some(&i) = covering.first() {
+    let ride = covering.first().and_then(|&i| {
         let (ri, bi) = placement.cell[i].unwrap();
         // The span hosts band b: column-disjoint from every node
         // anchored on b? (rank space: one rank is two grid columns.)
@@ -285,19 +312,52 @@ fn resolve_band(
             let (rj, _) = placement.cell[j].unwrap();
             rj + spans[j].0 <= ri || ri + spans[i].0 <= rj
         });
-        return if disjoint {
-            // The ride offset honours the gap rows reserved on the
-            // boundaries it crosses (gently-n0d): a riding band whose
-            // vertical travel reserved a gap row above it (same-column
-            // band-adjacent stacked states — the corpus's t4->diagnosing
-            // shape) may not sit grid-adjacent to the band above it, or
-            // the walk has no cell to route through and the edge
-            // realizes as a zero-cell path.
-            let reserved: usize = (bi + 1..=b).map(|k| slots[k]).sum();
-            row_of_band[bi] + (b - bi) + reserved
-        } else {
-            cursor
-        };
+        if !disjoint {
+            return None;
+        }
+        // The ride offset honours the gap rows reserved on the
+        // boundaries it crosses (gently-n0d): a riding band whose
+        // vertical travel reserved a gap row above it (same-column
+        // band-adjacent stacked states — the corpus's t4->diagnosing
+        // shape) may not sit grid-adjacent to the band above it, or
+        // the walk has no cell to route through and the edge
+        // realizes as a zero-cell path.
+        let reserved: usize = (bi + 1..=b).map(|k| slots[k]).sum();
+        let candidate = row_of_band[bi] + (b - bi) + reserved;
+        // (c) The ride lives INSIDE the host span — the formula's row
+        // count assumes every intermediate band packs one row; a cursor
+        // fallback (collision below) re-packs real rows past that
+        // assumption, and an out-of-span candidate is its signature.
+        let host_bottom = row_of_band[bi] + spans[i].1;
+        if candidate >= host_bottom {
+            return None;
+        }
+        Some(candidate)
+    });
+    // (b) No reserved gap row may fall inside the ride's row extent —
+    // gap rows are the routing corridors; a band row on one leaves its
+    // vertical walks no cell to route through.
+    if let Some(ride) = ride {
+        let max_cy = anchored[b].iter().map(|&i| spans[i].1).max().unwrap_or(1);
+        let hit = gap_rows[..(b + 1).min(gap_rows.len())]
+            .iter()
+            .flatten()
+            .any(|&g| g >= ride && g < ride + max_cy);
+        if hit {
+            return cursor;
+        }
+    }
+    if let Some(ride) = ride {
+        let free = anchored[b].iter().all(|&j| {
+            let (rj, _) = placement.cell[j].unwrap();
+            let (cx, cy) = spans[j];
+            occupied.iter().all(|&(r0, r1, y0, y1)| {
+                rj > r1 || r0 > rj + cx.saturating_sub(1) || ride > y1 || y0 > ride + cy - 1
+            })
+        });
+        if free {
+            return ride;
+        }
     }
     cursor
 }
@@ -694,6 +754,30 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
         }
         if cells.iter().all(|&c| !ctx.occupied.contains(&c)) {
             path.extend(cells);
+        } else if span_v.1 > 1 {
+            // The face-adjacent approach is taken (gently-0is): a fan-in
+            // hub with a sibling stacked north/south of its band leaves
+            // no free approach cell at the target's column. Ride the
+            // target's own span rows at the walk column instead (the
+            // west-side mirror of the span-hosted attachment, gently-n0d
+            // west branch): the walk column lies strictly west of the
+            // span, so the rows outside the box are approachable — the
+            // last path cell abuts the target's WEST face on a row
+            // inside its span (the entry's west-side rule, gently-206).
+            // North of the target the ride extends south to the span's
+            // bottom row; south of it, north to the first row inside
+            // the span. Any blocked ride row keeps the typed error
+            // rather than drawing through a node.
+            let ride: Vec<Cell> = if gu.1 > gv.1 {
+                (gv.1 + 1..=face).rev().map(|r| (walk_col, r)).collect()
+            } else {
+                (face..=gv.1 + span_v.1 - 1)
+                    .map(|r| (walk_col, r))
+                    .collect()
+            };
+            if ride.iter().all(|&c| !ctx.occupied.contains(&c)) {
+                path.extend(ride);
+            }
         }
     }
     path
@@ -716,22 +800,74 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
     } else {
         ((to + 1)..from).rev().collect()
     };
-    let dodge = if col < ctx.max_x { col + 1 } else { col - 1 };
     let mut path: Vec<Cell> = Vec::new();
-    let mut dodging = false;
+    let mut broke = false;
+    // The jog lane: a free column beside the walked one. The east gap
+    // column is the oracle's lane (odd columns never hold BASE cells),
+    // but a grown span can cover it (gently-0is: the corpus's acyclic
+    // hub grows across the gap column) — so the lane is validated per
+    // stretch and falls back west when east is taken.
+    let mut dodging: Option<usize> = None;
+    let lanes = |from_col: usize, prev: usize, r: usize, ctx: &Ctx| {
+        // The oracle's lane (one east) first, then west, then wider —
+        // grown spans can wall off several columns (gently-0is). A wider
+        // lane is valid only when the whole horizontal corridor at BOTH
+        // rows is free: the path walks from (from_col, prev) to (d, prev)
+        // through every column between.
+        (1..=3usize).find_map(|k| {
+            let east = from_col.checked_add(k).filter(|&d| d <= ctx.max_x);
+            let west = from_col.checked_sub(k);
+            [east, west].into_iter().flatten().find(|&d| {
+                let lo = d.min(from_col);
+                let hi = d.max(from_col);
+                (lo..=hi).all(|c| !ctx.occupied.contains(&(c, prev)))
+                    && !ctx.occupied.contains(&(d, r))
+            })
+        })
+    };
     for (i, &r) in rows.iter().enumerate() {
         match (ctx.occupied.contains(&(col, r)), dodging) {
-            (true, false) => {
+            (true, None) => {
                 // Jog east on the previous (free) row, then step past the
                 // blocked row in the gap column.
                 let prev = path.last().map_or(from, |&(_, y)| y);
-                path.push((dodge, prev));
-                path.push((dodge, r));
-                dodging = true;
+                match lanes(col, prev, r, ctx) {
+                    Some(d) => {
+                        path.push((d, prev));
+                        path.push((d, r));
+                        dodging = Some(d);
+                    }
+                    // No free lane beside the walk: stop here rather than
+                    // push through a node — the renderer reports the
+                    // truncated path as a typed error (gently-0is).
+                    None => {
+                        broke = true;
+                        break;
+                    }
+                }
             }
-            (true, true) => path.push((dodge, r)),
-            (false, true) => {
-                path.push((dodge, r));
+            (true, Some(d)) => {
+                if ctx.occupied.contains(&(d, r)) {
+                    // The lane itself is taken further down: switch to
+                    // another free column beside the lane at this row.
+                    let prev = path.last().map_or(from, |&(_, y)| y);
+                    match lanes(d, prev, r, ctx) {
+                        Some(d2) if d2 != col || !ctx.occupied.contains(&(col, r)) => {
+                            path.push((d2, prev));
+                            path.push((d2, r));
+                            dodging = Some(d2);
+                        }
+                        _ => {
+                            broke = true;
+                            break;
+                        }
+                    }
+                } else {
+                    path.push((d, r));
+                }
+            }
+            (false, Some(d)) => {
+                path.push((d, r));
                 // Stay in the dodge column while the NEXT row is blocked
                 // too (two stacked nodes one free row apart — the fan-in
                 // star's below-hub stack, gently-206): returning to the
@@ -744,10 +880,10 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
                     .is_some_and(|&nr| ctx.occupied.contains(&(col, nr)));
                 if !next_blocked {
                     path.push((col, r));
-                    dodging = false;
+                    dodging = None;
                 }
             }
-            (false, false) => path.push((col, r)),
+            (false, None) => path.push((col, r)),
         }
     }
     // The walk's terminal row was BLOCKED (a stacked multi-row node
@@ -757,8 +893,15 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
     // face row itself so the walk's endpoint stays grid-adjacent to
     // the face cell — the edge enters through the dodge-column side
     // (east face), never through the blocked face (gently-206).
-    if dodging && !ctx.occupied.contains(&(dodge, to)) {
-        path.push((dodge, to));
+    // Only close when the walk actually reached the terminal row — a
+    // give-up break leaves the path mid-column, and a close here would
+    // jump (gently-0is).
+    if !broke {
+        if let Some(d) = dodging {
+            if !ctx.occupied.contains(&(d, to)) {
+                path.push((d, to));
+            }
+        }
     }
     path
 }
