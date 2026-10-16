@@ -5,6 +5,34 @@ All notable changes to gently are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-10-16
+
+### Fixed
+
+- **Whole-corpus DOT projections render again** (gently-0is) — the
+  specodelic corpus outgrew the set verified at 0.2.2 (337 edges then,
+  1634 now), and its whole-corpus projection failed with
+  "edge enters its box through an unsupported side". Six routing
+  realizations in the layout/ascii path: wide jog lanes now push the
+  whole validated corridor instead of stitching non-adjacent pairs;
+  dodge-column returns to the walk column validate and walk the
+  corridor at the return row; the lane scan is unbounded to the grid
+  edges; west-going dodge-column closes bridge along the gap row to the
+  run's west end (no 180° turns) and give-up breaks truncate instead of
+  jumping; south walks from multi-row sources start below the span
+  bottom; and the renderer exit rule gains the west-side
+  continuation-row case. The whole corpus renders deterministically
+  (5,247 lines, byte-stable double-run); pinned oracle renders are
+  unchanged.
+- **West-going multiband routing repairs** (gently-hpd) — gap-row run
+  validation, empty-run close, and walk-connect fill for west-going
+  routes through reserved gap rows.
+
+### Changed
+
+- Specodelic pin bumped 0.7.0 → 0.10.0 (spec tooling); CI pins 0.10.0
+  with a rustfmt post-pass after artifact regeneration.
+
 ## [0.2.2] - 2026-10-16
 
 ### Fixed
