@@ -5,6 +5,18 @@ All notable changes to gently are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-10-16
+
+### Fixed
+
+- **`--help` no longer shows genesis library docs** — the flattened
+  `CliVerbosity`/`CliFormat` args structs leaked their doc comments into
+  the top of `gently --help` as mangled prose (clap flatten merges the
+  child's doc-derived help; non-verbatim rustdoc collapses to a broken
+  single-paragraph blob). Fixed upstream in genesis-vibes 0.13.2
+  (genesis-hjy); the dependency pin is bumped from 0.12.1 and `--help`
+  now leads with a one-line summary of the `--json`/`--human` flags.
+
 ## [0.2.0] - 2026-10-16
 
 Second release: DOT input wired into the CLI, a layout-capability wave
