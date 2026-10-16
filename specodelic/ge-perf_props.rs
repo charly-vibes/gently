@@ -73,10 +73,10 @@ fn p4() {
 
 proptest! {
     // id: p5
-    // generator: gently-only input sizes sweeping two orders of magnitude beyond the budget classes (raw-scaling tier)
-    // predicate: measured gently scaling stays near-linear; deviations beyond the bound are reported
+    // generator: gently-only input sizes sweeping two orders of magnitude beyond the budget classes (raw-scaling tier), each size measured as the median of five runs
+    // predicate: every sweep pair's bound is the documented scale factor × t(small) plus an absolute jitter allowance (tight in normal runs, widened under CI where runners share noisy hosts); measured gently scaling stays near-linear, and deviations beyond the bound are both reported and fail the run
     #[test]
     fn p5(v0 in spec_gen::classes()) {
-        todo_predicate!("measured gently scaling stays near-linear; deviations beyond the bound are reported");
+        todo_predicate!("every sweep pair's bound is the documented scale factor × t(small) plus an absolute jitter allowance (tight in normal runs, widened under CI where runners share noisy hosts); measured gently scaling stays near-linear, and deviations beyond the bound are both reported and fail the run");
     }
 }

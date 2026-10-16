@@ -8,6 +8,13 @@
 //! measured 1000 nodes ≈ 13 ms / 4.4 MB release), so the gates must catch
 //! order-of-magnitude regressions, not millisecond jitter.
 //!
+//! JITTER POLICY (gently-9ny): timing asserts never rest on a single
+//! measurement and never let a low small-side median shrink a
+//! multiplicative bound below machine noise. The scaling sweep (p5)
+//! measures each size as a median of five runs, and its absolute slack
+//! widens under CI, where runners share noisy hosts (a macOS runner hit a
+//! 12.93× ratio against the 12× bound with a fluke-low 13.1 ms median).
+//!
 //! HEADROOM POLICY (documented multiplier, applies to every timing assert
 //! in this module): cargo test runs debug builds in CI, and debug builds
 //! are ~20× slower than release. Every budget from the spec is therefore
@@ -34,6 +41,41 @@ const C1_BUDGET: Duration = Duration::from_millis(50);
 /// c2 budget: 2 s wall for a 1000-node/2000-edge render (release), ×20
 /// headroom here.
 const C2_BUDGET: Duration = Duration::from_secs(2);
+
+/// Absolute jitter allowance for the scaling sweep in normal runs: large
+/// enough to absorb scheduler noise around the measured baselines, small
+/// enough that an order-of-magnitude regression still trips the bound.
+const SWEEP_SLACK_LOCAL: Duration = Duration::from_millis(5);
+/// CI runners share noisy hosts (see gently-9ny), so the sweep allowance
+/// widens when `CI` is set — the multiplicative bound stays the same.
+const SWEEP_SLACK_CI: Duration = Duration::from_millis(40);
+
+/// True when the suite runs in CI (`CI` set to anything but 0/false),
+/// which widens the sweep's absolute jitter allowance.
+fn running_in_ci() -> bool {
+    match std::env::var("CI") {
+        Ok(v) => !v.is_empty() && v != "0" && v != "false",
+        Err(_) => false,
+    }
+}
+
+/// The sweep's absolute jitter allowance: tight locally, widened under CI.
+fn sweep_slack() -> Duration {
+    if running_in_ci() {
+        SWEEP_SLACK_CI
+    } else {
+        SWEEP_SLACK_LOCAL
+    }
+}
+
+#[test]
+fn sweep_slack_widens_under_ci() {
+    // gently-9ny: the CI allowance must strictly exceed the local one —
+    // widening is the whole point — and the local allowance must stay
+    // tight (it is the floor the flake fix was sized against).
+    assert!(SWEEP_SLACK_CI > SWEEP_SLACK_LOCAL);
+    assert_eq!(SWEEP_SLACK_LOCAL, Duration::from_millis(5));
+}
 
 /// Build a chain-class graph with `nodes` nodes and `edges` edges
 /// (a0 -> a1 -> ... — the k4u measurement class).
@@ -226,15 +268,20 @@ fn p4() {
 /// today's code) but below the 16× quadratic floor (so a regression to
 /// upstream-style O(n²) DOES trip it). Every sweep ratio is printed
 /// (the c5 "reported" clause) and ratios beyond the bound fail the run.
-/// Each size is measured three times; the median damps scheduler jitter.
+/// Each size is measured five times (median damps scheduler jitter) and
+/// the multiplicative bound carries an absolute jitter allowance —
+/// 5 ms locally, 40 ms under CI (gently-9ny) — so a fluke-low small-side
+/// median can no longer shrink the bound below machine noise (the CI
+/// flake: 12.93× measured vs the 12× bound, passed 40 min earlier and on
+/// job rerun with identical code).
 #[test]
 fn p5() {
-    /// Median of three runs for one size class (pure chain: n nodes,
+    /// Median of five runs for one size class (pure chain: n nodes,
     /// n-1 edges — the k4u measurement class for near-linear scaling).
     fn median_time(nodes: usize) -> Duration {
         let src = round_trip_source(nodes, nodes - 1);
         let mut runs: Vec<Duration> = Vec::new();
-        for _ in 0..3 {
+        for _ in 0..5 {
             let start = Instant::now();
             let g = text::parse(&src).expect("fixture must parse");
             let l = layout::layout(&g);
@@ -243,11 +290,10 @@ fn p5() {
             runs.push(start.elapsed());
         }
         runs.sort();
-        runs[1]
+        runs[2] // median of five
     }
 
     const SCALE_FACTOR: f64 = 12.0; // documented bound: t(4n) ≤ 12×t(n); see module doc
-    const ABSOLUTE_SLACK: Duration = Duration::from_millis(5);
 
     let t100 = median_time(100);
     let t400 = median_time(400);
@@ -260,10 +306,11 @@ fn p5() {
             "p5 sweep: t({small})={ts:?} t({large})={tl:?} ratio={:.2}",
             tl.as_secs_f64() / ts.as_secs_f64()
         );
-        let bound = ts.mul_f64(SCALE_FACTOR) + ABSOLUTE_SLACK;
+        let bound = ts.mul_f64(SCALE_FACTOR) + sweep_slack();
         assert!(
             tl <= bound,
-            "scaling regression: t({large}) = {tl:?} exceeds {SCALE_FACTOR}×t({small}) + slack = {bound:?} (t({small}) = {ts:?})"
+            "scaling regression: t({large}) = {tl:?} exceeds {SCALE_FACTOR}×t({small}) + slack = {bound:?} (t({small}) = {ts:?}; slack mode: {})"
+            , if running_in_ci() { "CI" } else { "local" }
         );
     }
 }
