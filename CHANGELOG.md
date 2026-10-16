@@ -5,6 +5,50 @@ All notable changes to gently are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-10-16
+
+Second release: DOT input wired into the CLI, a layout-capability wave
+(fan placement, indexed ports, multi-row stacking, grid-cell spans), and
+the decision-trace spec corpus.
+
+### Added
+
+- **CLI accepts DOT input** — the DOT parser is wired into the CLI input
+  path; a bare scope nested in a named subgraph joins the enclosing named
+  group (gently-cij, gently-fb1).
+- **Layout capability wave** — upstream's fan placement engine for the
+  fan-in star (gently-a6g); indexed front/back port slots route, grow,
+  and label byte-exactly (gently-byq); parallel channels stack as rows
+  through multi-row boxes (gently-awd); `size: W,H` as a virtual
+  attribute deriving columns/rows with txt emitting the merged size form
+  (gently-awd slice 1); nodes occupy their grid-cell span via
+  size/rows/columns spans (gently-awd); fan-stack vertical walks jog
+  around occupied band rows (gently-4ga).
+- **Decision-trace corpus** — D1–D4 hardened spec + contracts
+  (gently-i6a); `trace.rs` promoted to the D1 layer with versioned stage
+  vocabulary (gently-p7y); trace-diff minimal-antichain driver + EXCL-001
+  corpus property (gently-9nn).
+- **Repro tooling** — corpus-wide oracle dump mode with a tier-2
+  admission guard (gently-h1b); oracle `_prepare_layout` dump pilot
+  (gently-8je); env-gated decision-trace prototype + E1 driver
+  (gently-asc).
+- **CLI fail-fast guard** — terminal stdin with no file argument fails
+  fast with a diagnostic naming stdin and the input file instead of
+  blocking on an interactive read (gently-in2).
+
+### Fixed
+
+- **Pre-push cargo-gate hang under lefthook** — the pipeline unit test
+  read the process's global stdin to EOF, which is an open TTY when run
+  via `git push`; the reader is now injected so tests are hermetic
+  (gently-ktv).
+- BSD-compatible `script` invocation in the cli.p9 pty test for macOS
+  runners.
+- bd pre-push hook closes stdin (bd blocks waiting for EOF on the pipe
+  git/lefthook keeps open); spec-drift-gate failure output names the
+  remedy (gently-cgw).
+- Restored the cli.p9 integration test lost from an earlier rebase.
+
 ## [Unreleased]
 
 ## [0.1.0] - 2026-10-13
