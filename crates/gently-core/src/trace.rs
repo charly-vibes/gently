@@ -19,9 +19,11 @@
 //! those landing sites; do NOT refactor distant code to create emission
 //! points.
 
+use std::cell::RefCell;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
 /// The trace schema version (c1: versioned from day one).
 pub const VERSION: u32 = 1;
@@ -48,11 +50,39 @@ pub const STAGES: [&str; 10] = [
     "render.route",
 ];
 
-/// Whether the given stage is named by `GENTLY_TRACE` (c1 gating).
+thread_local! {
+    /// Test seam: when set, overrides the env gate on this thread only.
+    /// Parallel integration tests mutating the process-global
+    /// GENTLY_TRACE/GENTLY_TRACE_FILE raced each other's emissions (the
+    /// windows-latest CI flake in decision_trace::p1); a thread-local
+    /// override isolates each test thread while the env path stays the
+    /// real, spec'd behavior for ordinary processes.
+    static GATE_OVERRIDE: RefCell<Option<(Option<String>, Option<PathBuf>)>> =
+        const { RefCell::new(None) };
+}
+
+/// Set the thread-local gate override: `stage` replaces GENTLY_TRACE,
+/// `file` replaces GENTLY_TRACE_FILE, each `None` meaning "treat as
+/// unset". Dies with the thread — no cleanup needed. Test seam only
+/// (`#[doc(hidden)]`); production gating stays env-driven (c1).
+#[doc(hidden)]
+pub fn set_test_gate(stage: Option<&str>, file: Option<&Path>) {
+    GATE_OVERRIDE.with(|g| {
+        *g.borrow_mut() = Some((stage.map(|s| s.to_string()), file.map(|f| f.to_path_buf())));
+    });
+}
+
+/// Whether the given stage is named by `GENTLY_TRACE` (c1 gating), or by
+/// the thread-local test override when that is set.
 pub fn enabled(stage: &str) -> bool {
-    env::var("GENTLY_TRACE")
-        .map(|v| v == stage)
-        .unwrap_or(false)
+    GATE_OVERRIDE.with(|g| {
+        if let Some((stage_override, _)) = &*g.borrow() {
+            return stage_override.as_deref() == Some(stage);
+        }
+        env::var("GENTLY_TRACE")
+            .map(|v| v == stage)
+            .unwrap_or(false)
+    })
 }
 
 /// Append one trace line for an enabled stage. The line carries the
@@ -64,15 +94,27 @@ pub fn emit(stage: &str, event: &str) {
         return;
     }
     let line = format!("dt v{VERSION} stage={stage} spec={SPEC_ID} {event}\n");
-    match env::var("GENTLY_TRACE_FILE") {
-        Ok(f) => {
+    let file_override = GATE_OVERRIDE.with(|g| {
+        let g = g.borrow();
+        g.as_ref()
+            .and_then(|(_, f)| f.as_ref().map(|p| p.to_string_lossy().into_owned()))
+    });
+    match file_override {
+        Some(f) => {
             if let Ok(mut out) = OpenOptions::new().create(true).append(true).open(&f) {
                 let _ = out.write_all(line.as_bytes());
             }
         }
-        Err(_) => {
-            let _ = std::io::stderr().write_all(line.as_bytes());
-        }
+        None => match env::var("GENTLY_TRACE_FILE") {
+            Ok(f) => {
+                if let Ok(mut out) = OpenOptions::new().create(true).append(true).open(&f) {
+                    let _ = out.write_all(line.as_bytes());
+                }
+            }
+            Err(_) => {
+                let _ = std::io::stderr().write_all(line.as_bytes());
+            }
+        },
     }
 }
 

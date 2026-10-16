@@ -366,13 +366,11 @@ fn trace_file(tag: &str) -> std::path::PathBuf {
 }
 
 fn set_gate(stage: &str, file: &std::path::Path) {
-    std::env::set_var("GENTLY_TRACE", stage);
-    std::env::set_var("GENTLY_TRACE_FILE", file);
+    gently_core::trace::set_test_gate(Some(stage), Some(file));
 }
 
 fn clear_gate() {
-    std::env::remove_var("GENTLY_TRACE");
-    std::env::remove_var("GENTLY_TRACE_FILE");
+    gently_core::trace::set_test_gate(None, None);
 }
 
 /// decision.trace.p1 (specs/decision-trace.md p1, deriving from c1):
@@ -382,14 +380,15 @@ fn clear_gate() {
 fn p1() {
     let graph = Graph::tracer();
 
-    // Regression arm: with GENTLY_TRACE unset, emission is a no-op — even
-    // with GENTLY_TRACE_FILE pointed at a fresh path, no bytes appear
+    // Regression arm: with the gate unset, emission is a no-op — even
+    // with a file pointed at a fresh path, no bytes appear
     // (byte-identical corpus stays pinned by the existing corpus tests).
     clear_gate();
     let off = trace_file("off");
     std::fs::remove_file(&off).ok();
-    set_gate("", &off);
-    std::env::remove_var("GENTLY_TRACE");
+    // stage=None models "GENTLY_TRACE unset" while the file arm stays
+    // pointed — the exact p1 regression shape.
+    gently_core::trace::set_test_gate(None, Some(&off));
     let _ = layout::layout(&graph);
     assert!(
         !off.exists(),
@@ -666,8 +665,11 @@ fn excl001() {
 fn run_traced(tag: &str, source: &str, stage: &str) -> (String, String) {
     let file = std::env::temp_dir().join(format!("gently-dt-p3-{tag}.trace"));
     std::fs::remove_file(&file).ok();
-    std::env::set_var("GENTLY_TRACE", stage);
-    std::env::set_var("GENTLY_TRACE_FILE", &file);
+    // Thread-local gate override, never the process-global env: 145
+    // sibling tests run layout concurrently and the env is shared state
+    // (the windows-latest CI flake). Each test thread sees only its own
+    // gate; the env path stays covered by the env_smoke test below.
+    gently_core::trace::set_test_gate(Some(stage), Some(&file));
     let traced = || -> (String, String) {
         let graph = match gently_core::parse::text::parse(source) {
             Ok(g) => g,
@@ -678,10 +680,39 @@ fn run_traced(tag: &str, source: &str, stage: &str) -> (String, String) {
         let trace = std::fs::read_to_string(&file).unwrap_or_default();
         (bytes, trace)
     }();
-    std::env::remove_var("GENTLY_TRACE");
-    std::env::remove_var("GENTLY_TRACE_FILE");
+    gently_core::trace::set_test_gate(None, None);
     std::fs::remove_file(&file).ok();
     traced
+}
+
+/// The real env path (c1) exercised without racing parallel siblings:
+/// the gate stage is set on the real env while this thread runs layout,
+/// and the assertions only pin schema shape (version + spec id), never
+/// the stage name — a concurrent sibling's layout emitting into the
+/// unique temp file appends valid lines we happily accept. No other test
+/// touches the env, and `gently-dt-env-smoke` is not an emitted stage
+/// name, so no sibling can be polluted by this window.
+#[test]
+fn env_smoke() {
+    let file =
+        std::env::temp_dir().join(format!("gently-dt-env-smoke-{}.trace", std::process::id()));
+    std::fs::remove_file(&file).ok();
+    std::env::set_var("GENTLY_TRACE", "layout.place");
+    std::env::set_var("GENTLY_TRACE_FILE", &file);
+    let graph = Graph::tracer();
+    let _ = layout::layout(&graph);
+    std::env::remove_var("GENTLY_TRACE");
+    std::env::remove_var("GENTLY_TRACE_FILE");
+    let text = std::fs::read_to_string(&file).expect("env-gated emission writes the file");
+    let lines: Vec<&str> = text.lines().filter(|l| !l.is_empty()).collect();
+    assert!(!lines.is_empty(), "env gate must enable emission");
+    for line in lines {
+        assert!(
+            line.contains("dt v") && line.contains("spec=decision.trace"),
+            "env-path event lacks the schema shape: {line:?}"
+        );
+    }
+    std::fs::remove_file(&file).ok();
 }
 
 /// Extract a probe body from probes.pl. Two committed forms:
