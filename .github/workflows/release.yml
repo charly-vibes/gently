@@ -45,8 +45,12 @@ jobs:
             exit 1
           }
 
+      # `already exists on crates.io index` is a no-op, not a failure:
+      # publishing may have happened manually or on a re-run (v0.2.1 hit
+      # exactly this).
       - name: Publish gently-core
-        run: cargo publish -p gently-core
+        run: |
+          out=$(cargo publish -p gently-core 2>&1) || echo "$out" | grep -q "already exists"
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
@@ -54,6 +58,6 @@ jobs:
       - name: Publish gently-cli
         run: |
           sleep 15
-          cargo publish -p gently-cli
+          out=$(cargo publish -p gently-cli 2>&1) || echo "$out" | grep -q "already exists"
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
