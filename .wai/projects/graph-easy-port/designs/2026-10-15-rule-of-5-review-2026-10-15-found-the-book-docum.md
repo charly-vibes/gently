@@ -1,0 +1,2 @@
+Rule-of-5 review (2026-10-15) found the book documented the verification process more than the product. Moved bead IDs, spec-row citations, resolved-work narration and the example-publishing recipe out of user-facing pages into .wai/resources/maintainer-docs/ (compatibility-history.md, contributing-examples.md). known-hard-cases.md re-keyed by user-visible trigger; gallery/examples provenance stated once.
+
