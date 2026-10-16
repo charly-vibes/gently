@@ -207,6 +207,12 @@ fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderE
         }
     } else if first.0 >= sc + span_c && first.1 > sr && first.1 < sr + ctx.span_s.1.max(1) {
         Ok(Dir::East)
+    } else if first.0 < sc && first.1 > sr && first.1 < sr + ctx.span_s.1.max(1) {
+        // The span's WEST side on a continuation row (gently-0is, the
+        // exit mirror of the entry's west-side rule, gently-206): the
+        // corpus's straight gap cell rides the source's span rows west
+        // of the node — moving east into the source's west face.
+        Ok(Dir::West)
     } else if first.0 >= sc && first.0 < sc + span_c {
         Ok(if first.1 < sr { Dir::North } else { Dir::South })
     } else {

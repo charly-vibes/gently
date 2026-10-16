@@ -602,6 +602,87 @@ fn bend_path(
 /// Both vertical walks jog east around band rows occupied by a stacked
 /// node (gently-4ga) — the gap-only walk jumped the occupied band row
 /// between two reserved gap rows, rendering non-adjacent paths.
+/// Complete a west-going multiband path: bridge the `walk_column`
+/// result onto the run row and append the westward run.
+///
+/// The walk can end three ways. (a) Un-dodged, one row short of the run
+/// row at the walk column — the run's first cell `(gu0, g)` is adjacent;
+/// append the run (or close the empty run at the source column, the
+/// target's east face lying east of the source, gently-hpd edge 33).
+/// (b) Dodged, the terminal close landed ON the run row at the dodge
+/// column — walk the corridor across to the run's start column (gap
+/// rows hold no node cells, so this is free; validated anyway, gently-0is)
+/// and append the run skipping its duplicated first cell. (c) The
+/// give-up break stopped the walk mid-column — appending the far-away
+/// run would stitch a non-adjacent jump, so return `None`: the caller
+/// tries the next candidate, and a last resort truncates (the renderer
+/// reports the shape as a typed error).
+fn west_run_path(gu: Cell, span_cy: usize, run: &[Cell], g: usize, ctx: &Ctx) -> Option<Vec<Cell>> {
+    let gu0 = gu.0;
+    let mut path = walk_column(gu0, walk_from(gu.1, span_cy, g), g, ctx);
+    let Some(&(dc, dr)) = path.last() else {
+        // The walk range is empty: the run row is adjacent to the
+        // source band, so the run's first cell is adjacent to the
+        // source's attachment (gently-0is: edge 68 rendered fine before
+        // the helper — replicate that shape).
+        if run.is_empty() {
+            if !ctx.occupied.contains(&(gu0, g)) {
+                path.push((gu0, g));
+            }
+            return Some(path);
+        }
+        path.extend(run.iter().copied());
+        return Some(path);
+    };
+    if dr == g {
+        // Dodge-column close on the run row. Bridging east to the
+        // source column and then running back west would 180°-turn on
+        // the spot (gently-0is: edge 1603) — instead continue ALONG
+        // the run row toward the run's west end (the target's east-face
+        // entry cell). The gap row holds no node cells, so the travel
+        // is free whatever the dodge column; cells east of the close
+        // are simply not drawn (any valid route is fine at this tier).
+        match run.last() {
+            Some(&(west_end, _)) => {
+                if dc > west_end {
+                    path.extend((west_end..dc).rev().map(|c| (c, g)));
+                } else if dc < west_end {
+                    path.extend((dc + 1..=west_end).map(|c| (c, g)));
+                }
+                Some(path)
+            }
+            None => {
+                // Empty run (the target's east face lies east of the
+                // source, gently-hpd edge 33): bridge the corridor to
+                // the source column — the path ends there, so no
+                // 180° can follow.
+                if dc != gu0 {
+                    let lo = dc.min(gu0);
+                    let hi = dc.max(gu0);
+                    if !(lo..=hi).all(|c| !ctx.occupied.contains(&(c, g))) {
+                        return None;
+                    }
+                    push_corridor(&mut path, dc, gu0, g);
+                }
+                Some(path)
+            }
+        }
+    } else if dr.abs_diff(g) == 1 && dc == gu0 {
+        // Un-dodged end one row off the run row at the walk column.
+        if run.is_empty() {
+            if !ctx.occupied.contains(&(gu0, g)) {
+                path.push((gu0, g));
+            }
+            return Some(path);
+        }
+        path.extend(run.iter().copied());
+        Some(path)
+    } else {
+        // The give-up break stopped the walk short of the run row.
+        None
+    }
+}
+
 fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
     let (su, sv) = (ep.su, ep.sv);
     let (gu, gv) = (ep.gu, ep.gv);
@@ -635,29 +716,21 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
                 primary = Some(g);
             }
             if run.iter().all(|&c| !ctx.occupied.contains(&c)) {
-                let mut path = walk_column(gu.0, gu.1, g, ctx);
-                if run.is_empty() {
-                    // The target's east face can lie EAST of the source
-                    // (the source sits below the target's own column
-                    // span — gently-hpd edge 33): the westward run is
-                    // then EMPTY, and the walk (exclusive of its
-                    // endpoint) ends one row short of the gap row with
-                    // nothing bridging it. Close the final cell at the
-                    // source column so the path abuts the target's face.
-                    if !ctx.occupied.contains(&(gu.0, g)) {
-                        path.push((gu.0, g));
-                    }
-                } else {
-                    path.extend(run);
+                if let Some(path) = west_run_path(gu, span_u.1, &run, g, ctx) {
+                    return path;
                 }
-                return path;
+                // The walk gave up short of this run row: fall through
+                // to the next candidate (gently-0is).
             }
         }
         return match primary {
             Some(g) => {
-                let mut path = walk_column(gu.0, gu.1, g, ctx);
-                path.extend((gv.0 + span_v.0 - 1..=gu.0).rev().map(|c| (c, g)));
-                path
+                let run: Vec<Cell> = ((gv.0 + span_v.0 - 1)..=gu.0)
+                    .rev()
+                    .map(|c| (c, g))
+                    .collect();
+                west_run_path(gu, span_u.1, &run, g, ctx)
+                    .unwrap_or_else(|| walk_column(gu.0, walk_from(gu.1, span_u.1, g), g, ctx))
             }
             None => {
                 // Span-hosted attachment (gently-n0d): no gap row exists
@@ -668,9 +741,47 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
                 // row, then west into the target's east face — the run
                 // stops one column east of the face, so no node cell is
                 // entered and the last path cell abuts the span.
-                let mut path = walk_column(gu.0, gu.1, gv.1, ctx);
-                path.push((gu.0, gv.1));
+                let mut path = walk_column(gu.0, walk_from(gu.1, span_u.1, gv.1), gv.1, ctx);
                 let east_face = gv.0 + span_v.0;
+                let dodge_closed =
+                    matches!(path.last(), Some(&(dc, dr)) if dr == gv.1 && dc != gu.0);
+                if dodge_closed {
+                    // Dodge-column close on the band row: continue ALONG
+                    // the band row to the run's west end (east_face, the
+                    // cell abutting the target's east border). Bridging
+                    // east to the source column and running back west
+                    // would 180°-turn (gently-0is: edge 1603). The band
+                    // row can hold the target's own cells — validate the
+                    // corridor and truncate rather than jump.
+                    let Some(&(dc, _)) = path.last() else {
+                        return path;
+                    };
+                    let (lo, hi) = if dc > east_face {
+                        (east_face, dc)
+                    } else {
+                        (dc, east_face)
+                    };
+                    if !(lo..=hi).all(|c| !ctx.occupied.contains(&(c, gv.1))) {
+                        return path; // corridor blocked: truncate
+                    }
+                    if dc > east_face {
+                        path.extend((east_face..dc).rev().map(|c| (c, gv.1)));
+                    } else {
+                        path.extend((dc + 1..=east_face).map(|c| (c, gv.1)));
+                    }
+                    return path;
+                }
+                match path.last() {
+                    Some(&(dc, dr)) if dr.abs_diff(gv.1) == 1 && dc == gu.0 => {
+                        // The walk is one row short of the band row:
+                        // close the final cell at the source column so
+                        // the path abuts the target's face.
+                        if !ctx.occupied.contains(&(gu.0, gv.1)) {
+                            path.push((gu.0, gv.1));
+                        }
+                    }
+                    _ => return path, // gave up: truncate, never jump
+                }
                 path.extend((east_face..gu.0).rev().map(|c| (c, gv.1)));
                 path
             }
@@ -712,7 +823,18 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
     } else {
         gv.1
     };
-    path.extend(walk_column(walk_col, gu.1, face, ctx));
+    // A walk down the source's OWN column must start below the
+    // source's row span — the band row is the span's top row, and the
+    // span's cells would force a jog with no lane at the grid's west
+    // edge (gently-0is: edge 68). Walks from columns east of the span
+    // (the advanced walk_col) keep the band row — the span is not in
+    // their way, and the pinned tier-1 shapes start there.
+    let from = if walk_col >= gu.0 && walk_col < gu.0 + span_u.0 {
+        walk_from(gu.1, span_u.1, face)
+    } else {
+        gu.1
+    };
+    path.extend(walk_column(walk_col, from, face, ctx));
     if walk_col != gv.0 {
         // The walk ended short of the target's column: run east (or
         // west) along the face-adjacent row into the target's column,
@@ -783,6 +905,39 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
     path
 }
 
+/// Push the horizontal corridor between two columns at one row: every
+/// column strictly between the current column and the target, plus the
+/// target itself. A WIDE jog lane (k > 1) validated by `walk_column`'s
+/// `lanes` skips intermediate columns — without this run the path
+/// stitched non-adjacent pairs at every wide jog (gently-0is: edges
+/// 0/1/7 of the whole-corpus projection). The lane's validation already
+/// checked the whole corridor free at that row; callers bridging onto a
+/// row without that validation must check the corridor themselves.
+/// The first row a south-going vertical walk may occupy: below the
+/// source's own row span (the band row is the span's TOP row, so the
+/// span's cells sit between the band row and the walk's far row).
+/// Walking from the band row would jog around the source's own cells —
+/// and at the grid's west edge there is no lane to jog to, so the walk
+/// breaks empty (gently-0is: edge 68, a same-column south edge from a
+/// 3-row source at column 0). Only a walk whose far row lies strictly
+/// below the span is adjusted; a rider inside the span keeps the band
+/// row (the pinned tier-1 shapes).
+fn walk_from(from: usize, span_cy: usize, to: usize) -> usize {
+    if to > from && to >= from + span_cy.max(1) {
+        from + span_cy.max(1) - 1
+    } else {
+        from
+    }
+}
+
+fn push_corridor(path: &mut Vec<Cell>, from_col: usize, to_col: usize, row: usize) {
+    if to_col > from_col {
+        path.extend((from_col + 1..=to_col).map(|c| (c, row)));
+    } else if to_col < from_col {
+        path.extend((to_col..from_col).rev().map(|c| (c, row)));
+    }
+}
+
 /// Walk one column between two grid rows (exclusive of both), jogging
 /// east around rows occupied by a node (gently-4ga): when the walked
 /// column's cell is taken, the path shifts to the free gap column east
@@ -813,8 +968,11 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
         // grown spans can wall off several columns (gently-0is). A wider
         // lane is valid only when the whole horizontal corridor at BOTH
         // rows is free: the path walks from (from_col, prev) to (d, prev)
-        // through every column between.
-        (1..=3usize).find_map(|k| {
+        // through every column between. The scan is unbounded (to the
+        // grid edges): a corpus-scale wall can exceed any fixed lane
+        // count, and the corridor check keeps every wider candidate
+        // honest (gently-0is: the whole-corpus projection's row 99).
+        (1..=ctx.max_x + 1).find_map(|k| {
             let east = from_col.checked_add(k).filter(|&d| d <= ctx.max_x);
             let west = from_col.checked_sub(k);
             [east, west].into_iter().flatten().find(|&d| {
@@ -833,7 +991,7 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
                 let prev = path.last().map_or(from, |&(_, y)| y);
                 match lanes(col, prev, r, ctx) {
                     Some(d) => {
-                        path.push((d, prev));
+                        push_corridor(&mut path, col, d, prev);
                         path.push((d, r));
                         dodging = Some(d);
                     }
@@ -853,7 +1011,7 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
                     let prev = path.last().map_or(from, |&(_, y)| y);
                     match lanes(d, prev, r, ctx) {
                         Some(d2) if d2 != col || !ctx.occupied.contains(&(col, r)) => {
-                            path.push((d2, prev));
+                            push_corridor(&mut path, d, d2, prev);
                             path.push((d2, r));
                             dodging = Some(d2);
                         }
@@ -879,8 +1037,21 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
                     .get(i + 1)
                     .is_some_and(|&nr| ctx.occupied.contains(&(col, nr)));
                 if !next_blocked {
-                    path.push((col, r));
-                    dodging = None;
+                    // The return run crosses back through the corridor
+                    // between the dodge column and the walk column. A
+                    // WIDE lane (k > 1) has intermediate columns — they
+                    // must be pushed, and they must be free AT THIS ROW
+                    // (the lane's validation covered only the jog-start
+                    // row; a grown span can wall the corridor off down
+                    // the walk — gently-0is: the (1,63)->(4,63) stitch).
+                    // A blocked corridor keeps the walk in the dodge
+                    // column; the return is retried on a later free row.
+                    let lo = d.min(col);
+                    let hi = d.max(col);
+                    if (lo..=hi).all(|c| !ctx.occupied.contains(&(c, r))) {
+                        push_corridor(&mut path, d, col, r);
+                        dodging = None;
+                    }
                 }
             }
             (false, None) => path.push((col, r)),
