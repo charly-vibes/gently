@@ -243,3 +243,7 @@
   - Rebased onto origin (concurrent lane had pushed 754b1b3 gcp close); note the carried commit 32e7653 has a mislabeled message ('beads: close gently-gcp' but contains the corpus fixture + p2 RED test — inherited bundling from the prior session's db409c8, content complete).
   - Remaining open: gently-9ny (P3 ge_perf::p5 CI-flaky — needs a spec delta on ge.perf c5, not a silent threshold bump).
   - **Next:** /clear then /renew -> gently-9ny spec delta, or idle.
+- 2026-10-16T20:25:48Z [id:98b93bdaa6f52579d7cdec21908f6e5e0d45e7fe42f4521de0e9e3c1b4fcc19a] ### 2026-10-16 (evening) — snap
+  - gently-9ny CLOSED + pushed (18bcf71, origin in sync): ge_perf::p5 scaling gate hardened against CI noise. ge.perf c5 re-derived + p5 predicate amended (spec delta, same-commit mirror + specodelic artifacts + rustfmt post-pass). Fix: median of FIVE runs per size class (median index 1->2), CI-aware absolute slack (5 ms local / 40 ms under CI env), SCALE_FACTOR=12 unchanged so order-of-magnitude regressions still trip. New sweep_slack_widens_under_ci unit check. Verified both modes: ge_perf green local + CI=true; ah check --run-tests 88 passed 0 findings; clippy/fmt/spk lint clean.
+  - Also this session: whispered 0is close snap committed (0391b47).
+  - Board is now CLEAR (0 open beads). 0.2.3 release pending: routing fixes accumulated since v0.2.2 (gently-0is corpus-scale + gently-hpd west-multiband + specodelic 0.10.0 pin). Next: /renew -> cut 0.2.3 (bump workspace Cargo.toml + CHANGELOG + tag v0.2.3; tag push needs explicit user authorization).
