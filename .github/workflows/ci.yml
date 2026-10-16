@@ -4,7 +4,7 @@
 # (ddl standard, mirrors the specodelic ci.yml pattern). If CI fails,
 # run `just ci` locally to reproduce the issue.
 #
-# Ecosystem tools are installed pinned (specodelic 0.7.0 = Revision 18,
+# Ecosystem tools are installed pinned (specodelic 0.10.0 = Revision 18,
 # espectacular 0.9.3 = .espectacular/config.toml tool_version) and
 # smoke-dogfooded: installed tools must run, not just install.
 # The ubuntu leg runs the full pipeline; macOS/Windows legs run
@@ -45,7 +45,7 @@ jobs:
         uses: extractions/setup-just@v2
 
       - name: Install ecosystem tools (pinned)
-        run: cargo install --locked specodelic@0.7.0 espectacular@0.9.3
+        run: cargo install --locked specodelic@0.10.0 espectacular@0.9.3
 
       - name: Smoke dogfooded tools
         run: |

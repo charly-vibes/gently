@@ -65,7 +65,9 @@ pre-push:
       run: ah check
     # ddl:managed:end (pre-push)
     specodelic-compile:
-      run: specodelic compile specs --human && specodelic model-check specs --human
+      # rustfmt post-pass: generated *_props.rs is not fmt-clean
+      # (specodelic#15); without it the corpus churns dirty on every push.
+      run: specodelic compile specs --human && specodelic model-check specs --human && rustfmt --edition 2021 specodelic/*.rs
       skip:
         - merge
         - rebase

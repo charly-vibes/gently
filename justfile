@@ -11,9 +11,12 @@ lint:
     specodelic lint --human
 
 # Compile + model-check the spec corpus (pre-push equivalent)
+# rustfmt post-pass: generated *_props.rs is not fmt-clean (specodelic#15);
+# without it the corpus churns dirty after every regen.
 gates:
     specodelic compile specs --human
     specodelic model-check specs --human
+    rustfmt --edition 2021 specodelic/*.rs
 
 # === Build Commands ===
 
