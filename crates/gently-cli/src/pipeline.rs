@@ -14,7 +14,7 @@
 //! upstream writing nothing to stdout when a file receives the bytes.
 
 use std::fmt;
-use std::io::{IsTerminal, Read};
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 use genesis::guide::{Guide, Output, OutputFormat};
@@ -381,15 +381,24 @@ pub fn resolve_format(cli: &Cli, output_path: Option<&Path>) -> String {
 /// names the output file, further positionals are ignored, so only the
 /// first is ever parsed).
 fn read_source(cli: &Cli) -> Result<String, CliError> {
-    read_source_impl(cli, std::io::stdin().is_terminal())
+    let stdin = std::io::stdin();
+    read_source_impl(cli, stdin.is_terminal(), &mut stdin.lock())
 }
 
-/// The source read with the stdin kind injected so the interactive guard is
-/// unit-testable: a terminal stdin with no file argument fails fast (c1
-/// guard for gently-in2 — the upstream oracle is always exercised with
-/// piped stdin, so this deviates from upstream only where upstream would
-/// block forever on an interactive prompt).
-fn read_source_impl(cli: &Cli, stdin_is_terminal: bool) -> Result<String, CliError> {
+/// The source read with the stdin kind and the reader both injected so the
+/// unit tests are hermetic: a terminal stdin with no file argument fails
+/// fast (c1 guard for gently-in2 — the upstream oracle is always exercised
+/// with piped stdin, so this deviates from upstream only where upstream
+/// would block forever on an interactive prompt), and the piped path reads
+/// the supplied reader instead of the process's global stdin. Injecting the
+/// reader matters because under lefthook/git push the hook's stdin is the
+/// open controlling terminal, so a global-stdin read blocks the test suite
+/// forever (beads gently-ktv).
+fn read_source_impl(
+    cli: &Cli,
+    stdin_is_terminal: bool,
+    stdin: &mut dyn std::io::Read,
+) -> Result<String, CliError> {
     let Some(file) = cli.files.first() else {
         if stdin_is_terminal {
             return Err(CliError(
@@ -398,7 +407,7 @@ fn read_source_impl(cli: &Cli, stdin_is_terminal: bool) -> Result<String, CliErr
             ));
         }
         let mut buf = String::new();
-        std::io::stdin()
+        stdin
             .read_to_string(&mut buf)
             .map_err(|e| CliError(format!("cannot read stdin: {e}")))?;
         return Ok(buf);
@@ -425,16 +434,31 @@ mod tests {
     #[test]
     fn terminal_stdin_without_file_fails_fast() {
         let cli = cli_with(&[]);
-        let err = read_source_impl(&cli, true).expect_err("must not block on a TTY");
+        let mut stdin = std::io::empty();
+        let err = read_source_impl(&cli, true, &mut stdin).expect_err("must not block on a TTY");
         assert!(err.to_string().contains("stdin is a terminal"));
         assert!(err.to_string().contains("input file"));
     }
 
-    /// The piped path is unchanged: non-terminal stdin is read (cli.c1).
+    /// The piped path is unchanged: non-terminal stdin is read (cli.c1) —
+    /// from the injected reader, never the process's global stdin, which
+    /// under lefthook/git push is the open controlling terminal and would
+    /// hang the suite (beads gently-ktv).
     #[test]
     fn piped_stdin_still_read_when_not_terminal() {
         let cli = cli_with(&[]);
-        let source = read_source_impl(&cli, false).expect("piped stdin reads");
+        let mut stdin = std::io::Cursor::new(b"[ a ] --> [ b ]\n".to_vec());
+        let source = read_source_impl(&cli, false, &mut stdin).expect("piped stdin reads");
+        assert_eq!(source, "[ a ] --> [ b ]\n");
+    }
+
+    /// The piped path reads the reader to EOF: an empty reader yields the
+    /// empty graph (cli.c1 edge), without touching the global stdin.
+    #[test]
+    fn piped_empty_stdin_renders_empty() {
+        let cli = cli_with(&[]);
+        let mut stdin = std::io::empty();
+        let source = read_source_impl(&cli, false, &mut stdin).expect("empty pipe reads");
         assert_eq!(source, "");
     }
 }
