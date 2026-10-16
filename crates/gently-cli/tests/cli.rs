@@ -94,10 +94,17 @@ mod scenarios {
             // Terminal stdin: run the binary under a pty via `script` so
             // IsTerminal holds. Skipped silently when `script` is absent
             // (non-POSIX CI runners).
+            // GNU script (Linux) needs -c to set the command and -e to
+            // propagate the child's exit status; BSD script (macOS) has
+            // neither flag — `script -q file cmd` runs cmd under a pty
+            // and returns the child's status natively.
+            let script_argv: [&str; 3] = if cfg!(target_os = "macos") {
+                ["-q", "/dev/null", env!("CARGO_BIN_EXE_gently")]
+            } else {
+                ["-qec", env!("CARGO_BIN_EXE_gently"), "/dev/null"]
+            };
             let ok = Command::new("script")
-                .arg("-qec")
-                .arg(env!("CARGO_BIN_EXE_gently"))
-                .arg("/dev/null")
+                .args(script_argv)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .stdin(Stdio::null())
