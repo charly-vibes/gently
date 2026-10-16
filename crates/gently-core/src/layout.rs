@@ -451,8 +451,13 @@ pub fn layout(graph: &Graph) -> Layout {
 
 /// The label cell of each edge: the middle cell of its routed path when
 /// the edge carries a `label` (per-edge attribute, falling back to the
-/// base edge class), `None` otherwise (ge.layout.c4). Paths are
-/// non-empty for every routed edge, so the middle cell always exists.
+/// base edge class), `None` otherwise (ge.layout.c4). A routed edge's
+/// path is EXPECTED to be non-empty (c4 routes every edge), but the
+/// fan-star shapes at larger fan counts historically realized zero-cell
+/// paths (gently-n0d) — a labelled edge with an empty path contributes
+/// no label cell instead of underflowing on `path[(path.len()-1)/2]`;
+/// the renderer's own empty-path guard then reports the shape as a
+/// typed render error, never a panic.
 fn label_cells(graph: &Graph, edge_paths: &[Vec<Cell>]) -> Vec<Option<Cell>> {
     graph
         .edges
@@ -465,12 +470,23 @@ fn label_cells(graph: &Graph, edge_paths: &[Vec<Cell>]) -> Vec<Option<Cell>> {
                     .is_some();
             if labelled {
                 let path = &edge_paths[ei];
-                Some(path[(path.len() - 1) / 2])
+                non_empty_mid(path)
             } else {
                 None
             }
         })
         .collect()
+}
+
+/// The middle cell of a non-empty path; `None` when the path is empty
+/// (the c4 route contract should make this unreachable — it is the
+/// gentle degradation floor, not a designed state).
+fn non_empty_mid(path: &[Cell]) -> Option<Cell> {
+    if path.is_empty() {
+        None
+    } else {
+        Some(path[(path.len() - 1) / 2])
+    }
 }
 
 /// The label cell of each slot-routed edge (gently-byq): the ARROW-END

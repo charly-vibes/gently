@@ -230,6 +230,12 @@ fn entry_dir(ctx: &Ctx, last: Cell) -> Result<(Dir, char), RenderError> {
         // the slot's continuation row (gently-byq): moving west into the
         // target's east, arrowhead `<`.
         Ok((Dir::West, '<'))
+    } else if last.0 < tc && last.1 > tr && last.1 < tr + ctx.span_t.1.max(1) {
+        // The span's WEST side on a continuation row (gently-206): the
+        // fan-in star's west-ring attachments ride the target's grown
+        // row span below the band — moving east into the target's west,
+        // arrowhead `>` (the exit mirror of the east-side rule).
+        Ok((Dir::East, '>'))
     } else if last.0 >= tc && last.0 < tc + span_c {
         if last.1 < tr {
             // Moving south arrives through the target's north side.

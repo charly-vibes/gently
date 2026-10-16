@@ -435,6 +435,78 @@ fn p4_fanin_star_places_east_ring_slots_on_grown_hub() {
     );
 }
 
+/// A fan-in star with `n` sources -> hub, each edge optionally labelled
+/// (gently-n0d / gently-206 repro family).
+fn fanin_star_n(n: usize, label: Option<&str>) -> Graph {
+    let mut g = Graph::default();
+    let hub = g.add_node("hub");
+    for i in 0..n {
+        let s = g.add_node(&format!("s{}", i + 1));
+        let e = g.add_edge(s, hub, true).expect("live endpoints");
+        if let Some(l) = label {
+            g.set_attr(Scope::Edge(e), "label", l);
+        }
+    }
+    g
+}
+
+/// ge.layout.p4 (c4, gently-n0d): a labelled fan-in FIVE star must not
+/// panic — the hub's growth gives the fourth attacher a below-slot at
+/// the hub's bottom span row in the SAME column (band-adjacent), which
+/// multiband_path realized as a ZERO-cell path; label_cells then
+/// underflowed indexing `path[(path.len()-1)/2]` (layout.rs:468).
+/// Every edge must be routed (non-empty, orthogonal) and the ascii
+/// consumer must render without error — a labelled edge whose routing
+/// degenerates may not crash the layout, it must degrade like the
+/// unlabelled case (the renderer's own 'edge N has an empty path'
+/// guard was the only thing standing between this shape and the panic).
+#[test]
+fn p4_fanin5_labelled_star_routes_and_renders() {
+    let g = fanin_star_n(5, Some("x"));
+    let l = layout::layout(&g);
+    assert_all_routed(&l, g.edges.len());
+    for (ei, e) in g.edges.iter().enumerate() {
+        let path = &l.edge_paths[ei];
+        let (su, sv) = (l.node_cells[e.from], l.node_cells[e.to]);
+        assert_adjacent(path[0], su, l.spans[e.from], "edge {ei} first path cell");
+        assert_adjacent(
+            path[path.len() - 1],
+            sv,
+            l.spans[e.to],
+            "edge {ei} last path cell",
+        );
+    }
+    gently_core::render::ascii::render(&g, &l).expect("labelled fan-in 5 must render");
+}
+
+/// ge.layout.p4 (c4, gently-206): the fan-in EIGHT star (the minimized
+/// specodelic wiring-hub shape — 16 labelled edges converging on one
+/// file node) must lay out and render without error. The >=5 attacher
+/// ring previously under-routed: the below-slot edge realized as a
+/// zero-cell path and the later ring attachers as long non-axis
+/// turning walks the renderer rejected ('enters its box through an
+/// unsupported side' / 'turns without changing axis').
+#[test]
+fn p4_fanin8_star_routes_and_renders() {
+    for label in [None, Some("x")] {
+        let g = fanin_star_n(8, label);
+        let l = layout::layout(&g);
+        assert_all_routed(&l, g.edges.len());
+        for (ei, e) in g.edges.iter().enumerate() {
+            let path = &l.edge_paths[ei];
+            let (su, sv) = (l.node_cells[e.from], l.node_cells[e.to]);
+            assert_adjacent(path[0], su, l.spans[e.from], "edge {ei} first path cell");
+            assert_adjacent(
+                path[path.len() - 1],
+                sv,
+                l.spans[e.to],
+                "edge {ei} last path cell",
+            );
+        }
+        gently_core::render::ascii::render(&g, &l).expect("fan-in 8 must render");
+    }
+}
+
 /// ge.layout.p4 (c4, gently-awd): parallel channels between MULTI-ROW
 /// node pairs stack as grid ROWS through the boxes' row span — the
 /// pair's first edge keeps the straight band-row run, channel k rides

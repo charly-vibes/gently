@@ -232,6 +232,7 @@ pub(super) fn assemble_rows(
             &anchored,
             &covering[b],
             &row_of_band,
+            slots,
             b,
             row,
         );
@@ -265,12 +266,14 @@ pub(super) fn assemble_rows(
 /// `row_of_band[b'] + (b - b')` (the fan-in star's east-ring attachment
 /// rides the hub's bottom span row). Same-column stacking keeps the
 /// cursor (the size-attr column stacks south of each tall box).
+#[allow(clippy::too_many_arguments)]
 fn resolve_band(
     placement: &Placement,
     spans: &[(usize, usize)],
     anchored: &[Vec<usize>],
     covering: &[usize],
     row_of_band: &[usize],
+    slots: &[usize],
     b: usize,
     cursor: usize,
 ) -> usize {
@@ -283,7 +286,15 @@ fn resolve_band(
             rj + spans[j].0 <= ri || ri + spans[i].0 <= rj
         });
         return if disjoint {
-            row_of_band[bi] + (b - bi)
+            // The ride offset honours the gap rows reserved on the
+            // boundaries it crosses (gently-n0d): a riding band whose
+            // vertical travel reserved a gap row above it (same-column
+            // band-adjacent stacked states — the corpus's t4->diagnosing
+            // shape) may not sit grid-adjacent to the band above it, or
+            // the walk has no cell to route through and the edge
+            // realizes as a zero-cell path.
+            let reserved: usize = (bi + 1..=b).map(|k| slots[k]).sum();
+            row_of_band[bi] + (b - bi) + reserved
         } else {
             cursor
         };
@@ -413,7 +424,22 @@ fn edge_path(
                         || (gu.1 >= gv.1 && gu.1 < gv.1 + span_v.1)
                         || (gv.1 >= gu.1 && gv.1 < gu.1 + span_u.1) =>
                 {
-                    vec![(c, gu.1)]
+                    // The straight run rides the row the two spans
+                    // OVERLAP on: gu's band row when gu is the rider
+                    // inside gv's span (the fan-in star's east ring),
+                    // gv's band row when gv rides inside gu's span —
+                    // the fan-OUT stack (gently-206): the source grew a
+                    // row span hosting the targets below it, and the
+                    // straight cell must sit on the TARGET's row to
+                    // abut its west face, not on the source's top row
+                    // (which is diagonal to every rider below the
+                    // first).
+                    let row = if gu.1 >= gv.1 && gu.1 < gv.1 + span_v.1 {
+                        gu.1
+                    } else {
+                        gv.1
+                    };
+                    vec![(c, row)]
                 }
                 _ if gu.1 == gv.1 => bend_path(
                     gu,
@@ -532,14 +558,51 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
                 path.extend((gv.0 + span_v.0 - 1..=gu.0).rev().map(|c| (c, g)));
                 path
             }
-            None => Vec::new(),
+            None => {
+                // Span-hosted attachment (gently-n0d): no gap row exists
+                // at `home` because the endpoints' ROW SPANS OVERLAP —
+                // the corridor-clear accounting (gently-a6g) reserved no
+                // gap rows, the walk rides the target's own span rows.
+                // Vertical at the source's column to the target's band
+                // row, then west into the target's east face — the run
+                // stops one column east of the face, so no node cell is
+                // entered and the last path cell abuts the span.
+                let mut path = walk_column(gu.0, gu.1, gv.1, ctx);
+                path.push((gu.0, gv.1));
+                let east_face = gv.0 + span_v.0;
+                path.extend((east_face..gu.0).rev().map(|c| (c, gv.1)));
+                path
+            }
         };
     }
-    let mut path: Vec<Cell> = if gu.0 < gv.0 {
-        (gu.0 + span_u.0..=gv.0).map(|c| (c, gu.1)).collect()
-    } else {
-        Vec::new()
-    };
+    // The straight run east at the source's band row, truncated at the
+    // first occupied cell — a sibling target stacked at the source's row
+    // (the fan-out's first target, gently-206) may not be driven
+    // through; the walk then continues down the last free column and
+    // steps east into the target's column at the face-adjacent row.
+    let mut path: Vec<Cell> = Vec::new();
+    let mut walk_col = gv.0;
+    if gu.0 < gv.0 {
+        // When the run's row lies INSIDE the target's row span (a grown
+        // target whose bottom face row is the source's band row), the
+        // run stops west of the span — entering the target's own
+        // columns at that row would drive into its cells; the
+        // face-adjacent approach run below connects instead.
+        let capped_end = if gu.1 >= gv.1 && gu.1 < gv.1 + span_v.1 {
+            gv.0.saturating_sub(1)
+        } else {
+            gv.0
+        };
+        if capped_end >= gu.0 + span_u.0 {
+            for c in gu.0 + span_u.0..=capped_end {
+                if ctx.occupied.contains(&(c, gu.1)) {
+                    break;
+                }
+                path.push((c, gu.1));
+                walk_col = c;
+            }
+        }
+    }
     // The walk stops at the target's face row nearest the source
     // (gently-a6g): a grown target entered from the south is met at its
     // bottom span row — the walk never crosses the target's own cells.
@@ -548,7 +611,32 @@ fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
     } else {
         gv.1
     };
-    path.extend(walk_column(gv.0, gu.1, face, ctx));
+    path.extend(walk_column(walk_col, gu.1, face, ctx));
+    if walk_col != gv.0 {
+        // The walk ended short of the target's column: run east (or
+        // west) along the face-adjacent row into the target's column,
+        // one cell per column, so the last path cell abuts the
+        // target's north (or south) face. A blocked cell aborts the
+        // run — the renderer reports the shape as a typed error rather
+        // than drawing through a node (gently-206).
+        let approach = if gu.1 > gv.1 { face + 1 } else { face - 1 };
+        let mut cells: Vec<Cell> = if walk_col < gv.0 {
+            (walk_col + 1..=gv.0).map(|c| (c, approach)).collect()
+        } else {
+            ((gv.0..walk_col).rev().map(|c| (c, approach))).collect()
+        };
+        // An empty walk (the face row IS the source's row) leaves the
+        // path one row short of the approach row: connect vertically
+        // through the walk column first.
+        if path.last().is_some_and(|&l| l.1 != approach)
+            && !ctx.occupied.contains(&(walk_col, approach))
+        {
+            cells.insert(0, (walk_col, approach));
+        }
+        if cells.iter().all(|&c| !ctx.occupied.contains(&c)) {
+            path.extend(cells);
+        }
+    }
     path
 }
 
@@ -572,7 +660,7 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
     let dodge = if col < ctx.max_x { col + 1 } else { col - 1 };
     let mut path: Vec<Cell> = Vec::new();
     let mut dodging = false;
-    for r in rows {
+    for (i, &r) in rows.iter().enumerate() {
         match (ctx.occupied.contains(&(col, r)), dodging) {
             (true, false) => {
                 // Jog east on the previous (free) row, then step past the
@@ -585,11 +673,33 @@ fn walk_column(col: usize, from: usize, to: usize, ctx: &Ctx) -> Vec<Cell> {
             (true, true) => path.push((dodge, r)),
             (false, true) => {
                 path.push((dodge, r));
-                path.push((col, r));
-                dodging = false;
+                // Stay in the dodge column while the NEXT row is blocked
+                // too (two stacked nodes one free row apart — the fan-in
+                // star's below-hub stack, gently-206): returning to the
+                // walk column for a single free row would step back east
+                // on the very next row, reversing the path through the
+                // dodge column — the renderer rejects a 180° turn as
+                // 'turns without changing axis'.
+                let next_blocked = rows
+                    .get(i + 1)
+                    .is_some_and(|&nr| ctx.occupied.contains(&(col, nr)));
+                if !next_blocked {
+                    path.push((col, r));
+                    dodging = false;
+                }
             }
             (false, false) => path.push((col, r)),
         }
+    }
+    // The walk's terminal row was BLOCKED (a stacked multi-row node
+    // fills the walked column down to the face — cli.t6 under cli.c5,
+    // the corpus's e19 shape): the path sits in the dodge column one
+    // row short of the face. Close through the dodge column to the
+    // face row itself so the walk's endpoint stays grid-adjacent to
+    // the face cell — the edge enters through the dodge-column side
+    // (east face), never through the blocked face (gently-206).
+    if dodging && !ctx.occupied.contains(&(dodge, to)) {
+        path.push((dodge, to));
     }
     path
 }
