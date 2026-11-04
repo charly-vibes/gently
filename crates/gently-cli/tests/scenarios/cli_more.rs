@@ -106,17 +106,18 @@ fn p8() {
 /// exit 2). Oracle evidence: tests/repro/claims/cli-input-from.observed.
 #[test]
 fn p10() {
+    assert_oracle_dot();
+    p10_input_sources();
+}
+
+fn assert_oracle_dot() {
     // Oracle bytes for `digraph G { a -> b }` rendered as ascii via
     // the Graphviz parser (v0.69 @ ededa3d7, recorded 2026-10-14).
-    const DOT_ORACLE: &[u8] = b"+---+\n| a |\n+---+\n  |\n  |\n  v\n+---+\n| b |\n+---+\n";
-    let dir = TempDir::new("p10-from");
-    let dot_file = dir.0.join("graph.dot");
-    std::fs::write(&dot_file, b"digraph G { a -> b }\n").must("write dot fixture");
-    let dot_arg = dot_file.to_str().must("value");
+    let (_dir, dot_arg) = write_dot_fixture();
 
     // Explicit --from dot / graphviz parse the DOT input.
     for from in ["dot", "graphviz"] {
-        let r = run_gently(&["--from", from, dot_arg], b"");
+        let r = run_gently(&["--from", from, dot_arg.as_str()], b"");
         assert_eq!(Some(0), r.code, "--from {from} must parse DOT");
         assert_eq!(
             DOT_ORACLE,
@@ -126,17 +127,20 @@ fn p10() {
     }
 
     // The upstream boolean alias --from_graphviz works too.
-    let r = run_gently(&["--from_graphviz", dot_arg], b"");
+    let r = run_gently(&["--from_graphviz", dot_arg.as_str()], b"");
     assert_eq!(Some(0), r.code, "--from_graphviz must parse DOT");
     assert_eq!(DOT_ORACLE, &r.stdout[..], "--from_graphviz renders DOT");
+}
 
+fn p10_input_sources() {
+    let (_dir, dot_arg) = write_dot_fixture();
     // Sniffing: without --from (and with explicit --from txt / the
     // --from_txt alias) a line-start digraph header routes to the
     // DOT parser — the oracle's Graph::Easy::Parser sniff.
     for args in [
-        vec![dot_arg],
-        vec!["--from", "txt", dot_arg],
-        vec!["--from_txt", dot_arg],
+        vec![dot_arg.as_str()],
+        vec!["--from", "txt", dot_arg.as_str()],
+        vec!["--from_txt", dot_arg.as_str()],
     ] {
         let r = run_gently(&args, b"");
         assert_eq!(Some(0), r.code, "sniffed DOT input must parse: {args:?}");
@@ -166,7 +170,7 @@ fn p10() {
 
     // Unknown input format: exit 255 with upstream's die message
     // (get_options, bin/graph-easy line 333).
-    let r = run_gently(&["--from", "foo", dot_arg], b"");
+    let r = run_gently(&["--from", "foo", dot_arg.as_str()], b"");
     assert_eq!(Some(255), r.code, "unknown --from must exit 255");
     let err = String::from_utf8_lossy(&r.stderr);
     assert!(
@@ -177,7 +181,7 @@ fn p10() {
     // vcg/gdl are valid upstream --from values but route to the VCG
     // parser gently never ports — documented scope-offs, exit 255.
     for flag in ["--from=vcg", "--from=gdl", "--from_vcg", "--from_gdl"] {
-        let r = run_gently(&[flag, dot_arg], b"");
+        let r = run_gently(&[flag, dot_arg.as_str()], b"");
         assert_eq!(Some(255), r.code, "{flag} must exit 255 (scope-off)");
         let err = String::from_utf8_lossy(&r.stderr);
         assert!(
@@ -188,7 +192,7 @@ fn p10() {
 
     // --from_dot is NOT a declared upstream GetOptions flag — the
     // unknown-option path (usage + exit 2, suggestion per c7).
-    let r = run_gently(&["--from_dot", dot_arg], b"");
+    let r = run_gently(&["--from_dot", dot_arg.as_str()], b"");
     assert_eq!(Some(2), r.code, "--from_dot must hit the unknown-flag path");
     let err = String::from_utf8_lossy(&r.stderr);
     assert!(
@@ -198,6 +202,7 @@ fn p10() {
 
     // The `graph: {` sniff routes to the VCG parser upstream — no
     // gently parser exists, so the sniff is a scope-off diagnostic.
+    let dir = TempDir::new("p10-vcg");
     let vcg_file = dir.0.join("graph.vcg");
     std::fs::write(&vcg_file, b"graph: {\nnode: a\n}\n").must("write vcg fixture");
     let r = run_gently(&[vcg_file.to_str().must("value")], b"");
@@ -210,4 +215,17 @@ fn p10() {
         err.contains("VCG") || err.contains("vcg"),
         "sniffed-VCG diagnostic must name the unwired parser: {err}"
     );
+}
+
+/// A temp `.dot` fixture with one `a -> b` chain; returns its path.
+const DOT_ORACLE: &[u8] = b"+---+\n| a |\n+---+\n  |\n  |\n  v\n+---+\n| b |\n+---+\n";
+
+/// A temp `.dot` fixture with one `a -> b` chain; returns the dir (kept
+/// alive for the test's duration) and the fixture path.
+fn write_dot_fixture() -> (TempDir, String) {
+    let dir = TempDir::new("p10-from");
+    let dot_file = dir.0.join("graph.dot");
+    std::fs::write(&dot_file, b"digraph G { a -> b }\n").must("write dot fixture");
+    let arg = dot_file.to_str().must("value").to_string();
+    (dir, arg)
 }
