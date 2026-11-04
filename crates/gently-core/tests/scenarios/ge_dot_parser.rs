@@ -165,6 +165,17 @@ fn p3() {
 /// keyword form (with or without an attribute list) is a tokenizing error.
 #[test]
 fn p4() {
+    let groups_before = dot::parse("digraph G { a -> b }\n")
+        .must("must parse")
+        .groups
+        .len();
+    p4_named_groups_phase();
+    p4_nested_subgraphs();
+    p4_bare_scope_edges();
+    assert!(groups_before == 0, "plain chain: no groups");
+}
+
+fn p4_named_groups_phase() {
     // named subgraphs become groups under their verbatim names — with the
     // graphviz cluster convention: `cluster_x` re-parses as `x`, a bare
     // `cluster0` re-parses as an anonymous group (empty name)
@@ -190,7 +201,19 @@ fn p4() {
     assert_eq!(g.groups[cx].members, vec![node(&g, "c"), node(&g, "d")]);
     assert_eq!(g.groups[nm].members, vec![node(&g, "e")]);
     assert_eq!(g.groups[an].members, vec![node(&g, "f")]);
+}
 
+/// The (from, to) name pairs of the graph's edges, in creation order.
+fn edge_pairs(g: &Graph) -> Vec<(&str, &str)> {
+    g.edges
+        .iter()
+        .map(|e| (g.nodes[e.from].name.as_str(), g.nodes[e.to].name.as_str()))
+        .collect()
+}
+
+/// p4 phase 1: nested subgraphs — each level its own group, innermost
+/// membership wins.
+fn p4_nested_subgraphs() {
     // nested subgraphs: each level its own group, innermost membership wins
     let g =
         dot::parse("digraph G { subgraph outer { subgraph inner { a } b } }\n").must("must parse");
@@ -239,6 +262,12 @@ fn p4() {
         (g.edges[2].from, g.edges[2].to),
         (node(&g, "c"), node(&g, "d"))
     );
+}
+
+/// p4 phase 2: a bare scope as an edge target links the chain through
+/// it; bare scope group membership follows the oracle group_stack
+/// (tests/repro/claims/dot-bare-scope-in-named.observed).
+fn p4_bare_scope_edges() {
     // a bare scope as an edge target links the chain through it
     let g = dot::parse("digraph G { a -> { b } }\n").must("must parse");
     assert!(g.groups.is_empty());
@@ -307,14 +336,6 @@ fn p4() {
             "{src:?}: error quotes the input"
         );
     }
-}
-
-/// The (from, to) name pairs of the graph's edges, in creation order.
-fn edge_pairs(g: &Graph) -> Vec<(&str, &str)> {
-    g.edges
-        .iter()
-        .map(|e| (g.nodes[e.from].name.as_str(), g.nodes[e.to].name.as_str()))
-        .collect()
 }
 
 /// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
