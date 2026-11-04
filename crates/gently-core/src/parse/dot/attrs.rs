@@ -11,24 +11,34 @@
 
 /// Unquote raw quoted-string content: escapes resolved exactly once.
 pub(super) fn unquote(raw: &str) -> String {
-    let mut out = String::new();
-    let mut it = raw.chars();
-    while let Some(c) = it.next() {
-        if c == '\\' {
-            match it.next() {
-                Some('"') => out.push('"'),
-                Some('\\') => out.push('\\'),
-                Some(other) => {
-                    out.push('\\');
-                    out.push(other);
-                }
-                None => out.push('\\'),
+    // Sentinel character terminates the scan so a trailing backslash
+    // still emits; escape state rides the scan closure (no mutable
+    // bindings).
+    raw.chars()
+        .chain(['\0'])
+        .scan(false, |escaped, c| {
+            if *escaped {
+                *escaped = false;
+                return Some(if c == '\0' {
+                    "\\".to_string()
+                } else {
+                    match c {
+                        '"' => "\"".to_string(),
+                        '\\' => "\\".to_string(),
+                        other => format!("\\{other}"),
+                    }
+                });
             }
-        } else {
-            out.push(c);
-        }
-    }
-    out
+            if c == '\\' {
+                *escaped = true;
+                return Some(String::new());
+            }
+            if c == '\0' {
+                return None;
+            }
+            Some(c.to_string())
+        })
+        .collect()
 }
 
 /// The oracle's rankdir→flow map (Graphviz.pm `$rankdir`, gently-a0k):

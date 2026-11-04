@@ -276,15 +276,12 @@ fn apply_arrowheads(
     if westward && arrowed && !bidi {
         // SHORT_W: one chop, then the two-char ' <' head at x 0.
         line.truncate(w - 1);
-        line[0] = ' ';
-        line[1] = '<';
+        stamp_heads(line, None);
         x = 0;
     } else if bidi {
         // BD_EW: chop, '>' head, then the two-char ' <' head at x 0.
         line.truncate(w - 1);
-        *line.last_mut().expect("non-empty") = '>';
-        line[0] = ' ';
-        line[1] = '<';
+        stamp_heads(line, Some('>'));
         x = 0;
     } else if arrowed {
         // SHORT_E: two chops, the last remaining char becomes '>'.
@@ -295,4 +292,14 @@ fn apply_arrowheads(
         line.truncate(w - 2);
     }
     x
+}
+
+/// Stamp the two-char ' <' west head at x 0, optionally preceded by an
+/// east head on the last cell (the BD_EW bidirectional shape).
+fn stamp_heads(line: &mut [char], east: Option<char>) {
+    if let Some(c) = east {
+        *line.last_mut().expect("non-empty") = c;
+    }
+    line[0] = ' ';
+    line[1] = '<';
 }

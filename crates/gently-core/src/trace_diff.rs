@@ -212,32 +212,10 @@ pub fn trace_diff(
 /// gently's trace emits — so the lines are directly comparable.
 pub fn align_dump(dump: &str) -> String {
     let mut out = String::new();
-    let mut in_seed0 = false;
-    let mut in_invocation1 = false;
-    let mut in_band0 = false;
+    let mut state = DumpState::default();
     for line in dump.lines() {
-        if line.starts_with("-- seed ") {
-            in_seed0 = line == "-- seed 0";
-            in_invocation1 = false;
-            in_band0 = false;
-            continue;
-        }
-        if !in_seed0 {
-            continue;
-        }
-        if line.starts_with("== invocation ") {
-            in_invocation1 = line.starts_with("== invocation 1 ");
-            in_band0 = false;
-            continue;
-        }
-        if !in_invocation1 {
-            continue;
-        }
-        if line.starts_with("band y=") {
-            in_band0 = line.starts_with("band y=0 ");
-            continue;
-        }
-        if in_band0 && line.starts_with("  ") {
+        state.advance(line);
+        if state.collecting() {
             if let Some((name, x, y, cx, cy)) = parse_dump_node(line.trim_start()) {
                 out.push_str(&format!(
                     "dt v1 stage=layout.place spec=decision.trace place {name} x={x} y={y} cx={cx} cy={cy}\n"
@@ -246,6 +224,49 @@ pub fn align_dump(dump: &str) -> String {
         }
     }
     out
+}
+
+/// Where in the aligned dump we are: seed 0, invocation 1, band y=0 —
+/// only lines inside all three are collected.
+#[derive(Default)]
+struct DumpState {
+    in_seed0: bool,
+    in_invocation1: bool,
+    in_band0: bool,
+}
+
+impl DumpState {
+    /// Update the section state from one dump header/body line.
+    fn advance(&mut self, line: &str) {
+        if line.starts_with("-- seed ") {
+            self.in_seed0 = line == "-- seed 0";
+            self.in_invocation1 = false;
+            self.in_band0 = false;
+            return;
+        }
+        if !self.in_seed0 {
+            return;
+        }
+        if line.starts_with("== invocation ") {
+            self.in_invocation1 = line.starts_with("== invocation 1 ");
+            self.in_band0 = false;
+            return;
+        }
+        if !self.in_invocation1 {
+            return;
+        }
+        if line.starts_with("band y=") {
+            self.in_band0 = line.starts_with("band y=0 ");
+            return;
+        }
+        if self.in_band0 && line.starts_with("  ") {
+            return; // body line: keep collecting
+        }
+    }
+
+    fn collecting(&self) -> bool {
+        self.in_seed0 && self.in_invocation1 && self.in_band0
+    }
 }
 
 /// Parse one aligned dump node line: `Name @ (x,y) WxH cx=C cy=R` (the

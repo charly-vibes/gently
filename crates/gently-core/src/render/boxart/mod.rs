@@ -29,10 +29,20 @@ use canvas::Canvas;
 /// `as_boxart`) for the probed neighbourhoods, with one trailing newline.
 /// The empty graph renders as the empty string.
 pub fn render(graph: &Graph, layout: &Layout) -> Result<String, RenderError> {
+    let (canvas, edge_err) = draw_all(graph, layout);
+    edge_err?;
+    Ok(canvas.into_string())
+}
+
+/// Draw every node and edge onto a fresh canvas; the first edge error
+/// (if any) is returned alongside the canvas for the caller to raise.
+fn draw_all(graph: &Graph, layout: &Layout) -> (Canvas, Result<(), RenderError>) {
     let mut canvas = Canvas::new(graph, layout);
     canvas.draw_nodes(graph, layout);
     for edge_index in 0..graph.edges.len() {
-        canvas.draw_edge(graph, layout, edge_index)?;
+        if let Err(e) = canvas.draw_edge(graph, layout, edge_index) {
+            return (canvas, Err(e));
+        }
     }
-    Ok(canvas.into_string())
+    (canvas, Ok(()))
 }

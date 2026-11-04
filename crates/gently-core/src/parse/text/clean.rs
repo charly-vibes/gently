@@ -18,7 +18,8 @@ pub fn strip_comments(input: &str) -> String {
 /// `#` unless it opens a hex colour token after an attribute separator;
 /// collapse `\#` escapes afterwards; a fully commented line cleans to "".
 fn clean_line(line: &str) -> String {
-    let chars: Vec<char> = line.strip_suffix('\r').unwrap_or(line).chars().collect();
+    let trimmed = line.strip_suffix('\r').unwrap_or(line);
+    let chars: Vec<char> = trimmed.chars().collect();
     let mut out = String::new();
     let mut i = 0;
     while i < chars.len() {
@@ -45,27 +46,28 @@ fn hex_after_separator(chars: &[char], i: usize) -> bool {
     if hex_token_len(chars, i) == 0 {
         return false;
     }
-    let mut j = i;
-    while j > 0 && chars[j - 1].is_whitespace() {
-        j -= 1;
-    }
-    if j > 0 && chars[j - 1] == '"' {
-        j -= 1;
-    }
-    j > 0 && chars[j - 1] == ':'
+    let prefix = &chars[..i];
+    let before_quote = prefix.iter().rev().find(|c| !c.is_whitespace()).copied();
+    let sep = if before_quote == Some('"') {
+        // one opening quote may sit between the separator and the hex
+        let quote_pos = prefix.iter().rposition(|c| *c == '"');
+        let before = &prefix[..quote_pos.unwrap_or(0)];
+        before.iter().rev().find(|c| !c.is_whitespace()).copied()
+    } else {
+        before_quote
+    };
+    sep == Some(':')
 }
 
 /// The length of the hex digit run after the `#` at `i` — 3 or 6 exactly
 /// make a token (any other run length is a comment starter, not a colour).
 fn hex_token_len(chars: &[char], i: usize) -> usize {
-    let mut n = 0;
-    let mut j = i + 1;
-    while j < chars.len() && chars[j].is_ascii_hexdigit() {
-        n += 1;
-        j += 1;
-    }
-    if n == 3 || n == 6 {
-        n
+    let run: usize = chars[i + 1..]
+        .iter()
+        .take_while(|c| c.is_ascii_hexdigit())
+        .count();
+    if run == 3 || run == 6 {
+        run
     } else {
         0
     }

@@ -15,32 +15,27 @@
 
 /// The CSS rules for the classes the rendered table uses.
 pub(in crate::render) fn css(has_edges: bool, has_groups: bool, rounded: bool) -> String {
-    let mut out = String::new();
     // the per-primary-class rules (observed: always emitted, in this order)
-    out.push_str(
+    [
         "table.graph .edge {\n  font-family: monospaced, courier-new, courier, sans-serif;\n  margin: 0.1em;\n  padding: 0.2em;\n  vertical-align: bottom;\n}\n",
-    );
-    out.push_str("table.graph {\n  empty-cells: show;\n  margin: 0.5em;\n  padding: 0.5em;\n}\n");
-    out.push_str("table.graph .group_anon {\n  border-style: none;\n}\n");
-    out.push_str(
+        "table.graph {\n  empty-cells: show;\n  margin: 0.5em;\n  padding: 0.5em;\n}\n",
+        "table.graph .group_anon {\n  border-style: none;\n}\n",
         "table.graph .node,table.graph .node_anon {\n  text-align: center;\n  border-color: #000000;\n  border-style: solid;\n  border-width: 1px;\n  background: #ffffff;\n  margin: 0.1em;\n  padding: 0.2em;\n  padding-left: 0.3em;\n  padding-right: 0.3em;\n}\n",
-    );
-    out.push_str("table.graph .node_anon {\n  border-style: none;\n}\n");
-    if has_groups {
-        out.push_str("table.graph td[class|=\"group\"] { padding: 0.2em; }\n");
-    }
-    out.push_str(
+        "table.graph .node_anon {\n  border-style: none;\n}\n",
+        if has_groups {
+            "table.graph td[class|=\"group\"] { padding: 0.2em; }\n"
+        } else {
+            ""
+        },
         "table.graph td {\n  padding: 2px;\n  background: inherit;\n  white-space: nowrap;\n  }\ntable.graph span.l { float: left; }\ntable.graph span.r { float: right; }\n",
-    );
-    if has_edges {
-        out.push_str(EDGE_PART_RULES);
-    }
-    if rounded {
-        out.push_str(
-            "table.graph span.c { position: relative; top: 1.5em; }\ntable.graph div.c { -moz-border-radius: 100%; border-radius: 100%; }\ntable.graph div.r { -moz-border-radius: 1em; border-radius: 1em; }\n",
-        );
-    }
-    out
+        if has_edges { EDGE_PART_RULES } else { "" },
+        if rounded {
+            "table.graph span.c { position: relative; top: 1.5em; }\ntable.graph div.c { -moz-border-radius: 100%; border-radius: 100%; }\ntable.graph div.r { -moz-border-radius: 1em; border-radius: 1em; }\n"
+        } else {
+            ""
+        },
+    ]
+    .concat()
 }
 
 /// The edge-part rules (upstream: emitted when the graph has edges).

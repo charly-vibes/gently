@@ -184,18 +184,8 @@ impl P<'_> {
                 Ep::Name(name)
             }
             Some(Tok::Ident(s)) => {
-                if s == "subgraph" {
-                    self.named_subgraph()?;
-                    Ep::Scope
-                } else {
-                    let base = s.clone();
-                    self.pos += 1;
-                    if matches!(self.peek_tok(), Some(Tok::Colon)) {
-                        self.port_ep(&base)?
-                    } else {
-                        Ep::Name(base)
-                    }
-                }
+                let ident = s.clone();
+                self.ident_ep(&ident)?
             }
             Some(Tok::LBrace) => self.scope_endpoint(pending)?,
             _ => return Err(err(self.line(), "expected a node or subgraph")),
@@ -206,6 +196,23 @@ impl P<'_> {
             None
         };
         Ok((ep, list))
+    }
+
+    /// An endpoint starting with an identifier: the `subgraph' keyword
+    /// delegates to a named subgraph, otherwise a node name, possibly
+    /// with a `:port` suffix.
+    fn ident_ep(&mut self, s: &str) -> Result<Ep, ParseError> {
+        if s == "subgraph" {
+            self.named_subgraph()?;
+            return Ok(Ep::Scope);
+        }
+        let base = s.to_string();
+        self.pos += 1;
+        if matches!(self.peek_tok(), Some(Tok::Colon)) {
+            self.port_ep(&base)
+        } else {
+            Ok(Ep::Name(base))
+        }
     }
 
     /// A scope endpoint (bare `{ ... }` or, via the `subgraph` keyword,

@@ -18,19 +18,15 @@ pub fn quote(value: &str) -> String {
     if bare {
         return value.to_string();
     }
-    let mut out = String::with_capacity(value.len() + 2);
-    out.push('"');
-    for c in value.chars() {
-        match c {
-            '\\' | '"' => {
-                out.push('\\');
-                out.push(c);
-            }
-            _ => out.push(c),
-        }
-    }
-    out.push('"');
-    out
+    let escaped = value.chars().flat_map(|c| match c {
+        '\\' | '"' => vec!['\\', c],
+        _ => vec![c],
+    });
+    let quoted: String = std::iter::once('"')
+        .chain(escaped)
+        .chain(std::iter::once('"'))
+        .collect();
+    quoted
 }
 
 #[cfg(test)]
