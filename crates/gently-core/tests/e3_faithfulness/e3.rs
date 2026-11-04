@@ -33,13 +33,23 @@ pub(crate) fn e3_normalization_is_order_insensitive() {
 /// normalization must preserve the difference, not collapse it.
 #[test]
 pub(crate) fn e3_pairwise_faithfulness() {
+    let fixtures = FIXTURES.len();
+    let (raw, norm) = build_traces();
+    assert_eq!(raw.len(), fixtures, "every fixture yields a raw trace");
+    assert_pairwise_distinct(&raw, &norm);
+    assert_seed_stability();
+}
+
+/// Load every fixture's raw seed blocks and normalized traces.
+fn build_traces() -> (
+    BTreeMap<&'static str, Vec<String>>,
+    BTreeMap<&'static str, Trace>,
+) {
     let mut raw: BTreeMap<&str, Vec<String>> = BTreeMap::new();
     let mut norm: BTreeMap<&str, Trace> = BTreeMap::new();
     for fixture in FIXTURES {
         let dump = load_dump(fixture);
         let blocks = seed_blocks(&dump);
-        // stage image = concat over seeds (seed tagged by the marker in
-        // raw form; the raw compare uses the full block text)
         raw.insert(
             fixture,
             blocks.iter().flat_map(|(_, b)| b.clone()).collect(),
@@ -53,23 +63,33 @@ pub(crate) fn e3_pairwise_faithfulness() {
             .collect();
         norm.insert(fixture, merged);
     }
+    (raw, norm)
+}
 
-    for (i, &a) in FIXTURES.iter().enumerate() {
-        for &b in FIXTURES.iter().skip(i + 1) {
-            let raw_differs = raw[a] != raw[b];
-            if raw_differs {
-                assert_ne!(
-                    norm[a], norm[b],
-                    "{a} vs {b}: dumps differ at {STAGE} but normalized traces collide"
-                );
-            }
+/// Fixtures whose raw dumps differ must not normalize to the same trace.
+fn assert_pairwise_distinct(
+    raw: &BTreeMap<&'static str, Vec<String>>,
+    norm: &BTreeMap<&'static str, Trace>,
+) {
+    let pairs = FIXTURES
+        .iter()
+        .enumerate()
+        .flat_map(|(i, &a)| FIXTURES.iter().skip(i + 1).map(move |&b| (a, b)));
+    for (a, b) in pairs {
+        if raw[a] != raw[b] {
+            assert_ne!(
+                norm[a], norm[b],
+                "{a} vs {b}: dumps differ at {STAGE} but normalized traces collide"
+            );
         }
     }
+}
 
-    // Seed-level: fan-layout's case0 placement is genuinely hash-seed
-    // dependent (C/D vs B/D at the flanks); normalization must keep the
-    // two seeds distinct. Every other fixture is seed-stable, and its
-    // two seeds must normalize identically.
+/// Seed-level: fan-layout's case0 placement is genuinely hash-seed
+/// dependent (C/D vs B/D at the flanks); normalization must keep the
+/// two seeds distinct. Every other fixture is seed-stable, and its
+/// two seeds must normalize identically.
+fn assert_seed_stability() {
     for fixture in FIXTURES {
         let dump = load_dump(fixture);
         let blocks = seed_blocks(&dump);
