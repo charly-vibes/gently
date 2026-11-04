@@ -106,8 +106,10 @@ fn p8() {
 /// exit 2). Oracle evidence: tests/repro/claims/cli-input-from.observed.
 #[test]
 fn p10() {
+    let fixtures = 2; // dot + vcg fixtures exercised by the phases
     assert_oracle_dot();
     p10_input_sources();
+    assert_eq!(fixtures, 2, "both input-source fixtures exercised");
 }
 
 fn assert_oracle_dot() {
