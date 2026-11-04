@@ -48,6 +48,10 @@ fn p2() {
         }
     }
     assert_no_orphans(&cs, &inputs);
+    assert!(
+        cs.len() >= inputs.len(),
+        "each input contributes at least one companion (c2)"
+    );
 }
 
 /// ge.oracle.p3 (c3): the full verify pass — every fixture re-rendered and
