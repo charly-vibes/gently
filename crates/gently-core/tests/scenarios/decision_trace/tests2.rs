@@ -1,4 +1,6 @@
+use super::dump::*;
 use super::helpers::*;
+use super::verdicts::*;
 use super::*;
 
 /// decision.trace.p1 (specs/decision-trace.md p1, deriving from c1):

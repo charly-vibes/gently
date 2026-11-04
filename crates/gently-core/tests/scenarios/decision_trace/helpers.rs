@@ -1,3 +1,5 @@
+use super::dump::seed_blocks;
+use super::verdicts::{checklist_rows, checklist_verdicts};
 use super::*;
 
 /// c5's manifest gate over `tests/repro/admission.tsv`: the pin header
@@ -30,73 +32,41 @@ pub(crate) fn check_manifest(
             ));
         }
         let (name, verdict) = (cols[0], cols[1]);
-        if !matches!(verdict, "stable" | "hash-dependent" | "render-error") {
-            return Err(dump_defect(&format!(
-                "{name}: verdict '{verdict}' is outside the closed set \
-                 (stable, hash-dependent, render-error)"
-            )));
-        }
-        if verdict == "stable" {
-            let dump = dump_of(name).ok_or_else(|| {
-                dump_defect(&format!(
-                    "{name}: admitted (stable) but its dump companion is missing"
-                ))
-            })?;
-            let blocks = seed_blocks(&dump);
-            if blocks.len() >= 2 && blocks.iter().any(|b| *b != blocks[0]) {
-                return Err(dump_defect(&format!(
-                    "{name}: admitted (stable) but its dump's seed blocks differ — \
-                     a tier-2 (hash-seed-dependent) fixture is admitted"
-                )));
-            }
-        }
+        check_manifest_row(name, verdict, dump_of)?;
     }
     Ok(())
 }
 
-/// Parse a checklist verdict table — rows `| N | item | verdict | ...`
-/// with N in 1..=5 — into `(item number, verdict)` pairs.
-pub(crate) fn checklist_verdicts(text: &str) -> Vec<(usize, String)> {
-    text.lines()
-        .filter_map(|l| {
-            let l = l.trim();
-            if !l.starts_with("| ") {
-                return None;
-            }
-            let cells: Vec<&str> = l.split('|').collect();
-            // "| a | b | ... |" splits into ["", a, b, ...]
-            if cells.len() < 4 {
-                return None;
-            }
-            let n: usize = cells[1].trim().parse().ok()?;
-            if !(1..=5).contains(&n) {
-                return None;
-            }
-            // Verdicts are **HOLDS**-style bolded; a holding verdict may
-            // carry a qualifier ("HOLDS, modified form") — holding is the
-            // HOLDS prefix, never the FAILS prefix.
-            let verdict = cells[3].trim().trim_matches('*');
-            Some((n, verdict.to_string()))
-        })
-        .collect()
-}
-
-/// Parse the registry's item list — rows `| N | item |` with N in 1..=5.
-pub(crate) fn checklist_rows(text: &str) -> Vec<usize> {
-    text.lines()
-        .filter_map(|l| {
-            let l = l.trim();
-            if !l.starts_with("| ") {
-                return None;
-            }
-            let cells: Vec<&str> = l.split('|').collect();
-            if cells.len() != 4 {
-                return None;
-            }
-            let n: usize = cells[1].trim().parse().ok()?;
-            (1..=5).contains(&n).then_some(n)
-        })
-        .collect()
+/// One manifest row: the verdict must be from the closed set, and an
+/// admitted (stable) row must carry a dump companion whose seed blocks
+/// agree (a tier-2 hash-seed-dependent fixture may not be admitted).
+pub(crate) fn check_manifest_row(
+    name: &str,
+    verdict: &str,
+    dump_of: &dyn Fn(&str) -> Option<String>,
+) -> Result<(), String> {
+    if !matches!(verdict, "stable" | "hash-dependent" | "render-error") {
+        return Err(dump_defect(&format!(
+            "{name}: verdict '{verdict}' is outside the closed set \
+             (stable, hash-dependent, render-error)"
+        )));
+    }
+    if verdict != "stable" {
+        return Ok(());
+    }
+    let dump = dump_of(name).ok_or_else(|| {
+        dump_defect(&format!(
+            "{name}: admitted (stable) but its dump companion is missing"
+        ))
+    })?;
+    let blocks = seed_blocks(&dump);
+    if blocks.len() >= 2 && blocks.iter().any(|b| *b != blocks[0]) {
+        return Err(dump_defect(&format!(
+            "{name}: admitted (stable) but its dump's seed blocks differ — \
+             a tier-2 (hash-seed-dependent) fixture is admitted"
+        )));
+    }
+    Ok(())
 }
 
 /// Per-phase trace file (unique per process; the test body runs its

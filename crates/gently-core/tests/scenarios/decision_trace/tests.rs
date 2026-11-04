@@ -1,4 +1,6 @@
+use super::dump::*;
 use super::helpers::*;
+use super::verdicts::*;
 use super::*;
 
 /// decision.trace.p4 (c4): every committed dump carries the pin header,
@@ -124,37 +126,18 @@ fn p6() {
     // (b) class must hold all five.
     let designs = root.join(".wai/projects/decision-trace/designs");
     let mut adjudications = 0;
-    for entry in fs::read_dir(&designs).must("decision-trace designs dir must exist") {
-        let path = entry.must("designs entry").path();
-        if path.extension().and_then(|e| e.to_str()) != Some("md") {
-            continue;
-        }
-        let text = match fs::read_to_string(&path) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        let Some(class_line) = text.lines().find(|l| l.starts_with("## Final class")) else {
-            continue;
-        };
-        adjudications += 1;
-        let rows = checklist_verdicts(&text);
-        assert_eq!(
-            rows.len(),
-            5,
-            "{}: an adjudication record must carry per-item verdicts for all \
-             five checklist items, got {}",
-            path.display(),
-            rows.len()
-        );
-        if class_line.contains("(b)") {
-            for (n, verdict) in &rows {
-                assert!(
-                    verdict.starts_with("HOLDS"),
-                    "{}: (b) verdict requires item {n} to hold, got {verdict:?}",
-                    path.display()
-                );
+    let records: Vec<_> = fs::read_dir(&designs)
+        .must("decision-trace designs dir must exist")
+        .filter_map(|entry| {
+            let path = entry.must("designs entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                return None;
             }
-        }
+            fs::read_to_string(&path).ok().map(|text| (path, text))
+        })
+        .collect();
+    for (path, text) in &records {
+        adjudications += check_adjudication(path, text);
     }
     assert!(
         adjudications >= 1,
@@ -177,4 +160,32 @@ fn p6() {
         verdicts.iter().all(|(_, v)| v.starts_with("HOLDS")),
         "gently-58m: all five items must hold: {verdicts:?}"
     );
+}
+
+/// One adjudication record under the decision-trace designs: must carry
+/// the five-item verdict table; a `(b)` class must hold all five.
+/// Returns 1 when the record is a Final-class adjudication, 0 otherwise.
+fn check_adjudication(path: &std::path::Path, text: &str) -> usize {
+    let Some(class_line) = text.lines().find(|l| l.starts_with("## Final class")) else {
+        return 0;
+    };
+    let rows = checklist_verdicts(text);
+    assert_eq!(
+        rows.len(),
+        5,
+        "{}: an adjudication record must carry per-item verdicts for all \
+         five checklist items, got {}",
+        path.display(),
+        rows.len()
+    );
+    if class_line.contains("(b)") {
+        for (n, verdict) in &rows {
+            assert!(
+                verdict.starts_with("HOLDS"),
+                "{}: (b) verdict requires item {n} to hold, got {verdict:?}",
+                path.display()
+            );
+        }
+    }
+    1
 }

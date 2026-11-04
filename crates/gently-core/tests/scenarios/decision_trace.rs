@@ -35,61 +35,20 @@ fn dump_defect(defect: &str) -> String {
     )
 }
 
-/// c5's typed gate over one committed dump (c4's companion contract): the
-/// oracle pin header, the explicit hash-seed field, and the per-stage
-/// observability marks must all be present.
-fn check_dump(name: &str, text: &str) -> Result<(), String> {
-    let header = text.lines().next().unwrap_or("");
-    let pin_ok = header.starts_with("# dump: Graph::Easy v0.69 @ ") && header.contains(PIN_COMMIT);
-    if !pin_ok {
-        return Err(dump_defect(&format!(
-            "{name}: missing the oracle pin header ({PIN_COMMIT})"
-        )));
-    }
-    if !text
-        .lines()
-        .any(|l| l.starts_with("-- seed ") && l["-- seed ".len()..].trim().parse::<i64>().is_ok())
-    {
-        return Err(dump_defect(&format!(
-            "{name}: missing the explicit hash-seed field"
-        )));
-    }
-    if !text.lines().any(|l| l.starts_with("== invocation")) {
-        return Err(dump_defect(&format!(
-            "{name}: missing the per-stage observability marks"
-        )));
-    }
-    Ok(())
-}
-
-/// Split one dump into its `-- seed N` blocks (comment lines excluded) —
-/// the raw material for the tier-2 stability cross-check.
-fn seed_blocks(text: &str) -> Vec<Vec<String>> {
-    let mut blocks: Vec<Vec<String>> = Vec::new();
-    let mut cur: Option<Vec<String>> = None;
-    for line in text.lines() {
-        if line.starts_with("-- seed ") {
-            if let Some(b) = cur.take() {
-                blocks.push(b);
-            }
-            cur = Some(Vec::new());
-        } else if cur.is_some() && !line.starts_with('#') {
-            cur.as_mut().must("value").push(line.to_string());
-        }
-    }
-    if let Some(b) = cur.take() {
-        blocks.push(b);
-    }
-    blocks
-}
-
 use gently_core::{graph::Graph, layout};
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[path = "decision_trace/dump.rs"]
+mod dump;
+
 #[path = "decision_trace/helpers.rs"]
 mod helpers;
+
+#[path = "decision_trace/verdicts.rs"]
+mod verdicts;
+
 #[path = "decision_trace/tests.rs"]
 mod tests;
 #[path = "decision_trace/tests2.rs"]
