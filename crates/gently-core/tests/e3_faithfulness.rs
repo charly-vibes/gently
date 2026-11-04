@@ -110,96 +110,14 @@ fn event_key_band(band: &BandEvent) -> String {
 fn normalize_block(lines: &[&str]) -> Trace {
     let mut nodes: BTreeMap<(usize, String, i64, String), NodeEvent> = BTreeMap::new();
     let mut bands: BTreeMap<(usize, String, i64), BandEvent> = BTreeMap::new();
-    let mut invocation = 0usize;
-    let mut case = String::new();
-    let mut cur_band: Option<i64> = None;
+    let mut ctx = BlockCtx::default();
 
     for line in lines {
         let line = line.trim();
-        if let Some(rest) = line.strip_prefix("== invocation ") {
-            // "== invocation 1 (case0, format: ascii) nodes=.. .."
-            invocation = rest
-                .split_whitespace()
-                .next()
-                .and_then(|n| n.parse().ok())
-                .unwrap_or(0);
-            case = rest
-                .split('(')
-                .nth(1)
-                .and_then(|s| s.split(',').next())
-                .unwrap_or("")
-                .to_string();
-            cur_band = None;
-        } else if let Some(rest) = line.strip_prefix("band y=") {
-            // "band y=0 nodes=2 edge-cells=2 group-cells=0"
-            let mut it = rest.split_whitespace();
-            let y = it
-                .next()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_else(|| panic!("bad band line: {line}"));
-            let get = |key: &str| -> u64 {
-                rest.split(' ')
-                    .find_map(|tok| tok.strip_prefix(key).map(|v| v.parse().unwrap_or(0)))
-                    .unwrap_or(0)
-            };
-            bands.insert(
-                (invocation, case.clone(), y),
-                BandEvent {
-                    stage: STAGE,
-                    invocation,
-                    case: case.clone(),
-                    band_y: y,
-                    nodes: get("nodes="),
-                    edge_cells: get("edge-cells="),
-                    group_cells: get("group-cells="),
-                },
-            );
-            cur_band = Some(y);
-        } else if line.contains(" @ (") {
-            // "  Client @ (2,0) 13x3" | "  Msg Server @ (0,0) 14x12 cx=1 cy=4"
-            let Some(y) = cur_band else {
-                panic!("node line outside a band: {line}")
-            };
-            let (name, rest) = line.split_once(" @ (").unwrap();
-            let mut it = rest
-                .split(['(', ')', 'x', ' ', ','])
-                .filter(|t| !t.is_empty());
-            let x: i64 = it
-                .next()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_else(|| panic!("bad x: {line}"));
-            let ny: i64 = it
-                .next()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_else(|| panic!("bad y: {line}"));
-            let w: u64 = it
-                .next()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_else(|| panic!("bad w: {line}"));
-            let h: u64 = it
-                .next()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_else(|| panic!("bad h: {line}"));
-            let get_span = |key: &str| {
-                line.rsplit(' ')
-                    .find_map(|tok| tok.strip_prefix(key).and_then(|v| v.parse().ok()))
-                    .unwrap_or(1)
-            };
-            nodes.insert(
-                (invocation, case.clone(), y, name.to_string()),
-                NodeEvent {
-                    stage: STAGE,
-                    invocation,
-                    case: case.clone(),
-                    name: name.to_string(),
-                    x,
-                    y: ny,
-                    w,
-                    h,
-                    cx: get_span("cx="),
-                    cy: get_span("cy="),
-                },
-            );
+        if line.starts_with("== invocation ") {
+            ctx.apply_invocation(line);
+        } else {
+            ctx.emit(line, &mut nodes, &mut bands);
         }
         // "-- seed N" markers and "#" comments are block delimiters handled
         // by the caller; "..." truncation markers never occur (E2 meter).
@@ -217,24 +135,151 @@ fn normalize_block(lines: &[&str]) -> Trace {
     trace
 }
 
-/// Split a dump into (seed, block lines) pairs.
-fn seed_blocks(dump: &str) -> Vec<(i64, Vec<String>)> {
-    let mut blocks = Vec::new();
-    let mut seed: Option<i64> = None;
-    let mut cur: Vec<String> = Vec::new();
-    for line in dump.lines() {
-        if let Some(rest) = line.strip_prefix("-- seed ") {
-            if let Some(s) = seed.take() {
-                blocks.push((s, cur.clone()));
-            }
-            seed = rest.trim().parse().ok();
-            cur.clear();
-        } else if seed.is_some() && !line.starts_with('#') {
-            cur.push(line.to_string());
+impl BlockCtx {
+    /// One body line: a band header or a node line (other lines are
+    /// block delimiters handled by the caller).
+    fn emit(
+        &self,
+        line: &str,
+        nodes: &mut BTreeMap<(usize, String, i64, String), NodeEvent>,
+        bands: &mut BTreeMap<(usize, String, i64), BandEvent>,
+    ) {
+        if line.starts_with("band y=") {
+            let band = self.parse_band(line);
+            bands.insert(
+                (band.invocation, band.case.clone(), band.band_y),
+                band.clone(),
+            );
+            self.cur_band.set(Some(band.band_y));
+        } else if line.contains(" @ (") {
+            let node = self.parse_node(line);
+            nodes.insert(
+                (
+                    node.invocation,
+                    node.case.clone(),
+                    node.y,
+                    node.name.clone(),
+                ),
+                node,
+            );
         }
     }
-    if let Some(s) = seed {
-        blocks.push((s, cur));
+}
+
+/// The running invocation/case/band context while scanning a block.
+#[derive(Default)]
+struct BlockCtx {
+    invocation: usize,
+    case: String,
+    cur_band: std::cell::Cell<Option<i64>>,
+}
+
+impl BlockCtx {
+    /// "== invocation 1 (case0, format: ascii) nodes=.. .."
+    fn apply_invocation(&mut self, line: &str) {
+        let rest = line.strip_prefix("== invocation ").unwrap_or("");
+        self.invocation = rest
+            .split_whitespace()
+            .next()
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(0);
+        self.case = rest
+            .split('(')
+            .nth(1)
+            .and_then(|s| s.split(',').next())
+            .unwrap_or("")
+            .to_string();
+        self.cur_band.set(None);
+    }
+
+    /// "band y=0 nodes=2 edge-cells=2 group-cells=0"
+    fn parse_band(&self, line: &str) -> BandEvent {
+        let rest = line.strip_prefix("band y=").unwrap_or(line);
+        let y: i64 = rest
+            .split_whitespace()
+            .next()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_else(|| panic!("bad band line: {line}"));
+        let get = |key: &str| -> u64 {
+            rest.split(' ')
+                .find_map(|tok| tok.strip_prefix(key).map(|v| v.parse().unwrap_or(0)))
+                .unwrap_or(0)
+        };
+        BandEvent {
+            stage: STAGE,
+            invocation: self.invocation,
+            case: self.case.clone(),
+            band_y: y,
+            nodes: get("nodes="),
+            edge_cells: get("edge-cells="),
+            group_cells: get("group-cells="),
+        }
+    }
+
+    /// "  Client @ (2,0) 13x3" | "  Msg Server @ (0,0) 14x12 cx=1 cy=4"
+    fn parse_node(&self, line: &str) -> NodeEvent {
+        let y = self
+            .cur_band
+            .get()
+            .unwrap_or_else(|| panic!("node line outside a band: {line}"));
+        let (name, rest) = line.split_once(" @ (").unwrap();
+        let nums: Vec<i64> = rest
+            .split(['(', ')', 'x', ' ', ','])
+            .filter(|t| !t.is_empty())
+            .filter_map(|v| v.parse().ok())
+            .collect();
+        let bad = |what: &str| panic!("bad {what}: {line}");
+        let x = *nums.first().unwrap_or_else(|| bad("x"));
+        let ny = *nums.get(1).unwrap_or_else(|| bad("y"));
+        let w = *nums.get(2).unwrap_or_else(|| bad("w")) as u64;
+        let h = *nums.get(3).unwrap_or_else(|| bad("h")) as u64;
+        let get_span = |key: &str| {
+            line.rsplit(' ')
+                .find_map(|tok| tok.strip_prefix(key).and_then(|v| v.parse().ok()))
+                .unwrap_or(1)
+        };
+        NodeEvent {
+            stage: STAGE,
+            invocation: self.invocation,
+            case: self.case.clone(),
+            name: name.to_string(),
+            x,
+            y: ny,
+            w,
+            h,
+            cx: get_span("cx="),
+            cy: get_span("cy="),
+        }
+    }
+}
+
+/// Split a dump into (seed, block lines) pairs.
+fn seed_blocks(dump: &str) -> Vec<(i64, Vec<String>)> {
+    // Trailing `-- seed END` sentinel flushes the last open block;
+    // grouping state rides the fold accumulator.
+    let (done, tail) = dump.lines().chain(["-- seed END"]).fold(
+        (Vec::new(), None::<(i64, Vec<String>)>),
+        |(mut blocks, cur), line| {
+            if let Some(rest) = line.strip_prefix("-- seed ") {
+                if let Some(finished) = cur {
+                    blocks.push(finished);
+                }
+                (
+                    blocks,
+                    rest.trim().parse::<i64>().ok().map(|s| (s, Vec::new())),
+                )
+            } else if cur.is_some() && !line.starts_with('#') {
+                let (seed, mut body) = cur.unwrap();
+                body.push(line.to_string());
+                (blocks, Some((seed, body)))
+            } else {
+                (blocks, cur)
+            }
+        },
+    );
+    let mut blocks = done;
+    if let Some(finished) = tail {
+        blocks.push(finished);
     }
     blocks
 }
@@ -252,42 +297,49 @@ fn raw_stage_image(block: &[String]) -> String {
 /// line, so band lines stay put — reordering bands would break the
 /// dump grammar, not just its ordering.
 fn permute_block(block: &[String]) -> Vec<String> {
+    let band_starts = band_line_spans(block);
     let mut out: Vec<String> = Vec::new();
-    let mut band_start: Vec<(usize, usize)> = Vec::new(); // (band line idx, block end before next band)
-    let mut band_lines: Vec<usize> = Vec::new();
-    for (i, line) in block.iter().enumerate() {
-        if line.trim_start().starts_with("band y=") {
-            band_lines.push(i);
-        }
-    }
-    for (k, &start) in band_lines.iter().enumerate() {
-        // members run to the earliest of: next band line, next
-        // "== invocation" header, end of block
-        let next_band = band_lines.get(k + 1).copied();
-        let next_inv = block[start..]
-            .iter()
-            .position(|l| l.trim_start().starts_with("== invocation"))
-            .map(|p| start + p);
-        let end = next_band
-            .into_iter()
-            .chain(next_inv)
-            .min()
-            .unwrap_or(block.len());
-        band_start.push((start, end));
-    }
     let mut consumed = 0usize;
-    for (start, end) in &band_start {
+    for (start, end) in &band_starts {
         // header lines between previous band's end and this band line
         out.extend(block[consumed..*start].iter().cloned());
         // band line first, then its members reversed
         out.push(block[*start].clone());
-        let mut members: Vec<String> = block[*start + 1..*end].to_vec();
-        members.reverse();
+        let members: Vec<String> = block[*start + 1..*end].iter().rev().cloned().collect();
         out.extend(members);
         consumed = *end;
     }
     out.extend(block[consumed..].iter().cloned());
     out
+}
+
+/// Each band line's (start, end) span: the members run to the earliest
+/// of the next band line, the next `== invocation` header, or the end of
+/// the block.
+fn band_line_spans(block: &[String]) -> Vec<(usize, usize)> {
+    let band_lines: Vec<usize> = block
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| line.trim_start().starts_with("band y="))
+        .map(|(i, _)| i)
+        .collect();
+    band_lines
+        .iter()
+        .enumerate()
+        .map(|(k, &start)| {
+            let next_band = band_lines.get(k + 1).copied();
+            let next_inv = block[start..]
+                .iter()
+                .position(|l| l.trim_start().starts_with("== invocation"))
+                .map(|p| start + p);
+            let end = next_band
+                .into_iter()
+                .chain(next_inv)
+                .min()
+                .unwrap_or(block.len());
+            (start, end)
+        })
+        .collect()
 }
 
 const FIXTURES: [&str; 5] = [
