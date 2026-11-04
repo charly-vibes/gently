@@ -85,21 +85,9 @@ pub fn precheck_known_names(argv: &[String]) -> Option<i32> {
     // Flags: every `--name[=value]` or `-x` token must be known; unknown
     // ones get a DidYouMean when a close name exists, a Fix otherwise.
     let flag_registry = flag_names_registry();
-    let mut i = 0;
-    while i < argv.len() {
-        let arg = argv[i].as_str();
-        if VALUE_FLAGS.contains(&arg) {
-            i += 2;
-            continue;
-        }
-        if !is_flag(arg) {
-            i += 1;
-            continue;
-        }
-        if let Some(exit_code) = flag_suggestion(&engine, &flag_registry, is_known, arg) {
-            return Some(exit_code);
-        }
-        i += 1;
+    let unknown_flag = first_unknown_flag(argv, &engine, &flag_registry, is_known);
+    if let Some(exit_code) = unknown_flag {
+        return Some(exit_code);
     }
 
     // Subcommand near-miss: first bare token without path separators, that
@@ -146,26 +134,62 @@ fn flag_suggestion(
     Some(2)
 }
 
+/// The exit code of the first unknown flag token, skipping flag values.
+fn first_unknown_flag(
+    argv: &[String],
+    engine: &SuggestionEngine,
+    registry: &CommandRegistry,
+    is_known: impl Fn(&str) -> bool + Copy,
+) -> Option<i32> {
+    argv.iter()
+        .scan(0usize, |skip, arg| {
+            if *skip > 0 {
+                *skip -= 1;
+                return Some(None);
+            }
+            if VALUE_FLAGS.contains(&arg.as_str()) {
+                *skip = 1;
+                return Some(None);
+            }
+            if !is_flag(arg) {
+                return Some(None);
+            }
+            Some(flag_suggestion(engine, registry, is_known, arg))
+        })
+        .flatten()
+        .next()
+}
+
 /// The first bare token that is neither a flag nor a flag value, or `None`
 /// when argv holds only flags (or the first bare token is path-like).
 fn first_bare_token(argv: &[String]) -> Option<String> {
-    let mut i = 0;
-    while i < argv.len() {
-        let arg = argv[i].as_str();
-        if VALUE_FLAGS.contains(&arg) {
-            i += 2;
-            continue;
-        }
-        if arg.starts_with('-') {
-            i += 1;
-            continue;
-        }
-        if arg.contains('/') || arg.contains('.') {
-            return None;
-        }
-        return Some(arg.to_string());
+    argv.iter()
+        .scan(0usize, |skip, arg| Some(consume_token(skip, arg)))
+        .flatten()
+        .next()
+}
+
+/// One scan step over argv: `skip` counts remaining flag-value slots
+/// (capped at usize::MAX once a bare/path token ends the scan). Yields
+/// the bare token when found.
+fn consume_token(skip: &mut usize, arg: &str) -> Option<String> {
+    if *skip > 0 {
+        *skip -= 1;
+        return None; // a consumed flag value
     }
-    None
+    if VALUE_FLAGS.contains(&arg) {
+        *skip = 1;
+        return None;
+    }
+    if arg.starts_with('-') {
+        return None;
+    }
+    if arg.contains('/') || arg.contains('.') {
+        *skip = usize::MAX; // path-like: nothing after this counts
+        return None;
+    }
+    *skip = usize::MAX;
+    Some(arg.to_string())
 }
 
 /// `--name` / `-x` token shape (not the bare `-` stdin placeholder).

@@ -193,12 +193,15 @@ pub(in crate::render) fn color_as_hex(color: &str) -> String {
 fn rgb_to_hex(color: &str) -> Option<String> {
     let inner = color.strip_prefix("rgb(")?.strip_suffix(')')?;
     let mut parts = inner.split(',');
-    let mut out = String::from("#");
-    for part in (&mut parts).take(3) {
-        let v: u32 = part.trim().parse().ok()?;
-        out.push_str(&format!("{:02x}", v.min(255)));
-    }
-    parts.next().is_none().then_some(out)
+    let hex: String = (&mut parts)
+        .take(3)
+        .map(|part| {
+            let v: u32 = part.trim().parse().ok()?;
+            Some(format!("{:02x}", v.min(255)))
+        })
+        .collect::<Option<Vec<_>>>()?
+        .concat();
+    parts.next().is_none().then_some(format!("#{hex}"))
 }
 
 /// The border style→(css style, css width) remap — the width-carrying

@@ -16,29 +16,34 @@ pub(super) fn unquote(raw: &str) -> String {
     // bindings).
     raw.chars()
         .chain(['\0'])
-        .scan(false, |escaped, c| {
-            if *escaped {
-                *escaped = false;
-                return Some(if c == '\0' {
-                    "\\".to_string()
-                } else {
-                    match c {
-                        '"' => "\"".to_string(),
-                        '\\' => "\\".to_string(),
-                        other => format!("\\{other}"),
-                    }
-                });
-            }
-            if c == '\\' {
-                *escaped = true;
-                return Some(String::new());
-            }
-            if c == '\0' {
-                return None;
-            }
-            Some(c.to_string())
-        })
+        .scan(false, |escaped, c| Some(unescape_step(escaped, c)))
+        .flatten()
         .collect()
+}
+
+/// One scan step of the unquote loop: `escaped` carries whether the
+/// previous char was a backslash; the sentinel '\0' terminates the scan
+/// (a trailing backslash still emits itself).
+fn unescape_step(escaped: &mut bool, c: char) -> Option<String> {
+    if *escaped {
+        *escaped = false;
+        return Some(if c == '\0' {
+            "\\".to_string()
+        } else {
+            match c {
+                '"' | '\\' => c.to_string(),
+                other => format!("\\{other}"),
+            }
+        });
+    }
+    if c == '\\' {
+        *escaped = true;
+        return Some(String::new());
+    }
+    if c == '\0' {
+        return None;
+    }
+    Some(c.to_string())
 }
 
 /// The oracle's rankdir→flow map (Graphviz.pm `$rankdir`, gently-a0k):

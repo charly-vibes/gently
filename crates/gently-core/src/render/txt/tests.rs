@@ -9,8 +9,10 @@ fn edge_less_node_emits_bare_node_line() {
         edges: vec![Edge::directed(0, 1), Edge::directed(0, 1)],
         ..Graph::default()
     };
-    let mut g2 = g.clone();
-    g2.nodes.push(Node::named("c"));
+    let g2 = Graph {
+        nodes: vec![Node::named("a"), Node::named("b"), Node::named("c")],
+        ..g.clone()
+    };
     assert_eq!(
         super::render(&g2),
         "[ a ] --> [ b ]\n[ a ] --> [ b ]\n[ c ]\n"

@@ -98,6 +98,16 @@ fn p2() {
         g.get_attr(Scope::Class(ObjectKind::Edge, "important".into()), "color"),
         None
     );
+}
+
+/// ge.graph_model.p2 (c2, continued): border attribute derivation —
+/// components are computed AT ASSIGNMENT TIME, exactly as upstream
+/// split_border_attributes (Graph::Easy 0.69), per scope.
+#[test]
+fn p2_border_components_derive_at_assignment() {
+    let mut g = Graph::default();
+    let n = g.add_node("a");
+    let m = g.add_node("m");
     // derived border components computed AT ASSIGNMENT TIME, exactly as
     // upstream split_border_attributes (Graph::Easy 0.69)
     g.set_attr(Scope::Node(n), "border", "2px dotted #f0f");

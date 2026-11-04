@@ -61,16 +61,18 @@ fn remap<F>(grid: Layout, f: F) -> Layout
 where
     F: Fn((usize, usize)) -> (usize, usize),
 {
-    let mut g = grid;
-    g.node_cells = g.node_cells.into_iter().map(&f).collect();
-    g.edge_paths = g
-        .edge_paths
-        .into_iter()
-        .map(|path| path.into_iter().map(&f).collect())
-        .collect();
-    g.label_cells = g.label_cells.into_iter().map(|c| c.map(&f)).collect();
-    g.slot_labels = g.slot_labels.into_iter().map(|c| c.map(&f)).collect();
-    g
+    let g = grid;
+    Layout {
+        node_cells: g.node_cells.into_iter().map(&f).collect(),
+        edge_paths: g
+            .edge_paths
+            .into_iter()
+            .map(|path| path.into_iter().map(&f).collect())
+            .collect(),
+        label_cells: g.label_cells.into_iter().map(|c| c.map(&f)).collect(),
+        slot_labels: g.slot_labels.into_iter().map(|c| c.map(&f)).collect(),
+        ..g
+    }
 }
 
 /// The west layout: columns mirrored so sources sit east of their
@@ -82,10 +84,7 @@ fn mirrored_west(grid: Layout) -> Layout {
     g.edge_paths = g
         .edge_paths
         .into_iter()
-        .map(|mut p| {
-            p.reverse();
-            p
-        })
+        .map(|p| p.into_iter().rev().collect())
         .collect();
     g
 }
@@ -94,23 +93,27 @@ fn mirrored_west(grid: Layout) -> Layout {
 /// ranks run southward — sources sit strictly north of their targets.
 fn transposed(grid: Layout) -> Layout {
     let (w, h) = (grid.width, grid.height);
-    let mut g = remap(grid, |(x, y)| (y, x));
-    g.width = h;
-    g.height = w;
-    // The transpose swaps the column and row axes, so the spans swap
-    // with them.
-    g.spans = g.spans.into_iter().map(|(cx, cy)| (cy, cx)).collect();
-    g
+    let g = remap(grid, |(x, y)| (y, x));
+    Layout {
+        width: h,
+        height: w,
+        // The transpose swaps the column and row axes, so the spans swap
+        // with them.
+        spans: g.spans.into_iter().map(|(cx, cy)| (cy, cx)).collect(),
+        ..g
+    }
 }
 
 /// The north layout: the south layout with rows flipped, so sources sit
 /// strictly south of their targets (earlier along the northward axis).
 fn flipped_rows(grid: Layout) -> Layout {
     let (w, h) = (grid.width, grid.height);
-    let mut g = remap(grid, |(x, y)| (x, h - 1 - y));
-    g.width = w;
-    g.height = h;
-    g
+    let g = remap(grid, |(x, y)| (x, h - 1 - y));
+    Layout {
+        width: w,
+        height: h,
+        ..g
+    }
 }
 
 #[cfg(test)]

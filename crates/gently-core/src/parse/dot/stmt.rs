@@ -265,32 +265,43 @@ impl P<'_> {
         self.pos += 1;
         let mut list = Vec::new();
         loop {
-            while matches!(self.peek_tok(), Some(Tok::Comma) | Some(Tok::Semi)) {
-                self.pos += 1;
-            }
+            self.skip_separators();
             match self.peek_tok() {
                 Some(Tok::RBracket) => {
                     self.pos += 1;
                     return Ok(list);
                 }
                 Some(Tok::Ident(_)) | Some(Tok::Str(_)) => {
-                    let key = match self.toks[self.pos].tok.clone() {
-                        Tok::Str(q) => attrs::unquote(&q),
-                        Tok::Ident(s) => s,
-                        _ => unreachable!("matched above"),
-                    };
-                    self.pos += 1;
-                    let value = if matches!(self.peek_tok(), Some(Tok::Eq)) {
-                        self.pos += 1;
-                        self.attr_value()?
-                    } else {
-                        String::new()
-                    };
-                    list.push((key, value));
+                    let entry = self.attr_entry()?;
+                    list.push(entry);
                 }
                 _ => return Err(err(self.line(), "expected an attribute key or `]'")),
             }
         }
+    }
+
+    /// Swallow any run of attribute-list separators (`,`/`;`).
+    fn skip_separators(&mut self) {
+        while matches!(self.peek_tok(), Some(Tok::Comma) | Some(Tok::Semi)) {
+            self.pos += 1;
+        }
+    }
+
+    /// One `key` or `key = value` pair inside an attribute list.
+    fn attr_entry(&mut self) -> Result<(String, String), ParseError> {
+        let key = match self.toks[self.pos].tok.clone() {
+            Tok::Str(q) => attrs::unquote(&q),
+            Tok::Ident(s) => s,
+            _ => unreachable!("matched above"),
+        };
+        self.pos += 1;
+        let value = if matches!(self.peek_tok(), Some(Tok::Eq)) {
+            self.pos += 1;
+            self.attr_value()?
+        } else {
+            String::new()
+        };
+        Ok((key, value))
     }
 
     /// One attribute value: bare identifier, quoted string (unquoted
