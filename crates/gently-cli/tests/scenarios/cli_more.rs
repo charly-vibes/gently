@@ -109,6 +109,7 @@ fn p10() {
     let fixtures = 2; // dot + vcg fixtures exercised by the phases
     assert_oracle_dot();
     p10_input_sources();
+    p10_vcg_scope_off();
     assert_eq!(fixtures, 2, "both input-source fixtures exercised");
 }
 
@@ -201,7 +202,9 @@ fn p10_input_sources() {
         err.contains("from_dot"),
         "unknown-option diagnostic must name the flag: {err}"
     );
+}
 
+fn p10_vcg_scope_off() {
     // The `graph: {` sniff routes to the VCG parser upstream — no
     // gently parser exists, so the sniff is a scope-off diagnostic.
     let dir = TempDir::new("p10-vcg");
