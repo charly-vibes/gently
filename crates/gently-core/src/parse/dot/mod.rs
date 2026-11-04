@@ -170,14 +170,33 @@ impl<'a> P<'a> {
     }
 
     fn header(&mut self) -> Result<(), ParseError> {
-        let kind = match self.peek_tok() {
-            Some(Tok::Ident(s)) if s == "digraph" || s == "graph" => s.clone(),
-            _ => return Err(err(self.line(), "expected a `digraph' or `graph' header")),
-        };
+        let kind = self.expect_graph_kind()?;
         self.pos += 1;
         if kind == "graph" {
             self.g.attributes.set("type", "undirected");
         }
+        self.apply_graph_name();
+        self.expect_lbrace()?;
+        self.scope_body(true, None)?;
+        self.expect_rbrace()?;
+        self.skip_semis();
+        if self.pos < self.toks.len() {
+            return Err(err(self.line(), "trailing input after the graph body"));
+        }
+        Ok(())
+    }
+
+    /// The `digraph'/'graph' keyword (defaults to `graph' when omitted).
+    fn expect_graph_kind(&mut self) -> Result<String, ParseError> {
+        match self.peek_tok() {
+            Some(Tok::Ident(s)) if s == "digraph" || s == "graph" => Ok(s.clone()),
+            _ => Err(err(self.line(), "expected a `digraph' or `graph' header")),
+        }
+    }
+
+    /// The optional graph name, recorded as the `title' attribute
+    /// (defaulting to "unnamed" when absent).
+    fn apply_graph_name(&mut self) {
         let name = match self.peek_tok() {
             Some(Tok::Ident(s)) => Some(s.clone()),
             Some(Tok::Str(q)) => Some(attrs::unquote(q)),
@@ -190,17 +209,16 @@ impl<'a> P<'a> {
             }
             None => self.g.attributes.set("title", "unnamed"),
         }
+    }
+
+    fn expect_lbrace(&mut self) -> Result<(), ParseError> {
         match self.peek_tok() {
-            Some(Tok::LBrace) => self.pos += 1,
-            _ => return Err(err(self.line(), "expected `{' to open the graph body")),
+            Some(Tok::LBrace) => {
+                self.pos += 1;
+                Ok(())
+            }
+            _ => Err(err(self.line(), "expected `{' to open the graph body")),
         }
-        self.scope_body(true, None)?;
-        self.expect_rbrace()?;
-        self.skip_semis();
-        if self.pos < self.toks.len() {
-            return Err(err(self.line(), "trailing input after the graph body"));
-        }
-        Ok(())
     }
 
     fn skip_semis(&mut self) {

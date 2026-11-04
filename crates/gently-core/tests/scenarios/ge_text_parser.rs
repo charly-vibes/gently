@@ -38,16 +38,16 @@ mod p13;
 /// creates an anonymous `#N` that a later escaped `[ \#N ]` reuses.
 #[test]
 fn p1() {
-    let g = text::parse("[ a ] --> [ ]\n").expect("must parse");
+    let g = text::parse("[ a ] --> [ ]\n").must("must parse");
     assert_eq!(g.nodes[1].name, "#1", "the first anon node is #1");
-    let g = text::parse("[ a ]\n[ a ]\n").expect("must parse");
+    let g = text::parse("[ a ]\n[ a ]\n").must("must parse");
     assert_eq!(g.nodes.len(), 1, "the repeated token must reuse the node");
-    let g = text::parse("[ a ] --> [ ]\n[ b ] --> [ ]\n").expect("must parse");
+    let g = text::parse("[ a ] --> [ ]\n[ b ] --> [ ]\n").must("must parse");
     node(&g, "#1");
     node(&g, "#3");
     assert_eq!(g.nodes.len(), 4, "each bare [] is its own anon node");
     let src = "[ a ] --> [ ]\n[ \\#1 ] --> [ b ]\n";
-    let g = text::parse(src).expect("the escaped reference must parse");
+    let g = text::parse(src).must("the escaped reference must parse");
     assert_eq!(g.nodes.len(), 3, "3 nodes: a, #1, b");
     assert_eq!(
         g.edges[0].to, g.edges[1].from,
@@ -60,7 +60,7 @@ fn p1() {
 /// endpoints and a lone `<` are errors; style-only styles via attribute.
 #[test]
 fn p2() {
-    let g = text::parse("[ a ] => [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] => [ b ]\n").must("must parse");
     assert_eq!(style(&g, 0), Some(String::from("double")));
     directed_ops_map_to_styles();
     bidirectional_ops_mark_both_ends();
@@ -121,7 +121,7 @@ fn broken_edges_are_errors() {
 
 /// bold/wide/broad have no operator spelling; `{ style: X; }` works.
 fn style_only_styles_come_via_the_attribute() {
-    let g = text::parse("[ a ] --> { style: bold; } [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] --> { style: bold; } [ b ]\n").must("must parse");
     assert_eq!(style(&g, 0), Some(String::from("bold")));
     for src in ["[ a ] bold [ b ]\n", "[ a ] wide [ b ]\n"] {
         assert!(
@@ -134,12 +134,12 @@ fn style_only_styles_come_via_the_attribute() {
 /// ge.text_parser.p3 (c3): a chain creates one edge per adjacent pair, sharing repeated names.
 #[test]
 fn p3() {
-    let g = text::parse("[ a ] --> [ b ] --> [ c ]\n").expect("must parse");
+    let g = text::parse("[ a ] --> [ b ] --> [ c ]\n").must("must parse");
     assert_eq!(g.nodes.len(), 3);
     assert_eq!(g.edges.len(), 2);
     assert_eq!((g.edges[0].from, g.edges[0].to), (0, 1));
     assert_eq!((g.edges[1].from, g.edges[1].to), (1, 2));
-    let g = text::parse("[ a ] --> [ b ] --> [ a ]\n").expect("must parse");
+    let g = text::parse("[ a ] --> [ b ] --> [ a ]\n").must("must parse");
     assert_eq!(g.nodes.len(), 2, "repeated names share nodes");
     assert_eq!(g.edges.len(), 2);
     assert_eq!((g.edges[1].from, g.edges[1].to), (1, 0), "edge back to a");
@@ -147,7 +147,7 @@ fn p3() {
         .map(|i| format!("[ n{i} ]"))
         .collect::<Vec<_>>()
         .join(" --> ");
-    let g = text::parse(&chain).expect("chain must parse");
+    let g = text::parse(&chain).must("chain must parse");
     assert_eq!(g.nodes.len(), 6);
     assert_eq!(g.edges.len(), 5);
 }
@@ -156,13 +156,13 @@ fn p3() {
 /// flanks match and the edge has an arrow; mismatches are errors.
 #[test]
 fn p4() {
-    let g = text::parse("[ a ] -- go --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] -- go --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Edge(0), "label"), Some("go"));
     assert_eq!(style(&g, 0), None, "solid flanks");
-    let g = text::parse("[ a ] -  go - > [ b ]\n").expect("the rendered dashed form must parse");
+    let g = text::parse("[ a ] -  go - > [ b ]\n").must("the rendered dashed form must parse");
     assert_eq!(g.get_attr(Scope::Edge(0), "label"), Some("go"));
     assert_eq!(style(&g, 0), Some(String::from("dashed")));
-    let g = text::parse("[ a ] <.. lbl ..> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] <.. lbl ..> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Edge(0), "label"), Some("lbl"));
     let e = &g.edges[0];
     assert!(
@@ -178,13 +178,13 @@ fn p4() {
 /// ge.text_parser.p5 (c5): attribute blocks apply to the nearest preceding object; class sections to the whole class.
 #[test]
 fn p5() {
-    let g = text::parse("[ a ] { color: red; } [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { color: red; } [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "color"), Some("red"));
     assert_eq!(g.get_attr(Scope::Node(1), "color"), None, "nearest only");
-    let g = text::parse("[ a ]\n{ color: red; }\n").expect("must parse");
+    let g = text::parse("[ a ]\n{ color: red; }\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "color"), Some("red"));
     let src = "[ a ] -->\n{ style: bold; }\n[ b ]\n";
-    let g = text::parse(src).expect("must parse");
+    let g = text::parse(src).must("must parse");
     assert_eq!(
         style(&g, 0),
         Some(String::from("bold")),
@@ -192,16 +192,16 @@ fn p5() {
     );
     // a block after a completed edge line targets the edge's right node (the oracle's stack-top)
     let src = "[ a ] --> [ b ]\n{ color: red; }\n";
-    let g = text::parse(src).expect("must parse");
+    let g = text::parse(src).must("must parse");
     assert_eq!(
         g.get_attr(Scope::Node(1), "color"),
         Some("red"),
         "last node target"
     );
-    let g = text::parse("( G: [ a ] ) { color: red; } [ c ]\n").expect("must parse");
+    let g = text::parse("( G: [ a ] ) { color: red; } [ c ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Group(0), "color"), Some("red"));
     let src = "graph { x: 1; }\nnode { y: 2; }\nedge { z: 3; }\ngroup { w: 4; }\n[ a ]\n";
-    let g = text::parse(src).expect("must parse");
+    let g = text::parse(src).must("must parse");
     assert_eq!(g.get_attr(Scope::Graph, "x"), Some("1"));
     assert_eq!(
         g.get_attr(Scope::Class(ObjectKind::Node, String::new()), "y"),
@@ -221,15 +221,15 @@ fn p5() {
 /// membership with move-on-redeclare, nesting, anonymous `Group #N`.
 #[test]
 fn p6() {
-    let g = text::parse("( G: [ a ] )\n").expect("must parse");
+    let g = text::parse("( G: [ a ] )\n").must("must parse");
     assert_eq!(g.groups[0].name, "G:", "the colon joins the name");
     assert_eq!(members(&g, 0), vec![0]);
-    let g = text::parse("( G: [ a ] --> [ b ] )\n").expect("must parse");
+    let g = text::parse("( G: [ a ] --> [ b ] )\n").must("must parse");
     assert_eq!(members(&g, 0), vec![0, 1]);
-    let g = text::parse("( A [ a ] [ c ] )\n").expect("must parse");
+    let g = text::parse("( A [ a ] [ c ] )\n").must("must parse");
     assert_eq!(g.groups[0].name, "A", "no colon, no colon in the name");
     assert_eq!(members(&g, 0), vec![0, 1]);
-    let g = text::parse("( A: [ a ] )\n( B: [ a ] )\n").expect("must parse");
+    let g = text::parse("( A: [ a ] )\n( B: [ a ] )\n").must("must parse");
     assert_eq!(
         members(&g, 0),
         Vec::<usize>::new(),
@@ -237,7 +237,7 @@ fn p6() {
     );
     assert_eq!(members(&g, 1), vec![0], "the later group owns the node");
     let src = "( A [ a ] ( B: [ b ] ) [ c ] )\n";
-    let g = text::parse(src).expect("must parse");
+    let g = text::parse(src).must("must parse");
     assert_eq!(g.groups.len(), 2);
     let (a, b) = (node(&g, "a"), node(&g, "b"));
     assert_eq!(
@@ -246,7 +246,7 @@ fn p6() {
         "outer keeps direct nodes"
     );
     assert_eq!(members(&g, 1), vec![b], "inner-only membership");
-    let g = text::parse("( [ a ] )\n").expect("must parse");
+    let g = text::parse("( [ a ] )\n").must("must parse");
     assert_eq!(g.groups[0].name, "Group #0", "anonymous group");
     assert_eq!(members(&g, 0), vec![0]);
 }
@@ -255,22 +255,22 @@ fn p6() {
 /// inside quotes); `\#` escapes it; hex colours after a separator pass.
 #[test]
 fn p7() {
-    let g = text::parse("[ a ] # junk\n").expect("must parse");
+    let g = text::parse("[ a ] # junk\n").must("must parse");
     assert_eq!(g.nodes.len(), 1, "mid-line comments truncate");
-    let g = text::parse("# junk\n[ a ]\n   # indented junk\n").expect("must parse");
+    let g = text::parse("# junk\n[ a ]\n   # indented junk\n").must("must parse");
     assert_eq!(g.nodes.len(), 1, "comment-only lines are dropped");
     let err = text::parse("[ a ] { label: \"x # y\"; }\n").expect_err("truncated in-string");
     assert!(err.line >= 1);
-    let g = text::parse("[ \\#a ] --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ \\#a ] --> [ b ]\n").must("must parse");
     assert_eq!(node(&g, "#a"), 0, "the escape collapses to #");
-    let g = text::parse("[ a ] { label: x \\# y; } [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: x \\# y; } [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("x # y"));
     let cases = [
         ("[ a ] { color: #ff0000; }\n", "#ff0000"),
         ("[ a ] { color: #f00; }\n", "#f00"),
     ];
     for (src, want) in cases {
-        let g = text::parse(src).expect("hex colour must be accepted");
+        let g = text::parse(src).must("hex colour must be accepted");
         assert_eq!(g.get_attr(Scope::Node(0), "color"), Some(want));
     }
     for src in ["[ a ] { color: red #ff0000; }\n", "[ #1 ] --> [ b ]\n"] {
@@ -303,7 +303,7 @@ fn p8() {
 /// reps; singles error. Styles verified against the pinned oracle.
 #[test]
 fn p9() {
-    let g = text::parse("[ a ] ..-..-..-> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] ..-..-..-> [ b ]\n").must("must parse");
     assert_eq!(style(&g, 0), Some(String::from("dot-dot-dash")));
     directed_style_follows_the_last_unit();
     arrowless_dot_singles_are_valid();
@@ -381,7 +381,7 @@ fn plain_singles_are_errors() {
 #[test]
 fn p10() {
     // headline: single-quoted values lose their quotes (the bug report)
-    let g = text::parse("[ a ] { label: 'hello'; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: 'hello'; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("hello"));
     quote_pairs_strip();
     store_unescape_set();
@@ -392,43 +392,43 @@ fn p10() {
 
 /// Double-, single-, mixed-end, greedy, and mid-value quote handling.
 fn quote_pairs_strip() {
-    let g = text::parse("[ a ] { label: \"hello world\"; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"hello world\"; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("hello world"));
     // mixed ends strip (greedy first-and-last, either quote char)
-    let g = text::parse("[ a ] { label: \"mixed'; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"mixed'; } --> [ b ]\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Node(0), "label"),
         Some("mixed"),
         "mismatched ends strip"
     );
     // greedy: only the first and last quote go
-    let g = text::parse("[ a ] { label: \"a\" \"b\"; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"a\" \"b\"; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a\" \"b"));
     // mid-value quotes are kept verbatim
-    let g = text::parse("[ a ] { label: x\"y\"z; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: x\"y\"z; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("x\"y\"z"));
 }
 
 /// The store-layer unescape set: `\"`, `\'`, `\;`, `\\` — and the
 /// unterminated-quote and empty-value forms.
 fn store_unescape_set() {
-    let g = text::parse("[ a ] { label: \"a\\\"b\"; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"a\\\"b\"; } --> [ b ]\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Node(0), "label"),
         Some("a\"b"),
         "escaped quote inside quotes"
     );
-    let g = text::parse("[ a ] { label: a\\'b; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: a\\'b; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a'b"));
-    let g = text::parse("[ a ] { label: a\\;b; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: a\\;b; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a;b"));
-    let g = text::parse("[ a ] { label: a\\\\b; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: a\\\\b; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a\\b"));
     // unterminated quote: accepted verbatim, `;` still terminates
-    let g = text::parse("[ a ] { label: \"abc; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"abc; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("\"abc"));
     // empty quoted value
-    let g = text::parse("[ a ] { label: \"\"; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"\"; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some(""));
 }
 
@@ -464,24 +464,48 @@ fn percent_entity_decode() {
 /// or the end of the block — otherwise the unquoted branch takes the
 /// whole run; a properly closed value shields `;` from splitting.
 fn quote_split_rules() {
-    let g = text::parse("[ a ] { label: \"a\" x; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"a\" x; } --> [ b ]\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Node(0), "label"),
         Some("\"a\" x"),
         "no early quote close"
     );
-    let g = text::parse("[ a ] { label: \"x; y\"; color: red; } --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ a ] { label: \"x; y\"; color: red; } --> [ b ]\n").must("must parse");
     assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("x; y"));
     assert_eq!(g.get_attr(Scope::Node(0), "color"), Some("red"));
 }
 
 /// Node names and edge labels are parser-layer only — no store unquoting.
 fn names_and_labels_are_parser_layer_only() {
-    let g = text::parse("[ \"n\" ] -- \"l\" --> [ b ]\n").expect("must parse");
+    let g = text::parse("[ \"n\" ] -- \"l\" --> [ b ]\n").must("must parse");
     assert_eq!(
         g.nodes[node(&g, "\"n\"")].name,
         "\"n\"",
         "names keep their quotes"
     );
     assert_eq!(g.get_attr(Scope::Edge(0), "label"), Some("\"l\""));
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
 }

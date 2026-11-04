@@ -29,7 +29,7 @@ fn start_port_graph(attr: &str) -> Graph {
     let mut g = Graph::default();
     let a = g.add_node("a");
     let b = g.add_node("b");
-    let e = g.add_edge(a, b, true).expect("live endpoints");
+    let e = g.add_edge(a, b, true).must("live endpoints");
     g.set_attr(Scope::Edge(e), "start", attr);
     g
 }
@@ -40,9 +40,9 @@ fn skip_port_graph() -> Graph {
     let a = g.add_node("a");
     let b = g.add_node("b");
     let c = g.add_node("c");
-    g.add_edge(a, b, true).expect("live endpoints");
-    g.add_edge(b, c, true).expect("live endpoints");
-    let e = g.add_edge(a, c, true).expect("live endpoints");
+    g.add_edge(a, b, true).must("live endpoints");
+    g.add_edge(b, c, true).must("live endpoints");
+    let e = g.add_edge(a, c, true).must("live endpoints");
     g.set_attr(Scope::Edge(e), "start", "right");
     g
 }
@@ -53,9 +53,9 @@ fn chain_port_graph() -> Graph {
     let a = g.add_node("a");
     let b = g.add_node("b");
     let c = g.add_node("c");
-    let e = g.add_edge(a, b, true).expect("live endpoints");
+    let e = g.add_edge(a, b, true).must("live endpoints");
     g.set_attr(Scope::Edge(e), "start", "right");
-    g.add_edge(b, c, true).expect("live endpoints");
+    g.add_edge(b, c, true).must("live endpoints");
     g
 }
 
@@ -158,7 +158,7 @@ fn p6_start_front_is_noop() {
         let mut g = Graph::default();
         let a = g.add_node("a");
         let b = g.add_node("b");
-        g.add_edge(a, b, true).expect("live endpoints");
+        g.add_edge(a, b, true).must("live endpoints");
         g
     });
     assert_eq!(layout::layout(&g).edge_paths, plain.edge_paths);
@@ -222,8 +222,8 @@ fn p7_indexed_front_ports_route_oracle_ascii() {
     let input = "[ Msg Server ] -- 1. Number X of unread --> { start: front,0; } [ Client ]\n\
                  [ Msg Server ] -- 3. X Msg --> { start: front,3; } [ Client ]\n\
                  [ Client ] -- 2. read X --> { end: front,2; } [ Msg Server ]\n";
-    let g = gently_core::parse::text::parse(input).expect("the indexed ports must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("must render");
+    let g = gently_core::parse::text::parse(input).must("the indexed ports must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("must render");
     let expected = claims_seed0_ascii(
         &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/repro/claims/so-start-port-index.observed"),
@@ -237,7 +237,7 @@ fn p7_indexed_front_ports_route_oracle_ascii() {
 /// Seed-0 `as_ascii:` block of a claims file (the decision_trace.rs
 /// convention, local so the port scenarios stay self-contained).
 fn claims_seed0_ascii(path: &PathBuf) -> String {
-    let text = std::fs::read_to_string(path).expect("claims file must exist");
+    let text = std::fs::read_to_string(path).must("claims file must exist");
     let mut lines = text
         .lines()
         .skip_while(|l| *l != "== seed 0 ==")
@@ -264,3 +264,27 @@ fixture_pin!(port_end_right_renders_oracle_ascii, "port-end-right");
 fixture_pin!(port_start_left_renders_oracle_ascii, "port-start-left");
 fixture_pin!(port_skip_right_renders_oracle_ascii, "port-skip-right");
 fixture_pin!(port_chain_right_renders_oracle_ascii, "port-chain-right");
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
+}

@@ -259,6 +259,19 @@ fn straight_run(
     let len = pat.len();
     let phase = if arrowed && !bidi { 0 } else { gap_start % len };
     let mut line: Vec<char> = (0..w).map(|i| pat[(phase + i) % len]).collect();
+    let x = apply_arrowheads(&mut line, w, westward, arrowed, bidi);
+    (x, line.into_iter().collect())
+}
+
+/// Chop the run to the arrowhead span and stamp the heads, returning the
+/// stamp origin x (SHORT_W/BD_EW start at 0, SHORT_E/UN_EW at 1).
+fn apply_arrowheads(
+    line: &mut Vec<char>,
+    w: usize,
+    westward: bool,
+    arrowed: bool,
+    bidi: bool,
+) -> usize {
     let mut x = 1;
     if westward && arrowed && !bidi {
         // SHORT_W: one chop, then the two-char ' <' head at x 0.
@@ -281,5 +294,5 @@ fn straight_run(
         // UN_EW: two chops, x 1.
         line.truncate(w - 2);
     }
-    (x, line.into_iter().collect())
+    x
 }

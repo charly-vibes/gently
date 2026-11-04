@@ -15,8 +15,8 @@ use super::{ascii, layout, text};
 fn p2_back_edge_attachments_sit_left_plus_two() {
     let g =
         text::parse("[ Bonn ] -> [ Berlin ]\n[ Berlin ] -> [ Hamburg ]\n[ Bonn ] -> [ Hamburg ]\n")
-            .expect("triangle must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("triangle must render");
+            .must("triangle must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("triangle must render");
     assert_eq!(
         art,
         concat!(
@@ -42,9 +42,8 @@ fn p2_back_edge_attachments_sit_left_plus_two() {
 /// bypass ranking divergence, not minlen.
 #[test]
 fn p2_minlen_stretches_the_straight_gap_one_column() {
-    let g =
-        text::parse("[ Bonn ] --> { minlen: 3; } [ Berlin ]\n").expect("minlen edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("minlen edge must render");
+    let g = text::parse("[ Bonn ] --> { minlen: 3; } [ Berlin ]\n").must("minlen edge must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("minlen edge must render");
     assert_eq!(
         art,
         concat!(
@@ -74,8 +73,8 @@ fn p2_shared_middle_bypass_ranks_the_middle_inline() {
         "[ Frankfurt ] --> [ Dresden ]\n",
         "[ Trier ] --> [ Frankfurt ]\n",
     ))
-    .expect("bypass graph must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("bypass graph must render");
+    .must("bypass graph must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("bypass graph must render");
     assert_eq!(
         art,
         concat!(
@@ -88,4 +87,28 @@ fn p2_shared_middle_bypass_ranks_the_middle_inline() {
         ),
         "the shared-middle bypass ranks its middle node inline and bends the skip-edge over the band"
     );
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
 }

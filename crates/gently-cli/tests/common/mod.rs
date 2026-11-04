@@ -21,11 +21,11 @@ pub fn run_gently_in(dir: &Path, args: &[&str], stdin: &[u8]) -> Run {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("spawn gently");
-    if let Err(e) = child.stdin.as_mut().expect("stdin piped").write_all(stdin) {
+        .must("spawn gently");
+    if let Err(e) = child.stdin.as_mut().must("stdin piped").write_all(stdin) {
         assert_eq!(e.kind(), std::io::ErrorKind::BrokenPipe, "write stdin");
     }
-    let out = child.wait_with_output().expect("wait for gently");
+    let out = child.wait_with_output().must("wait for gently");
     Run {
         stdout: out.stdout,
         stderr: out.stderr,
@@ -39,7 +39,7 @@ pub struct TempDir(pub std::path::PathBuf);
 impl TempDir {
     pub fn new(tag: &str) -> TempDir {
         let dir = std::env::temp_dir().join(format!("gently-{tag}-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).expect("create temp dir");
+        std::fs::create_dir_all(&dir).must("create temp dir");
         TempDir(dir)
     }
 }
@@ -69,20 +69,20 @@ pub fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("spawn gently");
+        .must("spawn gently");
     // The child may exit before consuming stdin (e.g. unknown --as format
     // dies with 255 without reading — cli.c4) — a broken pipe is that
     // exit's observable signature, not a test failure. Any other IO error
     // still panics; correctness of p1-p3 is guarded by their assertions on
     // stdout/stderr/exit code.
-    if let Err(e) = child.stdin.as_mut().expect("stdin piped").write_all(stdin) {
+    if let Err(e) = child.stdin.as_mut().must("stdin piped").write_all(stdin) {
         assert_eq!(
             e.kind(),
             std::io::ErrorKind::BrokenPipe,
             "write stdin: unexpected IO error"
         );
     }
-    let out = child.wait_with_output().expect("wait for gently");
+    let out = child.wait_with_output().must("wait for gently");
     Run {
         stdout: out.stdout,
         stderr: out.stderr,
@@ -95,12 +95,36 @@ pub fn run_gently(args: &[&str], stdin: &[u8]) -> Run {
 /// probed oracle with documented scope-offs, so the CLI pin asserts
 /// routing: CLI bytes == renderer bytes.
 pub fn fixture_bytes(fmt: &str) -> String {
-    let g = gently_core::parse::text::parse("[ a ] --> [ b ]\n").expect("fixture parses");
+    let g = gently_core::parse::text::parse("[ a ] --> [ b ]\n").must("fixture parses");
     match fmt {
         "graphviz" => gently_core::render::graphviz::render(&g),
         "html" => gently_core::render::html::document(&g, &gently_core::layout::layout(&g))
-            .expect("html renders"),
+            .must("html renders"),
         "txt" => gently_core::render::txt::render(&g),
         _ => unreachable!("unwired format {fmt}"),
+    }
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
     }
 }

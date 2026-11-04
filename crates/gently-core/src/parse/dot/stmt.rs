@@ -132,21 +132,27 @@ impl P<'_> {
                 self.left = None;
             }
             Some(false) => {
-                if let Some((dir, left)) = &self.left {
-                    let left = left.clone();
-                    for &from in &left {
-                        let id = self
-                            .g
-                            .add_edge(from, idx, *dir)
-                            .expect("both endpoints are live nodes");
-                        run.edges.push(id);
-                    }
-                }
+                self.edge_left_neighbors(idx, run);
                 self.stack.push(idx);
             }
         }
         run.last = Some(idx);
         Ok(())
+    }
+
+    /// Inside a non-group scope: fan edges out from every recorded left
+    /// neighbor to `idx`, then remember `idx` as the new stack top.
+    fn edge_left_neighbors(&mut self, idx: usize, run: &mut StmtRun) {
+        if let Some((dir, left)) = &self.left {
+            let left = left.clone();
+            for &from in &left {
+                let id = self
+                    .g
+                    .add_edge(from, idx, *dir)
+                    .expect("both endpoints are live nodes");
+                run.edges.push(id);
+            }
+        }
     }
 
     /// Statement-end edge attributes land on every edge the statement

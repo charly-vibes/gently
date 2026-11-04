@@ -13,7 +13,7 @@ use gently_core::render::txt;
 fn chain_edge(g: &mut Graph, a: &str, b: &str, directed: bool) -> usize {
     let from = g.add_node(a);
     let to = g.add_node(b);
-    g.add_edge(from, to, directed).expect("live endpoints")
+    g.add_edge(from, to, directed).must("live endpoints")
 }
 
 /// Set the bidirectional arrows on an edge (arrowheads at both ends).
@@ -304,7 +304,7 @@ fn labels_do_not_survive_the_supported_subset() {
 /// payload bytes remain for byte-identical comparison (same convention as
 /// the tb.oracle companions).
 fn strip_pin_header(bytes: &[u8]) -> &[u8] {
-    let s = std::str::from_utf8(bytes).expect("companion must be utf-8 text");
+    let s = std::str::from_utf8(bytes).must("companion must be utf-8 text");
     let mut rest = s;
     while let Some(idx) = rest.find('\n') {
         if rest[..idx].starts_with("# oracle: ") {
@@ -334,9 +334,9 @@ fn p4() {
     const PIN: &str = "Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499";
 
     let mut names: Vec<String> = std::fs::read_dir(fixture_dir())
-        .expect("fixture dir")
+        .must("fixture dir")
         .map(|e| {
-            e.expect("dir entry")
+            e.must("dir entry")
                 .file_name()
                 .to_string_lossy()
                 .into_owned()
@@ -346,14 +346,14 @@ fn p4() {
     names.sort();
     assert!(names.len() >= 5, "fixture corpus must be non-trivial");
     for name in &names {
-        let input = std::fs::read(fixture_dir().join(name)).expect("fixture input");
+        let input = std::fs::read(fixture_dir().join(name)).must("fixture input");
         let companion = fixture_dir().join(format!("{name}.expected"));
         let expected = std::fs::read(&companion)
             .unwrap_or_else(|e| panic!("missing recorded companion {}: {e}", companion.display()));
         // the pin header is recorder metadata: verify it names the pinned
         // revision, then strip it before the byte-identical comparison
         let header = std::str::from_utf8(&expected)
-            .expect("companion must be utf-8")
+            .must("companion must be utf-8")
             .lines()
             .next()
             .unwrap_or("")
@@ -363,7 +363,7 @@ fn p4() {
             format!("# oracle: {PIN}"),
             "{name}.expected must carry the pinned-revision header (ge.txt_render.c4)"
         );
-        let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
+        let g = text::parse(std::str::from_utf8(&input).must("fixture must be utf-8"))
             .unwrap_or_else(|e| panic!("fixture {name} must parse: {e}"));
         let got = txt::render(&g);
         assert_eq!(
@@ -382,7 +382,7 @@ fn p4() {
 #[test]
 fn p5() {
     fn node_attrs(source: &str) -> String {
-        let g = text::parse(source).expect("parse");
+        let g = text::parse(source).must("parse");
         txt::render(&g)
     }
 
@@ -433,7 +433,7 @@ fn p5() {
 #[test]
 fn p6() {
     // as_txt: the group block AND [ Berlin ]
-    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").expect("the repro must parse");
+    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").must("the repro must parse");
     let expected_txt = "( Group \\#0\n  [ Bonn ]\n)\n\n[ Berlin ]\n";
     assert_eq!(
         txt::render(&g),
@@ -442,7 +442,7 @@ fn p6() {
     );
 
     // as_ascii: the dashed group border with both boxes — own graph
-    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").expect("the repro must parse");
+    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").must("the repro must parse");
     let expected_ascii = concat!(
         "+ - - - - - -+\n' Group #0   '\n'            '\n",
         "' +--------+ '   +--------+\n' |  Bonn  | '   | Berlin |\n",
@@ -450,8 +450,32 @@ fn p6() {
     );
     let laid = gently_core::layout::layout(&g);
     assert_eq!(
-        ascii::render(&g, &laid).expect("the repro must render"),
+        ascii::render(&g, &laid).must("the repro must render"),
         expected_ascii,
         "as_ascii must draw the dashed group border with both boxes"
     );
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
 }

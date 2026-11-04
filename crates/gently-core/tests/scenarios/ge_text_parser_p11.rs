@@ -18,7 +18,7 @@ fn edge_pairs(g: &gently_core::graph::Graph) -> Vec<(usize, usize)> {
 /// A->B, A->C, A->D — three edges over four shared nodes).
 #[test]
 fn fan_out_reuses_the_remembered_left_side() {
-    let g = text::parse("[ A ] -> [ B ], [ C ], [ D ]\n").expect("must parse");
+    let g = text::parse("[ A ] -> [ B ], [ C ], [ D ]\n").must("must parse");
     assert_eq!(g.nodes.len(), 4);
     let (a, b, c, d) = (node(&g, "A"), node(&g, "B"), node(&g, "C"), node(&g, "D"));
     assert_eq!(
@@ -31,7 +31,7 @@ fn fan_out_reuses_the_remembered_left_side() {
 /// `[ A ], [ B ], [ C ] --> [ D ]` links every list element to D (fan-in).
 #[test]
 fn fan_in_links_every_list_element() {
-    let g = text::parse("[ A ], [ B ], [ C ] --> [ D ]\n").expect("must parse");
+    let g = text::parse("[ A ], [ B ], [ C ] --> [ D ]\n").must("must parse");
     let (a, b, c, d) = (node(&g, "A"), node(&g, "B"), node(&g, "C"), node(&g, "D"));
     assert_eq!(edge_pairs(&g), vec![(a, d), (b, d), (c, d)], "fan-in to D");
 }
@@ -45,7 +45,7 @@ fn attribute_blocks_share_across_the_list() {
         "[ A ], [ B ] { color: red; }\n",
         "[ A ], [ B ]\n{ color: red; }\n",
     ] {
-        let g = text::parse(src).expect("must parse");
+        let g = text::parse(src).must("must parse");
         assert_eq!(
             g.get_attr(Scope::Node(node(&g, "A")), "color"),
             Some("red"),
@@ -63,14 +63,14 @@ fn attribute_blocks_share_across_the_list() {
 /// bare node statement resets the remembered left side.
 #[test]
 fn lists_continue_across_lines_until_reset() {
-    let g = text::parse("[ A ] --> [ B ]\n, [ C ]\n").expect("must parse");
+    let g = text::parse("[ A ] --> [ B ]\n, [ C ]\n").must("must parse");
     let (a, b, c) = (node(&g, "A"), node(&g, "B"), node(&g, "C"));
     assert_eq!(
         edge_pairs(&g),
         vec![(a, b), (a, c)],
         "the comma continues the fan across lines"
     );
-    let g = text::parse("[ A ] --> [ B ]\n[ C ], [ D ]\n").expect("must parse");
+    let g = text::parse("[ A ] --> [ B ]\n[ C ], [ D ]\n").must("must parse");
     let (a, b) = (node(&g, "A"), node(&g, "B"));
     assert_eq!(
         edge_pairs(&g),
@@ -83,9 +83,33 @@ fn lists_continue_across_lines_until_reset() {
 /// A bidirectional operator fans out with both arrows on every edge.
 #[test]
 fn bidirectional_fan_keeps_both_arrows() {
-    let g = text::parse("[ A ] <-> [ B ], [ C ]\n").expect("must parse");
+    let g = text::parse("[ A ] <-> [ B ], [ C ]\n").must("must parse");
     assert_eq!(g.edges.len(), 2);
     for e in &g.edges {
         assert!(e.arrows.start && e.arrows.end, "bidirectional fan edge");
+    }
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
     }
 }

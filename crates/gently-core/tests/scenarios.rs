@@ -4,6 +4,7 @@
 //! these module paths: `scenarios::<cap>::<pid>`.
 
 mod tb {
+    use crate::Must;
     /// Walking-skeleton smoke test (epic gently-2po): the workspace links,
     /// gently-core is loadable, and the tracer shape plumbing is reachable.
     /// Deepened by gently-2po.7/.8/.9/.10.
@@ -40,6 +41,7 @@ mod tb {
     /// a west of b, same row, one-cell gap. Deepened by gently-4ht /
     /// gently-4nx (capability contracts p1–p4).
     mod layout {
+        use crate::Must;
         use gently_core::{graph::Graph, layout};
 
         /// ge.layout.c1: the layout is a pure function — identical inputs
@@ -100,7 +102,7 @@ mod tb {
             }
             assert_eq!(path[0], (a.0 + 1, a.1), "path must start at a's east side");
             assert_eq!(
-                *path.last().unwrap(),
+                *path.last().must("value"),
                 (b.0 - 1, b.1),
                 "path must end at b's west side"
             );
@@ -112,11 +114,12 @@ mod tb {
     /// two interned nodes and one edge; junk lines are typed parse errors,
     /// never panics. Deepened by gently-bzx (full ge.text_parser).
     mod parse_text {
+        use crate::Must;
         use gently_core::parse::text::{self, ParseError};
 
         #[test]
         fn tracer_edge_parses_to_interned_shape() {
-            let g = text::parse("[ a ] --> [ b ]\n").expect("tracer line must parse");
+            let g = text::parse("[ a ] --> [ b ]\n").must("tracer line must parse");
             assert_eq!(g.nodes.len(), 2);
             assert_eq!(g.nodes[0].name, "a");
             assert_eq!(g.nodes[1].name, "b");
@@ -130,9 +133,9 @@ mod tb {
         /// Flexible whitespace and the `->` spelling are accepted.
         #[test]
         fn arrow_spelling_and_whitespace_flexibility() {
-            let g = text::parse("[a]->[b]\n").expect("compact form must parse");
+            let g = text::parse("[a]->[b]\n").must("compact form must parse");
             assert_eq!(g.edges.len(), 1);
-            let g = text::parse("  [  a  ]   -->   [  b  ]  \n").expect("spaced form must parse");
+            let g = text::parse("  [  a  ]   -->   [  b  ]  \n").must("spaced form must parse");
             assert_eq!(g.edges.len(), 1);
             assert_eq!(g.nodes[0].name, "a");
         }
@@ -140,7 +143,7 @@ mod tb {
         /// Shared names intern to one node; bare node lines add nodes.
         #[test]
         fn names_intern_and_bare_nodes_parse() {
-            let g = text::parse("[ x ]\n[ x ] --> [ y ]\n").expect("must parse");
+            let g = text::parse("[ x ]\n[ x ] --> [ y ]\n").must("must parse");
             assert_eq!(g.nodes.len(), 2, "x must intern to a single node");
             assert_eq!(g.nodes[0].name, "x");
             assert_eq!(g.nodes[1].name, "y");
@@ -154,13 +157,13 @@ mod tb {
             assert_eq!(err.line, 1);
             assert!(text::parse("[ a ] -->\n").is_err());
             // ge.text_parser c1 (gently-bzx): a bare [ ] is an anonymous node
-            let g = text::parse("[ ] --> [ b ]\n").expect("bare [] is an anon node");
+            let g = text::parse("[ ] --> [ b ]\n").must("bare [] is an anon node");
             assert_eq!(g.nodes[0].name, "#1");
             assert!(text::parse("[ a ] junk [ b ]\n").is_err());
             assert!(text::parse("]]][[[\n").is_err(), "no panic on bracket soup");
             // empty input is a valid (empty) graph
             assert_eq!(
-                text::parse("").unwrap(),
+                text::parse("").must("value"),
                 gently_core::graph::Graph::default()
             );
         }
@@ -186,13 +189,14 @@ mod tb {
     /// `+---+     +---+` / `| a | --> | b |` / `+---+     +---+`.
     /// Deepened by the ge-ascii_render capability slices.
     mod ascii_render {
+        use crate::Must;
         use gently_core::{graph::Graph, layout, render::ascii};
 
         #[test]
         fn tracer_layout_renders_oracle_bytes() {
             let g = Graph::tracer();
             let l = layout::layout(&g);
-            let art = ascii::render(&g, &l).expect("tracer layout must render");
+            let art = ascii::render(&g, &l).must("tracer layout must render");
             assert_eq!(art, "+---+     +---+\n| a | --> | b |\n+---+     +---+\n");
         }
 
@@ -210,7 +214,7 @@ mod tb {
         fn empty_graph_renders_empty() {
             let g = Graph::default();
             let l = layout::layout(&g);
-            assert_eq!(ascii::render(&g, &l).unwrap(), "");
+            assert_eq!(ascii::render(&g, &l).must("value"), "");
         }
     }
 
@@ -231,6 +235,7 @@ mod tb {
     /// bytes (ge.oracle.c3); `just oracle-record` / `just oracle-verify`
     /// run the same correspondence against live perl locally (c4/c5).
     mod oracle {
+        use crate::Must;
         use gently_core::{layout, parse::text, render::ascii, render::txt};
         use std::path::PathBuf;
 
@@ -257,7 +262,7 @@ mod tb {
         /// Strip every leading `# oracle: ` header line so only the oracle
         /// payload bytes remain for byte-identical comparison.
         fn strip_pin_header(bytes: &[u8]) -> &[u8] {
-            let s = std::str::from_utf8(bytes).expect("companion must be utf-8 text");
+            let s = std::str::from_utf8(bytes).must("companion must be utf-8 text");
             let mut rest = s;
             while let Some(idx) = rest.find('\n') {
                 if rest[..idx].starts_with("# oracle: ") {
@@ -302,11 +307,11 @@ mod tb {
         /// `as_txt` companion.
         #[test]
         fn tracer_fixture_matches_recorded_oracle_txt() {
-            let input = std::fs::read(fixture_dir().join("tracer.txt")).expect("fixture input");
-            let expected = std::fs::read(fixture_dir().join("tracer.txt.expected"))
-                .expect("recorded companion");
-            let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
-                .expect("fixture input must parse");
+            let input = std::fs::read(fixture_dir().join("tracer.txt")).must("fixture input");
+            let expected =
+                std::fs::read(fixture_dir().join("tracer.txt.expected")).must("recorded companion");
+            let g = text::parse(std::str::from_utf8(&input).must("fixture must be utf-8"))
+                .must("fixture input must parse");
             let m = mismatch(
                 "tracer.txt",
                 "txt",
@@ -322,13 +327,13 @@ mod tb {
         /// `as_ascii` companion.
         #[test]
         fn tracer_fixture_matches_recorded_oracle_ascii() {
-            let input = std::fs::read(fixture_dir().join("tracer.txt")).expect("fixture input");
+            let input = std::fs::read(fixture_dir().join("tracer.txt")).must("fixture input");
             let expected = std::fs::read(fixture_dir().join("tracer.ascii.expected"))
-                .expect("recorded companion");
-            let g = text::parse(std::str::from_utf8(&input).expect("fixture must be utf-8"))
-                .expect("fixture input must parse");
+                .must("recorded companion");
+            let g = text::parse(std::str::from_utf8(&input).must("fixture must be utf-8"))
+                .must("fixture input must parse");
             let l = layout::layout(&g);
-            let art = ascii::render(&g, &l).expect("fixture layout must render");
+            let art = ascii::render(&g, &l).must("fixture layout must render");
             let m = mismatch(
                 "tracer.txt",
                 "ascii",
@@ -344,7 +349,7 @@ mod tb {
         #[test]
         fn stale_pin_header_is_rejected() {
             for name in ["tracer.txt.expected", "tracer.ascii.expected"] {
-                let bytes = std::fs::read(fixture_dir().join(name)).expect("recorded companion");
+                let bytes = std::fs::read(fixture_dir().join(name)).must("recorded companion");
                 assert!(!pin_is_stale(&bytes), "{name} must carry the pinned header");
             }
             let foreign_version = format!("# oracle: Graph::Easy v0.76 @ {}\n", PIN.1);
@@ -429,3 +434,27 @@ mod ge_perf;
 /// and group emission plus the dot_parser round trip (specs/ge-graphviz_render.md).
 #[path = "scenarios/ge_graphviz_render.rs"]
 mod ge_graphviz_render;
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
+}

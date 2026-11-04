@@ -142,25 +142,37 @@ fn dispatch(cli: &Cli, guide: &Guide, subcommand: Option<&str>) -> i32 {
         return 255;
     }
 
-    // cli.c2: resolve the output format — `--as` wins; otherwise the output
-    // filename's extension (upstream's map); otherwise ascii.
-    let output_path = cli.output.clone().or_else(|| cli.files.get(1).cloned());
-    let format_name = pipeline::resolve_format(cli, output_path.as_deref());
-
-    // cli.c4: validate the resolved format before dispatch — a diagnostic
-    // naming the requested and valid formats, then exit 255 (bug-for-bug
-    // with the upstream script's uncaught die, re-derived gently-0h9).
-    if !SUPPORTED_FORMATS.contains(&format_name.as_str()) {
-        report_error(
-            guide,
-            &format!(
-                "unknown output format '{format_name}' (valid formats: {})",
-                SUPPORTED_FORMATS.join(", ")
-            ),
-        );
-        return 255;
+    let (output_path, format_name) = resolve_output(cli);
+    if let Some(code) = reject_unknown_output_format(guide, &format_name) {
+        return code;
     }
     pipeline::run(guide, cli, output_path, format, &format_name)
+}
+
+/// cli.c2: resolve the output format — `--as` wins; otherwise the output
+/// filename's extension (upstream's map); otherwise ascii.
+fn resolve_output(cli: &Cli) -> (Option<PathBuf>, String) {
+    let output_path = cli.output.clone().or_else(|| cli.files.get(1).cloned());
+    let format_name = pipeline::resolve_format(cli, output_path.as_deref());
+    (output_path, format_name)
+}
+
+/// cli.c4: validate the resolved format before dispatch — a diagnostic
+/// naming the requested and valid formats, then exit 255 (bug-for-bug
+/// with the upstream script's uncaught die, re-derived gently-0h9).
+/// Returns Some(255) when the format is unsupported.
+fn reject_unknown_output_format(guide: &Guide, format_name: &str) -> Option<i32> {
+    if SUPPORTED_FORMATS.contains(&format_name) {
+        return None;
+    }
+    report_error(
+        guide,
+        &format!(
+            "unknown output format '{format_name}' (valid formats: {})",
+            SUPPORTED_FORMATS.join(", ")
+        ),
+    );
+    Some(255)
 }
 
 /// The emit format (c5/c6): `--json` wraps results in the genesis

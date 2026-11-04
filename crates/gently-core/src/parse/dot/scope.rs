@@ -74,28 +74,39 @@ impl P<'_> {
             unreachable!("matched Ident above")
         };
         self.pos += 2;
-        let value = match self.peek_tok() {
+        let value = self.graph_attr_value()?;
+        self.apply_graph_attr(&key, &value);
+        Ok(true)
+    }
+
+    /// The RHS of a `key = value' graph attribute (quoted or bare ident).
+    fn graph_attr_value(&mut self) -> Result<String, ParseError> {
+        match self.peek_tok() {
             Some(Tok::Str(q)) => {
                 let v = attrs::unquote(q);
                 self.pos += 1;
-                v
+                Ok(v)
             }
             Some(Tok::Ident(s)) => {
                 let v = s.clone();
                 self.pos += 1;
-                v
+                Ok(v)
             }
-            _ => return Err(err(self.line(), "expected an attribute value")),
-        };
+            _ => Err(err(self.line(), "expected an attribute value")),
+        }
+    }
+
+    /// Record a graph-level attribute: group-scoped when the innermost
+    /// scope carries a group, `rankdir' translated to `flow' at the top.
+    fn apply_graph_attr(&mut self, key: &str, value: &str) {
         match self.scopes.iter().rev().find_map(|s| s.group) {
-            Some(gidx) => self.g.set_attr(Scope::Group(gidx), &key, &value),
+            Some(gidx) => self.g.set_attr(Scope::Group(gidx), key, value),
             None if key == "rankdir" => {
                 self.g
-                    .set_attr(Scope::Graph, "flow", attrs::rankdir_flow(&value));
+                    .set_attr(Scope::Graph, "flow", attrs::rankdir_flow(value));
             }
-            None => self.g.set_attr(Scope::Graph, &key, &value),
+            None => self.g.set_attr(Scope::Graph, key, value),
         }
-        Ok(true)
     }
 
     /// Named subgraph shared by statement and endpoint positions; the

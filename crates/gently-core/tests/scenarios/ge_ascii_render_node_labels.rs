@@ -10,8 +10,8 @@ use super::{ascii, layout, text};
 /// pinned oracle (seed-stable two-node render).
 #[test]
 fn p5_node_label_newline_splits_interior_rows() {
-    let g = text::parse("[ a\\nb ]\n").expect("the \\n label must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("the \\n label must render");
+    let g = text::parse("[ a\\nb ]\n").must("the \\n label must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("the \\n label must render");
     assert_eq!(
         art, "+---+\n| a |\n| b |\n+---+\n",
         "the \\n escape splits the node label over two interior rows"
@@ -30,8 +30,8 @@ fn p5_alignment_escapes_align_label_rows() {
     let g = text::parse(
         "[ Long Node Label\\l left\\r right\\c center ] -- A\\r long\\n edge label --> [ B ]\n",
     )
-    .expect("the aligned labels must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("the aligned labels must render");
+    .must("the aligned labels must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("the aligned labels must render");
     assert_eq!(
         art,
         concat!(
@@ -54,10 +54,34 @@ fn p5_alignment_escapes_align_label_rows() {
 /// oracle's byte-string framebuffer.
 #[test]
 fn p5_label_width_counts_utf8_bytes() {
-    let g = text::parse("[ A ] --> [ Köln ]\n").expect("the umlaut label must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("the umlaut label must render");
+    let g = text::parse("[ A ] --> [ Köln ]\n").must("the umlaut label must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("the umlaut label must render");
     assert_eq!(
         art, "+---+     +-------+\n| A | --> | Köln |\n+---+     +-------+\n",
         "Köln's box is 7 dashes wide (5 label bytes + 2 per side)"
     );
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
 }

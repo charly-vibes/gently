@@ -23,8 +23,19 @@ pub(super) struct Border {
 /// pattern, and side glyph. Unknown styles render solid (upstream
 /// falls back the same way for unrecognized style strings).
 pub(super) fn border(style: &str) -> Border {
-    match style {
-        "dotted" => Border {
+    BORDER_TABLE
+        .iter()
+        .find(|(names, _)| names.contains(&style))
+        .map(|(_, b)| *b)
+        .unwrap_or(DEFAULT_BORDER)
+}
+
+/// Per-style border glyph sets (style names, glyphs), in upstream's
+/// match order; `bold'/`broad'/`wide' share one set.
+const BORDER_TABLE: &[(&[&str], Border)] = &[
+    (
+        &["dotted"],
+        Border {
             tl: '.',
             tr: '.',
             br: ':',
@@ -32,7 +43,10 @@ pub(super) fn border(style: &str) -> Border {
             h: ".",
             side: ':',
         },
-        "dashed" => Border {
+    ),
+    (
+        &["dashed"],
+        Border {
             tl: '+',
             tr: '+',
             br: '+',
@@ -40,7 +54,10 @@ pub(super) fn border(style: &str) -> Border {
             h: "- ",
             side: '\'',
         },
-        "dot-dash" => Border {
+    ),
+    (
+        &["dot-dash"],
+        Border {
             tl: '+',
             tr: '+',
             br: '+',
@@ -48,7 +65,10 @@ pub(super) fn border(style: &str) -> Border {
             h: ".-",
             side: '!',
         },
-        "dot-dot-dash" => Border {
+    ),
+    (
+        &["dot-dot-dash"],
+        Border {
             tl: '+',
             tr: '+',
             br: '+',
@@ -56,7 +76,10 @@ pub(super) fn border(style: &str) -> Border {
             h: "..-",
             side: '|',
         },
-        "double" => Border {
+    ),
+    (
+        &["double"],
+        Border {
             tl: '#',
             tr: '#',
             br: '#',
@@ -64,7 +87,10 @@ pub(super) fn border(style: &str) -> Border {
             h: "=",
             side: 'H',
         },
-        "double-dash" => Border {
+    ),
+    (
+        &["double-dash"],
+        Border {
             tl: '#',
             tr: '#',
             br: '#',
@@ -72,7 +98,10 @@ pub(super) fn border(style: &str) -> Border {
             h: "= ",
             side: '"',
         },
-        "wave" => Border {
+    ),
+    (
+        &["wave"],
+        Border {
             tl: '+',
             tr: '+',
             br: '+',
@@ -80,7 +109,10 @@ pub(super) fn border(style: &str) -> Border {
             h: "~",
             side: '{',
         },
-        "bold" | "broad" | "wide" => Border {
+    ),
+    (
+        &["bold", "broad", "wide"],
+        Border {
             tl: '#',
             tr: '#',
             br: '#',
@@ -88,7 +120,10 @@ pub(super) fn border(style: &str) -> Border {
             h: "#",
             side: '#',
         },
-        "none" => Border {
+    ),
+    (
+        &["none"],
+        Border {
             tl: ' ',
             tr: ' ',
             br: ' ',
@@ -96,16 +131,18 @@ pub(super) fn border(style: &str) -> Border {
             h: " ",
             side: ' ',
         },
-        _ => Border {
-            tl: '+',
-            tr: '+',
-            br: '+',
-            bl: '+',
-            h: "-",
-            side: '|',
-        },
-    }
-}
+    ),
+];
+
+/// The plain solid border used for unknown styles.
+const DEFAULT_BORDER: Border = Border {
+    tl: '+',
+    tr: '+',
+    br: '+',
+    bl: '+',
+    h: "-",
+    side: '|',
+};
 
 /// The interior horizontal run of a border: the pattern shifted by one
 /// position (oracle: dashed `+ - +`, dot-dash `+-.-+`, dot-dot-dash

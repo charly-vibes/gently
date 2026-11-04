@@ -19,8 +19,10 @@ mod common;
 /// the filter `scenarios::cli::pN` used by `.espectacular/cli/pN.toml`
 /// matches these test paths.
 mod scenarios {
+    use crate::Must;
     mod cli {
         use crate::common::{run_gently, run_gently_in, TempDir, ORACLE};
+        use crate::Must;
         use std::process::{Command, Stdio};
 
         /// cli.p1 (c1): stdin and the first file argument reach the parser
@@ -40,10 +42,10 @@ mod scenarios {
 
             // file argument: same bytes through the file path.
             let dir = std::env::temp_dir().join(format!("gently-p1-{}", std::process::id()));
-            std::fs::create_dir_all(&dir).expect("create temp dir");
+            std::fs::create_dir_all(&dir).must("create temp dir");
             let input = dir.join("in.txt");
-            std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture file");
-            let r = run_gently(&[input.to_str().unwrap()], b"");
+            std::fs::write(&input, b"[ a ] --> [ b ]\n").must("write fixture file");
+            let r = run_gently(&[input.to_str().must("value")], b"");
             assert_eq!(Some(0), r.code, "exit 0 on success via file argument");
             assert_eq!(
                 ORACLE,
@@ -59,12 +61,12 @@ mod scenarios {
             // are silently ignored (bug-for-bug with upstream).
             let out = dir.join("out");
             let extra = dir.join("extra.txt");
-            std::fs::write(&extra, b"garbage that must be ignored\n").expect("write extra");
+            std::fs::write(&extra, b"garbage that must be ignored\n").must("write extra");
             let r = run_gently(
                 &[
-                    input.to_str().unwrap(),
-                    out.to_str().unwrap(),
-                    extra.to_str().unwrap(),
+                    input.to_str().must("value"),
+                    out.to_str().must("value"),
+                    extra.to_str().must("value"),
                 ],
                 b"",
             );
@@ -72,7 +74,7 @@ mod scenarios {
             assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
             assert_eq!(
                 ORACLE,
-                std::fs::read(&out).expect("read output file").as_slice()
+                std::fs::read(&out).must("read output file").as_slice()
             );
             let _ = std::fs::remove_dir_all(&dir);
         }
@@ -144,17 +146,17 @@ mod scenarios {
 
             // --output names the output file and receives the bytes.
             let dir = std::env::temp_dir().join(format!("gently-p2-{}", std::process::id()));
-            std::fs::create_dir_all(&dir).expect("create temp dir");
+            std::fs::create_dir_all(&dir).must("create temp dir");
             let input = dir.join("in.txt");
             let out = dir.join("out");
-            std::fs::write(&input, b"[ a ] --> [ b ]\n").expect("write fixture");
+            std::fs::write(&input, b"[ a ] --> [ b ]\n").must("write fixture");
             let r = run_gently(
                 &[
                     "--as",
                     "ascii",
                     "--output",
-                    out.to_str().unwrap(),
-                    input.to_str().unwrap(),
+                    out.to_str().must("value"),
+                    input.to_str().must("value"),
                 ],
                 b"",
             );
@@ -162,7 +164,7 @@ mod scenarios {
             assert!(r.stdout.is_empty(), "output goes to the file, not stdout");
             assert_eq!(
                 ORACLE,
-                std::fs::read(&out).expect("read output file").as_slice()
+                std::fs::read(&out).must("read output file").as_slice()
             );
             let _ = std::fs::remove_dir_all(&dir);
         }
@@ -206,7 +208,7 @@ mod scenarios {
             );
             let manifest = dir.0.join(".genesis/tools.toml");
             let body = std::fs::read_to_string(&manifest)
-                .expect("init must write .genesis/tools.toml in the working directory");
+                .must("init must write .genesis/tools.toml in the working directory");
             assert!(
                 body.contains("[tools.gently]"),
                 "manifest must name gently: {body}"
@@ -357,7 +359,7 @@ mod scenarios {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .output()
-                .expect("spawn gently doctor");
+                .must("spawn gently doctor");
             assert_eq!(Some(1), out.status.code(), "unhealthy doctor exits 1");
             let report = String::from_utf8_lossy(&out.stdout);
             for check in ["oracle", "format", "pin", "genesis"] {
@@ -404,8 +406,8 @@ mod scenarios {
             const DOT_ORACLE: &[u8] = b"+---+\n| a |\n+---+\n  |\n  |\n  v\n+---+\n| b |\n+---+\n";
             let dir = TempDir::new("p10-from");
             let dot_file = dir.0.join("graph.dot");
-            std::fs::write(&dot_file, b"digraph G { a -> b }\n").expect("write dot fixture");
-            let dot_arg = dot_file.to_str().unwrap();
+            std::fs::write(&dot_file, b"digraph G { a -> b }\n").must("write dot fixture");
+            let dot_arg = dot_file.to_str().must("value");
 
             // Explicit --from dot / graphviz parse the DOT input.
             for from in ["dot", "graphviz"] {
@@ -492,8 +494,8 @@ mod scenarios {
             // The `graph: {` sniff routes to the VCG parser upstream — no
             // gently parser exists, so the sniff is a scope-off diagnostic.
             let vcg_file = dir.0.join("graph.vcg");
-            std::fs::write(&vcg_file, b"graph: {\nnode: a\n}\n").expect("write vcg fixture");
-            let r = run_gently(&[vcg_file.to_str().unwrap()], b"");
+            std::fs::write(&vcg_file, b"graph: {\nnode: a\n}\n").must("write vcg fixture");
+            let r = run_gently(&[vcg_file.to_str().must("value")], b"");
             assert!(
                 !r.code.is_some_and(|c| c == 0),
                 "graph: {{ sniff must not silently text-parse"
@@ -503,6 +505,30 @@ mod scenarios {
                 err.contains("VCG") || err.contains("vcg"),
                 "sniffed-VCG diagnostic must name the unwired parser: {err}"
             );
+        }
+    }
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
         }
     }
 }

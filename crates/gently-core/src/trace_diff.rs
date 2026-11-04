@@ -136,27 +136,8 @@ pub fn minimal_cut(a: &str, b: &str) -> Vec<CutEvent> {
         let mut cut = Vec::new();
         let keys: std::collections::BTreeSet<&String> = sa.keys().chain(sb.keys()).collect();
         for key in keys {
-            match (sa.get(key), sb.get(key)) {
-                (Some(pa), Some(pb)) if pa == pb => {}
-                (Some(pa), Some(pb)) => cut.push(CutEvent {
-                    stage: (*stage).clone(),
-                    key: key.clone(),
-                    a: Some(pa.clone()),
-                    b: Some(pb.clone()),
-                }),
-                (Some(pa), None) => cut.push(CutEvent {
-                    stage: (*stage).clone(),
-                    key: key.clone(),
-                    a: Some(pa.clone()),
-                    b: None,
-                }),
-                (None, Some(pb)) => cut.push(CutEvent {
-                    stage: (*stage).clone(),
-                    key: key.clone(),
-                    a: None,
-                    b: Some(pb.clone()),
-                }),
-                (None, None) => unreachable!("key came from one of the sides"),
+            if let Some(ev) = diff_key(stage, key, sa.get(key), sb.get(key)) {
+                cut.push(ev);
             }
         }
         if !cut.is_empty() {
@@ -164,6 +145,37 @@ pub fn minimal_cut(a: &str, b: &str) -> Vec<CutEvent> {
         }
     }
     Vec::new()
+}
+
+/// The cut event for one key whose two sides differ, if any.
+fn diff_key(
+    stage: &String,
+    key: &String,
+    a: Option<&String>,
+    b: Option<&String>,
+) -> Option<CutEvent> {
+    match (a, b) {
+        (Some(pa), Some(pb)) if pa == pb => None,
+        (Some(pa), Some(pb)) => Some(CutEvent {
+            stage: stage.clone(),
+            key: key.clone(),
+            a: Some(pa.clone()),
+            b: Some(pb.clone()),
+        }),
+        (Some(pa), None) => Some(CutEvent {
+            stage: stage.clone(),
+            key: key.clone(),
+            a: Some(pa.clone()),
+            b: None,
+        }),
+        (None, Some(pb)) => Some(CutEvent {
+            stage: stage.clone(),
+            key: key.clone(),
+            a: None,
+            b: Some(pb.clone()),
+        }),
+        (None, None) => unreachable!("key came from one of the sides"),
+    }
 }
 
 /// The full trace-diff entry point (c3/p3): the minimal cut between the

@@ -27,8 +27,8 @@ fn chain_with_flow(flow: Option<&str>) -> Graph {
     let a = g.add_node("a");
     let b = g.add_node("b");
     let c = g.add_node("c");
-    g.add_edge(a, b, true).expect("live endpoints");
-    g.add_edge(b, c, true).expect("live endpoints");
+    g.add_edge(a, b, true).must("live endpoints");
+    g.add_edge(b, c, true).must("live endpoints");
     if let Some(f) = flow {
         g.set_attr(Scope::Graph, "flow", f);
     }
@@ -41,8 +41,8 @@ fn fanout_with_flow(flow: &str) -> Graph {
     let a = g.add_node("a");
     let b = g.add_node("b");
     let c = g.add_node("c");
-    g.add_edge(a, b, true).expect("live endpoints");
-    g.add_edge(a, c, true).expect("live endpoints");
+    g.add_edge(a, b, true).must("live endpoints");
+    g.add_edge(a, c, true).must("live endpoints");
     g.set_attr(Scope::Graph, "flow", flow);
     g
 }
@@ -52,7 +52,7 @@ fn labelled_edge_graph() -> Graph {
     let mut g = Graph::default();
     let a = g.add_node("a");
     let b = g.add_node("b");
-    let e = g.add_edge(a, b, true).expect("live endpoints");
+    let e = g.add_edge(a, b, true).must("live endpoints");
     g.set_attr(Scope::Edge(e), "label", "go");
     g
 }
@@ -68,13 +68,13 @@ fn flowchart_size_graph() -> Graph {
     let server = g.add_node("Server");
     g.set_attr(Scope::Node(client), "size", "5,10");
     g.set_attr(Scope::Node(msg), "size", "5,10");
-    let e0 = g.add_edge(server, msg, true).expect("live endpoints");
+    let e0 = g.add_edge(server, msg, true).must("live endpoints");
     g.set_attr(Scope::Edge(e0), "label", "put msg\n via http");
-    let e1 = g.add_edge(msg, client, true).expect("live endpoints");
+    let e1 = g.add_edge(msg, client, true).must("live endpoints");
     g.set_attr(Scope::Edge(e1), "label", "1. Number X of unread");
-    let e2 = g.add_edge(msg, client, true).expect("live endpoints");
+    let e2 = g.add_edge(msg, client, true).must("live endpoints");
     g.set_attr(Scope::Edge(e2), "label", "3. X Msg");
-    let e3 = g.add_edge(client, msg, true).expect("live endpoints");
+    let e3 = g.add_edge(client, msg, true).must("live endpoints");
     g.set_attr(Scope::Edge(e3), "label", "2. read X");
     g
 }
@@ -85,7 +85,7 @@ fn quad_parallel_graph() -> Graph {
     let a = g.add_node("a");
     let b = g.add_node("b");
     for _ in 0..4 {
-        g.add_edge(a, b, true).expect("live endpoints");
+        g.add_edge(a, b, true).must("live endpoints");
     }
     g
 }
@@ -94,7 +94,7 @@ fn quad_parallel_graph() -> Graph {
 fn selfloop_graph() -> Graph {
     let mut g = Graph::default();
     let a = g.add_node("a");
-    g.add_edge(a, a, true).expect("live endpoints");
+    g.add_edge(a, a, true).must("live endpoints");
     g
 }
 
@@ -107,9 +107,9 @@ fn fanout_stack_graph() -> Graph {
     let b = g.add_node("b");
     let c = g.add_node("c");
     let d = g.add_node("d");
-    g.add_edge(a, b, true).expect("live endpoints");
-    g.add_edge(a, c, true).expect("live endpoints");
-    g.add_edge(a, d, true).expect("live endpoints");
+    g.add_edge(a, b, true).must("live endpoints");
+    g.add_edge(a, c, true).must("live endpoints");
+    g.add_edge(a, d, true).must("live endpoints");
     g
 }
 
@@ -124,7 +124,7 @@ fn fanin_star_graph() -> Graph {
     let n4 = g.add_node("n4");
     let hub = g.add_node("hub");
     for src in [n1, n2, n3, n4] {
-        g.add_edge(src, hub, true).expect("live endpoints");
+        g.add_edge(src, hub, true).must("live endpoints");
     }
     g
 }
@@ -132,7 +132,7 @@ fn fanin_star_graph() -> Graph {
 /// Edges `i -> i + step` for every i where both endpoints exist.
 fn step_edges(g: &mut Graph, n: usize, step: usize) {
     for i in 0..n.saturating_sub(step) {
-        g.add_edge(i, i + step, true).expect("live endpoints");
+        g.add_edge(i, i + step, true).must("live endpoints");
     }
 }
 
@@ -253,7 +253,7 @@ fn p1() {
     let mut cyclic = chain_with_flow(None);
     let a = cyclic.add_node("z0");
     let b = cyclic.add_node("z1");
-    cyclic.add_edge(b, a, true).expect("live endpoints");
+    cyclic.add_edge(b, a, true).must("live endpoints");
     cases.push(cyclic);
     for g in &cases {
         assert_eq!(
@@ -273,7 +273,7 @@ fn p2() {
     for i in 1..8 {
         let prev = i - 1;
         let node = wide.add_node(&format!("n{i}"));
-        wide.add_edge(prev, node, true).expect("live endpoints");
+        wide.add_edge(prev, node, true).must("live endpoints");
     }
     let dense = dense_grid_graph(10);
     for g in [&wide, &dense] {
@@ -297,13 +297,19 @@ fn p2_corpus_scale_no_overlap() {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/corpus/specodelic-corpus.dot"),
     )
-    .expect("fixture tests/fixtures/corpus/specodelic-corpus.dot");
-    let g = gently_core::parse::dot::parse(&dot).expect("corpus projection must parse");
+    .must("fixture tests/fixtures/corpus/specodelic-corpus.dot");
+    let g = gently_core::parse::dot::parse(&dot).must("corpus projection must parse");
     let l = layout::layout(&g);
     assert_disjoint_cells(&l);
     assert_inside(&l.node_cells, l.width, l.height);
+    assert_eq!(
+        l.node_cells.len(),
+        g.nodes.len(),
+        "corpus: every node placed"
+    );
+    assert!(l.width > 0 && l.height > 0, "corpus grid is non-empty");
     gently_core::render::ascii::render(&g, &l)
-        .expect("the corpus render that consumes the grid must succeed");
+        .must("the corpus render that consumes the grid must succeed");
 }
 
 /// ge.layout.p3 (c3): the configured flow direction maps source nodes to
@@ -363,7 +369,7 @@ fn p4() {
     let mut g = Graph::default();
     let a3 = g.add_node("A3");
     let b3 = g.add_node("B3");
-    g.add_edge(a3, b3, true).expect("live endpoints");
+    g.add_edge(a3, b3, true).must("live endpoints");
     g.set_attr(Scope::Node(a3), "size", "3,1");
     let l = layout::layout(&g);
     assert_routed(&l, 0);
@@ -372,7 +378,7 @@ fn p4() {
     // labelled edge: the path passes through the label cell.
     let l = layout::layout(&labelled_edge_graph());
     assert_routed(&l, 0);
-    let label = l.label_cells[0].expect("labelled edge must publish a label cell");
+    let label = l.label_cells[0].must("labelled edge must publish a label cell");
     assert!(
         l.edge_paths[0].contains(&label),
         "label cell {label:?} must lie on the routed path"
@@ -412,7 +418,8 @@ fn p4_fan_stack_routes_jog_not_jump() {
                 "edge {ei} last path cell",
             );
         }
-        gently_core::render::ascii::render(g, &l).expect("fan must render");
+        assert_eq!(l.edge_paths.len(), g.edges.len(), "every edge has a route");
+        gently_core::render::ascii::render(g, &l).must("fan must render");
     }
 }
 
@@ -437,7 +444,7 @@ fn p4_fanin_star_places_east_ring_slots_on_grown_hub() {
     assert_eq!(l.node_cells[4], (2, 0), "hub chained east of n1");
     assert_eq!(l.spans[4], (1, 3), "hub grown to a 3-row span");
     assert_all_routed(&l, g.edges.len());
-    let art = gently_core::render::ascii::render(&g, &l).expect("star must render");
+    let art = gently_core::render::ascii::render(&g, &l).must("star must render");
     assert_eq!(
         art,
         concat!(
@@ -465,7 +472,7 @@ fn fanin_star_n(n: usize, label: Option<&str>) -> Graph {
     let hub = g.add_node("hub");
     for i in 0..n {
         let s = g.add_node(&format!("s{}", i + 1));
-        let e = g.add_edge(s, hub, true).expect("live endpoints");
+        let e = g.add_edge(s, hub, true).must("live endpoints");
         if let Some(l) = label {
             g.set_attr(Scope::Edge(e), "label", l);
         }
@@ -499,7 +506,8 @@ fn p4_fanin5_labelled_star_routes_and_renders() {
             "edge {ei} last path cell",
         );
     }
-    gently_core::render::ascii::render(&g, &l).expect("labelled fan-in 5 must render");
+    gently_core::render::ascii::render(&g, &l).must("labelled fan-in 5 must render");
+    assert_eq!(l.node_cells.len(), g.nodes.len(), "every star node placed");
 }
 
 /// ge.layout.p4 (c4, gently-206): the fan-in EIGHT star (the minimized
@@ -526,7 +534,8 @@ fn p4_fanin8_star_routes_and_renders() {
                 "edge {ei} last path cell",
             );
         }
-        gently_core::render::ascii::render(&g, &l).expect("fan-in 8 must render");
+        gently_core::render::ascii::render(&g, &l).must("fan-in 8 must render");
+        assert_eq!(l.node_cells.len(), g.nodes.len(), "every star node placed");
     }
 }
 
@@ -566,7 +575,7 @@ fn p4_parallel_channels_stack_rows() {
         vec![(7, 2)],
         "channel 2 rides continuation row 2"
     );
-    gently_core::render::ascii::render(&g, &l).expect("flowchart must render");
+    gently_core::render::ascii::render(&g, &l).must("flowchart must render");
 }
 
 /// The path cell orthogonally abuts the endpoint's whole span rect
@@ -621,7 +630,7 @@ fn p5() {
         let l = layout::layout(g);
         assert_published_contract(g, &l);
         // the renderer-style consumer read
-        let art = gently_core::render::ascii::render(g, &l).expect("consumer must render");
+        let art = gently_core::render::ascii::render(g, &l).must("consumer must render");
         assert!(
             !art.is_empty() || g.nodes.is_empty(),
             "consumer produced bytes"
@@ -712,7 +721,7 @@ digraph spec {
 
 #[test]
 fn p4_dense_spec_projection_routes_and_renders() {
-    let g = gently_core::parse::dot::parse(GENTLY_HPD_DOT).expect("dense projection must parse");
+    let g = gently_core::parse::dot::parse(GENTLY_HPD_DOT).must("dense projection must parse");
     // 36 edge statements today — the ticket's "33 edges" was filed against
     // the corpus before three later spec rows landed; the failing error
     // (edge 5 path cells (5, 3) -> (5, 5)) is byte-identical to the filed
@@ -735,5 +744,29 @@ fn p4_dense_spec_projection_routes_and_renders() {
             "edge {ei} last path cell",
         );
     }
-    gently_core::render::ascii::render(&g, &l).expect("dense spec projection must render");
+    gently_core::render::ascii::render(&g, &l).must("dense spec projection must render");
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
 }

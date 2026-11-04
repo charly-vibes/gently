@@ -30,7 +30,7 @@ fn styled_edge(style: &str, arrowed: bool) -> Graph {
     let mut g = Graph::default();
     let a = g.add_node("a");
     let b = g.add_node("b");
-    let e = g.add_edge(a, b, arrowed).expect("live endpoints");
+    let e = g.add_edge(a, b, arrowed).must("live endpoints");
     g.set_attr(Scope::Edge(e), "style", style);
     if !arrowed {
         g.edges[e].arrows.end = false;
@@ -52,8 +52,8 @@ fn labelled_chain() -> Graph {
     let a = g.add_node("a");
     let b = g.add_node("b");
     let c = g.add_node("c");
-    let e1 = g.add_edge(a, b, true).expect("live endpoints");
-    let e2 = g.add_edge(b, c, true).expect("live endpoints");
+    let e1 = g.add_edge(a, b, true).must("live endpoints");
+    let e2 = g.add_edge(b, c, true).must("live endpoints");
     g.set_attr(Scope::Edge(e1), "label", "xy");
     g.set_attr(Scope::Edge(e2), "label", "pq");
     g
@@ -82,7 +82,7 @@ fn p1() {
             &bordered_node(style),
             &layout::layout(&bordered_node(style)),
         )
-        .expect("bordered node must render");
+        .must("bordered node must render");
         assert_eq!(art, want, "border {style}");
     }
 }
@@ -101,9 +101,9 @@ fn p1_size_attr_spans() {
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/fixtures/graph-easy/size-attr.txt"
     ))
-    .expect("size-attr fixture");
-    let g = text::parse(&src).expect("size-attr must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("size-attr must render");
+    .must("size-attr fixture");
+    let g = text::parse(&src).must("size-attr must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("size-attr must render");
     let want = "+----+     +----+\n| A  | --> | B  |\n+----+     +----+\
 \n+---------+      +----+\n|   A2    | ---> | B2 |\n+---------+      +----+\
 \n+---------------+      +----+\n|      A3       | ---> | B3 |\
@@ -129,8 +129,8 @@ fn p1_parallel_channels_rows() {
 \n[ Msg Server ] -- 1. Number X of unread --> [ Client ]\
 \n[ Msg Server ] -- 3. X Msg --> [ Client ]\
 \n[ Client ] -- 2. read X --> [ Msg Server ]\n";
-    let g = text::parse(src).expect("flowchart must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("flowchart must render");
+    let g = text::parse(src).must("flowchart must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("flowchart must render");
     let want = concat!(
         "+--------+  put msg    +------------+                          +--------+\n",
         "| Server |  via http   |            |  1. Number X of unread   |        |\n",
@@ -274,7 +274,7 @@ fn p2() {
     ];
     for (style, arrowed, want) in cases {
         let g = styled_edge(style, arrowed);
-        let art = ascii::render(&g, &layout::layout(&g)).expect("styled edge must render");
+        let art = ascii::render(&g, &layout::layout(&g)).must("styled edge must render");
         assert_eq!(art, want, "edge {style} arrowed={arrowed}");
     }
 }
@@ -288,12 +288,12 @@ fn p2_undirected_dot_dot_dash_shifts_with_rx() {
     let a = g.add_node("a");
     let b = g.add_node("b");
     let c = g.add_node("c");
-    let e1 = g.add_edge(a, b, true).expect("live endpoints");
-    let e2 = g.add_edge(b, c, false).expect("live endpoints");
+    let e1 = g.add_edge(a, b, true).must("live endpoints");
+    let e2 = g.add_edge(b, c, false).must("live endpoints");
     g.set_attr(Scope::Edge(e1), "style", "solid");
     g.set_attr(Scope::Edge(e2), "style", "dot-dot-dash");
     g.edges[e2].arrows.end = false;
-    let art = ascii::render(&g, &layout::layout(&g)).expect("styled edges must render");
+    let art = ascii::render(&g, &layout::layout(&g)).must("styled edges must render");
     assert_eq!(
         art,
         "+---+     +---+      +---+\n| a | --> | b | ..-. | c |\n+---+     +---+      +---+\n"
@@ -306,8 +306,8 @@ fn p2_undirected_dot_dot_dash_shifts_with_rx() {
 /// _correct_size w++ for BD_HOR cells).
 #[test]
 fn p2_bidirectional_straight_run() {
-    let g = text::parse("[ Bonn ] <--> [ Berlin ]\n").expect("bidirectional edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("bidirectional edge must render");
+    let g = text::parse("[ Bonn ] <--> [ Berlin ]\n").must("bidirectional edge must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("bidirectional edge must render");
     assert_eq!(
         art,
         "+------+      +--------+\n| Bonn | <--> | Berlin |\n+------+      +--------+\n"
@@ -321,9 +321,9 @@ fn p2_bidirectional_straight_run() {
 /// arrowhead at the target (upstream Node _draw_hor END_* arrow rule).
 #[test]
 fn p2_bidirectional_parallel_bend_start_arrow() {
-    let g = text::parse("[ A ] <--> [ B ]\n[ A ] <--> [ B ]\n").expect("parallel edges must parse");
+    let g = text::parse("[ A ] <--> [ B ]\n[ A ] <--> [ B ]\n").must("parallel edges must parse");
     let art =
-        ascii::render(&g, &layout::layout(&g)).expect("parallel bidirectional edges must render");
+        ascii::render(&g, &layout::layout(&g)).must("parallel bidirectional edges must render");
     assert_eq!(
         art,
         "\n  +----------+\n  v          v\n+---+      +---+\n| A | <--> | B |\n+---+      +---+\n"
@@ -338,9 +338,8 @@ fn p2_bidirectional_parallel_bend_start_arrow() {
 #[test]
 fn p2_bidirectional_labelled_straight() {
     let g =
-        text::parse("[ A ] <-- label --> [ B ]\n").expect("labeled bidirectional edge must parse");
-    let art =
-        ascii::render(&g, &layout::layout(&g)).expect("labeled bidirectional edge must render");
+        text::parse("[ A ] <-- label --> [ B ]\n").must("labeled bidirectional edge must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("labeled bidirectional edge must render");
     assert_eq!(
         art,
         "+---+  label    +---+\n| A | <-------> | B |\n+---+           +---+\n"
@@ -354,8 +353,8 @@ fn p2_bidirectional_labelled_straight() {
 #[test]
 fn p2_undirected_labelled_run_has_no_head() {
     let g = text::parse("[ AB ] -- { label: edgelabel; } [ CD ]\n")
-        .expect("labeled undirected edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("labeled undirected edge must render");
+        .must("labeled undirected edge must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("labeled undirected edge must render");
     assert_eq!(
         art,
         "+----+  edgelabel   +----+\n| AB | ------------ | CD |\n+----+              +----+\n"
@@ -371,20 +370,20 @@ fn p3() {
     let a = first.add_node("a");
     let b = first.add_node("b");
     let c = first.add_node("c");
-    first.add_edge(a, b, true).expect("live endpoints");
-    first.add_edge(b, c, true).expect("live endpoints");
+    first.add_edge(a, b, true).must("live endpoints");
+    first.add_edge(b, c, true).must("live endpoints");
 
     let mut second = Graph::default();
     let a2 = second.add_node("a");
     let b2 = second.add_node("b");
-    second.add_edge(a2, b2, true).expect("live endpoints");
+    second.add_edge(a2, b2, true).must("live endpoints");
     let c2 = second.add_node("c");
-    second.add_edge(b2, c2, true).expect("live endpoints");
+    second.add_edge(b2, c2, true).must("live endpoints");
 
     let l1 = layout::layout(&first);
     let l2 = layout::layout(&second);
-    let art1 = ascii::render(&first, &l1).expect("must render");
-    let art2 = ascii::render(&second, &l2).expect("must render");
+    let art1 = ascii::render(&first, &l1).must("must render");
+    let art2 = ascii::render(&second, &l2).must("must render");
     assert_eq!(art1, art2, "construction order must not change the bytes");
 }
 
@@ -398,7 +397,7 @@ fn p4() {
     let l = layout::layout(&g);
     // the label cells: on the routed path, off every node cell, distinct
     for ei in 0..2 {
-        let label = l.label_cells[ei].expect("labelled edge must publish a label cell");
+        let label = l.label_cells[ei].must("labelled edge must publish a label cell");
         assert!(
             l.edge_paths[ei].contains(&label),
             "label cell {label:?} off edge {ei}'s path"
@@ -408,7 +407,7 @@ fn p4() {
         }
     }
     assert_ne!(l.label_cells[0], l.label_cells[1], "labels collide");
-    let art = ascii::render(&g, &l).expect("labelled chain must render");
+    let art = ascii::render(&g, &l).must("labelled chain must render");
     let want = concat!(
         "+---+  xy   +---+  pq   +---+\n",
         "| a | ----> | b | ----> | c |\n",
@@ -429,7 +428,7 @@ fn p5() {
     let mut g = Graph::default();
     g.add_node("中");
     let l = layout::layout(&g);
-    let art = ascii::render(&g, &l).expect("wide glyph must render");
+    let art = ascii::render(&g, &l).must("wide glyph must render");
     let want = "+-----+\n| 中 |\n+-----+\n";
     assert_eq!(art, want, "中 box width follows byte length (7 bytes)");
 
@@ -437,7 +436,7 @@ fn p5() {
     let mut g = Graph::default();
     g.add_node(long);
     let l = layout::layout(&g);
-    let art = ascii::render(&g, &l).expect("long label must render");
+    let art = ascii::render(&g, &l).must("long label must render");
     let want = format!(
         "+{}+\n| {} |\n+{}+\n",
         "-".repeat(long.len() + 2),
@@ -470,14 +469,14 @@ fn p6() {
     ];
     for (shape, want) in cases {
         let g = shaped_node(shape);
-        let art = ascii::render(&g, &layout::layout(&g)).expect("shaped node must render");
+        let art = ascii::render(&g, &layout::layout(&g)).must("shaped node must render");
         assert_eq!(art, want, "shape {shape}");
     }
     // color attributes do not affect ASCII output
     let mut g = Graph::default();
     let n = g.add_node("x");
     g.set_attr(Scope::Node(n), "color", "red");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("colored node must render");
+    let art = ascii::render(&g, &layout::layout(&g)).must("colored node must render");
     assert_eq!(
         art, "+---+\n| x |\n+---+\n",
         "color must not change ascii bytes"
@@ -521,8 +520,8 @@ mod p2_edge_node;
 /// .observed (seed 0, Parser.pm POD anonymous-nodes example).
 #[test]
 fn p7() {
-    let g = text::parse("[ ] --> [ Bonn ]\n[ Bonn ] --> [ ]\n").expect("anon chain must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("anon chain must render");
+    let g = text::parse("[ ] --> [ Bonn ]\n[ Bonn ] --> [ ]\n").must("anon chain must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("anon chain must render");
     assert_eq!(
         art,
         "        +------+\n    --> | Bonn | -->\n        +------+\n"
@@ -539,8 +538,8 @@ fn p7() {
 #[test]
 fn p8() {
     let g = text::parse("( Cities:\n  [ Berlin ]\n  [ Bonn ]\n)\n\n[ Bonn ] --> [ Berlin ]\n")
-        .expect("group example must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).expect("group example must render");
+        .must("group example must parse");
+    let art = ascii::render(&g, &layout::layout(&g)).must("group example must render");
     assert_eq!(
         art,
         concat!(
@@ -554,4 +553,28 @@ fn p8() {
             "+ - - - - - - - - - - - - -+\n",
         )
     );
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
+    }
 }

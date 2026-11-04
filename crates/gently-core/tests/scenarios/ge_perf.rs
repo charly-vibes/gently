@@ -122,9 +122,9 @@ fn p1() {
     let mut runs: Vec<Duration> = Vec::new();
     for _ in 0..5 {
         let start = Instant::now();
-        let g = text::parse(&src).expect("fixture must parse");
+        let g = text::parse(&src).must("fixture must parse");
         let l = layout::layout(&g);
-        let out = ascii::render(&g, &l).expect("fixture must render");
+        let out = ascii::render(&g, &l).must("fixture must render");
         let elapsed = start.elapsed();
         assert!(!out.is_empty(), "render must produce output");
         runs.push(elapsed);
@@ -159,9 +159,9 @@ fn p2() {
     let budget = C2_BUDGET * DEBUG_HEADROOM;
 
     let start = Instant::now();
-    let ascii_out = ascii::render(&g, &l).expect("ascii must render");
-    let boxart_out = boxart::render(&g, &l).expect("boxart must render");
-    let html_out = html::render(&g, &l).expect("html must render");
+    let ascii_out = ascii::render(&g, &l).must("ascii must render");
+    let boxart_out = boxart::render(&g, &l).must("boxart must render");
+    let html_out = html::render(&g, &l).must("html must render");
     let txt_out = txt::render(&g);
     let graphviz_out = graphviz::render(&g);
     let elapsed = start.elapsed();
@@ -206,12 +206,12 @@ fn p2() {
 fn p3() {
     let g = chain_graph(200, 300);
     let l1 = layout::layout(&g);
-    let out1 = ascii::render(&g, &l1).expect("first render");
+    let out1 = ascii::render(&g, &l1).must("first render");
     // Second render builds a FRESH layout and renders while l1/out1 are
     // still alive — a shared cross-stage mutable cache would make the
     // second result depend on the first.
     let l2 = layout::layout(&g);
-    let out2 = ascii::render(&g, &l2).expect("second render");
+    let out2 = ascii::render(&g, &l2).must("second render");
 
     assert_eq!(
         out1, out2,
@@ -283,9 +283,9 @@ fn p5() {
         let mut runs: Vec<Duration> = Vec::new();
         for _ in 0..5 {
             let start = Instant::now();
-            let g = text::parse(&src).expect("fixture must parse");
+            let g = text::parse(&src).must("fixture must parse");
             let l = layout::layout(&g);
-            let out = ascii::render(&g, &l).expect("fixture must render");
+            let out = ascii::render(&g, &l).must("fixture must render");
             assert!(!out.is_empty());
             runs.push(start.elapsed());
         }
@@ -312,5 +312,29 @@ fn p5() {
             "scaling regression: t({large}) = {tl:?} exceeds {SCALE_FACTOR}×t({small}) + slack = {bound:?} (t({small}) = {ts:?}; slack mode: {})"
             , if running_in_ci() { "CI" } else { "local" }
         );
+    }
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
     }
 }

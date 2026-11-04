@@ -20,19 +20,19 @@ fn node(g: &Graph, name: &str) -> usize {
 /// Neither header fixes edge direction (p2 covers the operator rule).
 #[test]
 fn p1() {
-    let g = dot::parse("graph G { a -- b }\n").expect("must parse");
+    let g = dot::parse("graph G { a -- b }\n").must("must parse");
     assert_eq!(g.attributes.get("type"), Some("undirected"), "graph header");
-    let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b }\n").must("must parse");
     assert_eq!(g.attributes.get("type"), None, "digraph header");
     // the header name is the graph title; an unnamed header names the
     // graph `unnamed` — the oracle's own name for it (gh-4 observed)
-    let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b }\n").must("must parse");
     assert_eq!(
         g.attributes.get("title"),
         Some("G"),
         "header name is the title"
     );
-    let g = dot::parse("digraph { a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph { a -> b }\n").must("must parse");
     assert_eq!(g.attributes.get("title"), Some("unnamed"), "unnamed header");
 }
 
@@ -47,7 +47,7 @@ fn p1() {
 /// overrides the default (`rankdir` remaps to `flow` per c3).
 #[test]
 fn p6() {
-    let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b }\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Graph, "flow"),
         Some("south"),
@@ -64,7 +64,7 @@ fn p6() {
         "edge base-class arrowstyle default"
     );
     // A groupless graph carries no group class defaults.
-    let g = dot::parse("digraph G { a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b }\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Class(ObjectKind::Group, String::new()), "align"),
         None,
@@ -73,7 +73,7 @@ fn p6() {
 
     // A named subgraph (cluster convention or not) creates the group and
     // with it the group base-class defaults.
-    let g = dot::parse("digraph G { subgraph cluster_x { a } a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { subgraph cluster_x { a } a -> b }\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Class(ObjectKind::Group, String::new()), "align"),
         Some("center"),
@@ -86,13 +86,13 @@ fn p6() {
     );
 
     // An explicit statement overrides the default (rankdir → flow per c3).
-    let g = dot::parse("digraph G { rankdir=LR; a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { rankdir=LR; a -> b }\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Graph, "flow"),
         Some("east"),
         "explicit rankdir overrides the flow default"
     );
-    let g = dot::parse("digraph G { colorscheme=none; a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { colorscheme=none; a -> b }\n").must("must parse");
     assert_eq!(
         g.get_attr(Scope::Graph, "colorscheme"),
         Some("none"),
@@ -116,11 +116,11 @@ fn p2() {
         }
     }
     // a chain creates one edge per adjacent pair, sharing node objects
-    let g = dot::parse("digraph G { a -> b -> c }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b -> c }\n").must("must parse");
     assert_eq!(g.edges.len(), 2, "one edge per arrow in a chain");
     assert_eq!(g.edges[0].to, g.edges[1].from, "b is shared");
     // mixed operators in one chain stay independent
-    let g = dot::parse("digraph G { a -> b -- c }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b -- c }\n").must("must parse");
     assert!(g.edges[0].directed, "-> stays directed");
     assert!(!g.edges[1].directed, "-- stays undirected");
 }
@@ -131,8 +131,7 @@ fn p2() {
 #[test]
 fn p3() {
     // node attributes, quoted value with an escaped quote and backslash
-    let g =
-        dot::parse("digraph G { a [color=red, label=\"x \\\"y\\\\\" ] }\n").expect("must parse");
+    let g = dot::parse("digraph G { a [color=red, label=\"x \\\"y\\\\\" ] }\n").must("must parse");
     let a = node(&g, "a");
     assert_eq!(g.nodes[a].attributes.get("color"), Some("red"));
     assert_eq!(
@@ -141,10 +140,10 @@ fn p3() {
         "unescaped exactly once"
     );
     // edge attributes land on the edge
-    let g = dot::parse("digraph G { a -> b [style=dotted] }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b [style=dotted] }\n").must("must parse");
     assert_eq!(g.edges[0].attributes.get("style"), Some("dotted"));
     // bare values and multiple pairs on edges
-    let g = dot::parse("digraph G { a -> b [dir=both, weight=2] }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b [dir=both, weight=2] }\n").must("must parse");
     assert_eq!(g.edges[0].attributes.get("dir"), Some("both"));
     assert_eq!(g.edges[0].attributes.get("weight"), Some("2"));
     graph_scope_attr_statements();
@@ -167,20 +166,20 @@ fn graph_scope_attr_statements() {
     // any unrecognized rankdir value falls back to east (oracle `$rankdir->{$dir} || 'east'`)
     for dir in ["XX", "lr"] {
         let src = format!("digraph G {{ rankdir={dir} a -> b }}\n");
-        let g = dot::parse(&src).expect("must parse");
+        let g = dot::parse(&src).must("must parse");
         assert_eq!(g.attributes.get("flow"), Some("east"), "{src:?}");
     }
     // quoted values unescape exactly once
-    let g = dot::parse("digraph G { rankdir=\"LR\" a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { rankdir=\"LR\" a -> b }\n").must("must parse");
     assert_eq!(g.attributes.get("flow"), Some("east"), "quoted value");
     // applies from inside a bare scope too, and the last statement wins
-    let g = dot::parse("digraph G { { rankdir=RL } a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { { rankdir=RL } a -> b }\n").must("must parse");
     assert_eq!(
         g.attributes.get("flow"),
         Some("west"),
         "inside a bare scope"
     );
-    let g = dot::parse("digraph G { rankdir=TB; rankdir=BT a }\n").expect("must parse");
+    let g = dot::parse("digraph G { rankdir=TB; rankdir=BT a }\n").must("must parse");
     assert_eq!(
         g.attributes.get("flow"),
         Some("north"),
@@ -204,39 +203,39 @@ fn p4() {
     let g = dot::parse(
         "digraph G { a -> b; subgraph cluster_x { c d } subgraph named { e } subgraph cluster0 { f } }\n",
     )
-    .expect("must parse");
+    .must("must parse");
     let cx = g
         .groups
         .iter()
         .position(|grp| grp.name == "x")
-        .expect("x group (cluster_ stripped)");
+        .must("x group (cluster_ stripped)");
     let nm = g
         .groups
         .iter()
         .position(|grp| grp.name == "named")
-        .expect("named group");
+        .must("named group");
     let an = g
         .groups
         .iter()
         .position(|grp| grp.name.is_empty())
-        .expect("anonymous group (cluster0)");
+        .must("anonymous group (cluster0)");
     assert_eq!(g.groups[cx].members, vec![node(&g, "c"), node(&g, "d")]);
     assert_eq!(g.groups[nm].members, vec![node(&g, "e")]);
     assert_eq!(g.groups[an].members, vec![node(&g, "f")]);
 
     // nested subgraphs: each level its own group, innermost membership wins
-    let g = dot::parse("digraph G { subgraph outer { subgraph inner { a } b } }\n")
-        .expect("must parse");
+    let g =
+        dot::parse("digraph G { subgraph outer { subgraph inner { a } b } }\n").must("must parse");
     let inner = g
         .groups
         .iter()
         .position(|grp| grp.name == "inner")
-        .expect("inner group");
+        .must("inner group");
     let outer = g
         .groups
         .iter()
         .position(|grp| grp.name == "outer")
-        .expect("outer group");
+        .must("outer group");
     assert_eq!(
         g.groups[inner].members,
         vec![node(&g, "a")],
@@ -252,7 +251,7 @@ fn p4() {
     // boundary, so `a -> b; { c -> d }` also yields the pinned leaked
     // `b -> d` edge — linked when the scope's inner operator fires, before
     // the scope's own edge (observed, Graph::Easy v0.69 @ ededa3d7)
-    let g = dot::parse("digraph G { a -> b; { c -> d } }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b; { c -> d } }\n").must("must parse");
     assert!(g.groups.is_empty(), "bare scope keeps nodes ungrouped");
     assert_eq!(
         g.edges.len(),
@@ -273,7 +272,7 @@ fn p4() {
         (node(&g, "c"), node(&g, "d"))
     );
     // a bare scope as an edge target links the chain through it
-    let g = dot::parse("digraph G { a -> { b } }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> { b } }\n").must("must parse");
     assert!(g.groups.is_empty());
     assert_eq!(
         (g.edges[0].from, g.edges[0].to),
@@ -287,36 +286,36 @@ fn p4() {
     // group — transitively through nested bare scopes — while a top-level
     // bare scope stays ungrouped and a bare scope AFTER the named group's
     // scope closed is ungrouped again (the group popped).
-    let g = dot::parse("digraph G { subgraph outer { { x } } }\n").expect("must parse");
+    let g = dot::parse("digraph G { subgraph outer { { x } } }\n").must("must parse");
     let outer = g
         .groups
         .iter()
         .position(|grp| grp.name == "outer")
-        .expect("outer group");
+        .must("outer group");
     assert_eq!(
         g.groups[outer].members,
         vec![node(&g, "x")],
         "bare scope nested in a named subgraph joins the enclosing group"
     );
-    let g = dot::parse("digraph G { subgraph outer { { { x } } } }\n").expect("must parse");
+    let g = dot::parse("digraph G { subgraph outer { { { x } } } }\n").must("must parse");
     let outer = g
         .groups
         .iter()
         .position(|grp| grp.name == "outer")
-        .expect("outer group");
+        .must("outer group");
     assert_eq!(
         g.groups[outer].members,
         vec![node(&g, "x")],
         "bare-in-bare-in-named is transitive: still the named group"
     );
-    let g = dot::parse("digraph G { { x } }\n").expect("must parse");
+    let g = dot::parse("digraph G { { x } }\n").must("must parse");
     assert!(g.groups.is_empty(), "top-level bare scope stays ungrouped");
-    let g = dot::parse("digraph G { subgraph a { q } { x } }\n").expect("must parse");
+    let g = dot::parse("digraph G { subgraph a { q } { x } }\n").must("must parse");
     let a = g
         .groups
         .iter()
         .position(|grp| grp.name == "a")
-        .expect("group a");
+        .must("group a");
     assert_eq!(g.groups[a].members, vec![node(&g, "q")]);
     assert_eq!(
         g.groups.len(),
@@ -351,20 +350,19 @@ fn p4() {
 #[test]
 fn p5() {
     // record label WITHOUT shape=record: no split — the label stays an attr
-    let g = dot::parse("digraph G { a [label=\"A|B\"] a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { a [label=\"A|B\"] a -> b }\n").must("must parse");
     assert_eq!(g.nodes.len(), 2, "no autosplit without shape=record");
     assert_eq!(g.nodes[node(&g, "a")].attributes.get("label"), Some("A|B"));
 
     // shape=record without a pipe: no split either
-    let g = dot::parse("digraph G { a [shape=record label=\"AB\"] }\n").expect("must parse");
+    let g = dot::parse("digraph G { a [shape=record label=\"AB\"] }\n").must("must parse");
     assert_eq!(g.nodes.len(), 1, "no autosplit without a vertical bar");
     assert_eq!(g.nodes[0].name, "a");
 
     // record autosplit: parts a.0/a.1, the original becomes the label text
     // with `basename` set (observed: `[ A|B ] { basename: a; }`), and the
     // plain endpoint reattaches to the first part
-    let g =
-        dot::parse("digraph G { a [shape=record label=\"A|B\"] a -> b }\n").expect("must parse");
+    let g = dot::parse("digraph G { a [shape=record label=\"A|B\"] a -> b }\n").must("must parse");
     node(&g, "a.0");
     node(&g, "a.1");
     node(&g, "b");
@@ -378,7 +376,7 @@ fn p5() {
         .nodes
         .iter()
         .position(|n| n.name == "A|B")
-        .expect("renamed original");
+        .must("renamed original");
     assert_eq!(
         g.nodes[orig].attributes.get("basename"),
         Some("a"),
@@ -387,7 +385,7 @@ fn p5() {
 
     // explicit ports resolve to their parts; compass ports resolve to part 0
     let g = dot::parse("digraph G { a [shape=record label=\"A|B\"] a:0 -> b c -> a:1 }\n")
-        .expect("must parse");
+        .must("must parse");
     assert_eq!(
         (g.edges[0].from, g.edges[0].to),
         (node(&g, "a.0"), node(&g, "b"))
@@ -397,7 +395,7 @@ fn p5() {
         (node(&g, "c"), node(&g, "a.1"))
     );
     let g =
-        dot::parse("digraph G { a [shape=record label=\"A|B\"] a:n -> b }\n").expect("must parse");
+        dot::parse("digraph G { a [shape=record label=\"A|B\"] a:n -> b }\n").must("must parse");
     assert_eq!(
         g.edges[0].from,
         node(&g, "a.0"),
@@ -414,7 +412,7 @@ fn p5() {
 /// statement's edge attributes land on every linked edge.
 fn scope_stack_endpoints() {
     // {a b} -> c links BOTH scope nodes (gh-4 input b)
-    let g = dot::parse("digraph G { {foo bar} -> baz }\n").expect("must parse");
+    let g = dot::parse("digraph G { {foo bar} -> baz }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("foo", "baz"), ("bar", "baz")]);
 
     // gh-4 input a: the pre-declared nodes leak into the scope's stack, so
@@ -423,7 +421,7 @@ fn scope_stack_endpoints() {
     let g = dot::parse(
         "digraph {\n  rankdir=\"LR\"\n\n  foo\n  bar [label=\"bar-label!\"]\n  baz\n\n  {foo bar} -> baz\n}\n",
     )
-    .expect("gh-4 input a must parse");
+    .must("gh-4 input a must parse");
     assert_eq!(g.attributes.get("flow"), Some("east"));
     assert_eq!(g.attributes.get("title"), Some("unnamed"));
     assert_eq!(
@@ -438,23 +436,23 @@ fn scope_stack_endpoints() {
 
     // the endpoint form links every scope node from the left side, and the
     // chain continues through the scope (observed add_edge order)
-    let g = dot::parse("digraph G { a -> { b c } -> d }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> { b c } -> d }\n").must("must parse");
     assert_eq!(
         edge_pairs(&g),
         vec![("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")]
     );
     // chains continue after a statement-position scope too
-    let g = dot::parse("digraph G { {a b} -> c -> d }\n").expect("must parse");
+    let g = dot::parse("digraph G { {a b} -> c -> d }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("a", "c"), ("b", "c"), ("c", "d")]);
     // a named subgraph as an endpoint links its nodes — no node for its name
-    let g = dot::parse("digraph G { subgraph g { x } -> y }\n").expect("must parse");
+    let g = dot::parse("digraph G { subgraph g { x } -> y }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("x", "y")]);
     assert!(
         g.node_by_name("g").is_none(),
         "no node for the subgraph name"
     );
     // statement-end attributes land on every edge the statement linked
-    let g = dot::parse("digraph G { {a b} -> c [color=red] }\n").expect("must parse");
+    let g = dot::parse("digraph G { {a b} -> c [color=red] }\n").must("must parse");
     assert_eq!(g.edges.len(), 2);
     assert_eq!(g.edges[0].attributes.get("color"), Some("red"));
     assert_eq!(g.edges[1].attributes.get("color"), Some("red"));
@@ -466,12 +464,12 @@ fn scope_stack_endpoints() {
 /// an attribute list after a scope is dropped (no operator) or fatal.
 fn scope_stack_resets() {
     // no inner edge: nothing links, the stack does not leak out
-    let g = dot::parse("digraph G { a -> b; { c } }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> b; { c } }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("a", "b")]);
-    let g = dot::parse("digraph G { a; { c } b -> d }\n").expect("must parse");
+    let g = dot::parse("digraph G { a; { c } b -> d }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("b", "d")]);
     // a nested bare scope's plain `}` cuts the leak at its boundary
-    let g = dot::parse("digraph G { { a { b } c -> d } }\n").expect("must parse");
+    let g = dot::parse("digraph G { { a { b } c -> d } }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("c", "d")]);
     // an operator with an empty stack is the oracle's not-recognized error
     for src in [
@@ -487,7 +485,7 @@ fn scope_stack_resets() {
         );
     }
     // an attribute list after a scope with no operator is dropped
-    let g = dot::parse("digraph G { a -> { b } [x=1] }\n").expect("must parse");
+    let g = dot::parse("digraph G { a -> { b } [x=1] }\n").must("must parse");
     assert_eq!(edge_pairs(&g), vec![("a", "b")]);
 }
 
@@ -504,7 +502,7 @@ fn html_table_autosplits() {
     let g = dot::parse(
         "digraph G { a [label=<<TABLE><TR><TD>one</TD><TD>two</TD></TR></TABLE>>] a -> b }\n",
     )
-    .expect("must parse");
+    .must("must parse");
     node(&g, "a.0");
     node(&g, "a.1");
     assert_eq!(g.edges[0].from, node(&g, "a.0"));
@@ -540,5 +538,29 @@ fn failing_constructs_are_typed_errors() {
             "the edge id is named: {}",
             err.message
         );
+    }
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
+    }
+}
+impl<T> Must<T> for Option<T> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Some(v) => v,
+            None => panic!("{what}: expected a value, got None"),
+        }
     }
 }

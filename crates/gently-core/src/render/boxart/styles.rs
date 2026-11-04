@@ -34,8 +34,18 @@ pub(super) struct Border {
 /// model stores values verbatim, so the renderer falls back the same way
 /// the ascii renderer does).
 pub(super) fn border(style: &str) -> Border {
-    match style {
-        "dotted" => Border {
+    BORDER_TABLE
+        .iter()
+        .find(|(name, _)| *name == style)
+        .map(|(_, b)| *b)
+        .unwrap_or(DEFAULT_BORDER)
+}
+
+/// Per-style border glyph sets (name, glyphs), in upstream's match order.
+const BORDER_TABLE: &[(&str, Border)] = &[
+    (
+        "dotted",
+        Border {
             tl: '┌',
             tr: '┐',
             br: '┘',
@@ -45,7 +55,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '⋮',
             side_r: '⋮',
         },
-        "dashed" => Border {
+    ),
+    (
+        "dashed",
+        Border {
             tl: '┌',
             tr: '┐',
             br: '┘',
@@ -55,7 +68,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '╎',
             side_r: '╎',
         },
-        "double" => Border {
+    ),
+    (
+        "double",
+        Border {
             tl: '╔',
             tr: '╗',
             br: '╝',
@@ -65,7 +81,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '║',
             side_r: '║',
         },
-        "dot-dash" => Border {
+    ),
+    (
+        "dot-dash",
+        Border {
             tl: '┌',
             tr: '┐',
             br: '┘',
@@ -75,7 +94,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '!',
             side_r: '!',
         },
-        "dot-dot-dash" => Border {
+    ),
+    (
+        "dot-dot-dash",
+        Border {
             tl: '┌',
             tr: '┐',
             br: '┘',
@@ -85,7 +107,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '│',
             side_r: '│',
         },
-        "bold" => Border {
+    ),
+    (
+        "bold",
+        Border {
             tl: '┏',
             tr: '┓',
             br: '┛',
@@ -95,7 +120,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '┃',
             side_r: '┃',
         },
-        "bold-dash" => Border {
+    ),
+    (
+        "bold-dash",
+        Border {
             tl: '┏',
             tr: '┓',
             br: '┛',
@@ -105,7 +133,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '╻',
             side_r: '╻',
         },
-        "double-dash" => Border {
+    ),
+    (
+        "double-dash",
+        Border {
             tl: '╔',
             tr: '╗',
             br: '╝',
@@ -115,7 +146,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '∥',
             side_r: '∥',
         },
-        "wave" => Border {
+    ),
+    (
+        "wave",
+        Border {
             tl: '┌',
             tr: '┐',
             br: '┘',
@@ -125,7 +159,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '≀',
             side_r: '≀',
         },
-        "broad" => Border {
+    ),
+    (
+        "broad",
+        Border {
             tl: '▛',
             tr: '▜',
             br: '▟',
@@ -135,7 +172,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '▌',
             side_r: '▐',
         },
-        "wide" => Border {
+    ),
+    (
+        "wide",
+        Border {
             tl: '█',
             tr: '█',
             br: '█',
@@ -145,7 +185,10 @@ pub(super) fn border(style: &str) -> Border {
             side_l: '█',
             side_r: '█',
         },
-        "none" => Border {
+    ),
+    (
+        "none",
+        Border {
             tl: ' ',
             tr: ' ',
             br: ' ',
@@ -155,18 +198,20 @@ pub(super) fn border(style: &str) -> Border {
             side_l: ' ',
             side_r: ' ',
         },
-        _ => Border {
-            tl: '┌',
-            tr: '┐',
-            br: '┘',
-            bl: '└',
-            h_top: "─",
-            h_bottom: "─",
-            side_l: '│',
-            side_r: '│',
-        },
-    }
-}
+    ),
+];
+
+/// The plain solid border used for unknown styles.
+const DEFAULT_BORDER: Border = Border {
+    tl: '┌',
+    tr: '┐',
+    br: '┘',
+    bl: '└',
+    h_top: "─",
+    h_bottom: "─",
+    side_l: '│',
+    side_r: '│',
+};
 
 /// The interior horizontal run of a border: the pattern shifted by one
 /// position (the upstream h_run rule, probed: dot-dash `┌-·-┐`,
