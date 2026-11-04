@@ -9,6 +9,12 @@
 use gently_core::graph::{Graph, ObjectKind, Scope};
 use gently_core::parse::dot;
 
+#[path = "ge_dot_parser/misc.rs"]
+mod misc;
+use misc::*;
+#[path = "ge_dot_parser/p5.rs"]
+mod p5;
+
 /// The index of the node with `name` (panics when missing — tests only).
 fn node(g: &Graph, name: &str) -> usize {
     g.node_by_name(name)
@@ -147,44 +153,6 @@ fn p3() {
     assert_eq!(g.edges[0].attributes.get("dir"), Some("both"));
     assert_eq!(g.edges[0].attributes.get("weight"), Some("2"));
     graph_scope_attr_statements();
-}
-
-/// ge.dot_parser.p3 (c3): a graph-scope attribute statement `key=value`
-/// (quoted or bare value) applies to the model graph, with `rankdir`
-/// remapped to `flow` per the oracle's direction map (gently-a0k).
-fn graph_scope_attr_statements() {
-    for (dir, flow) in [
-        ("LR", "east"),
-        ("RL", "west"),
-        ("TB", "south"),
-        ("BT", "north"),
-    ] {
-        let src = format!("digraph G {{ rankdir={dir} a -> b }}\n");
-        let g = dot::parse(&src).unwrap_or_else(|e| panic!("{src:?} must parse: {e}"));
-        assert_eq!(g.attributes.get("flow"), Some(flow), "{src:?}");
-    }
-    // any unrecognized rankdir value falls back to east (oracle `$rankdir->{$dir} || 'east'`)
-    for dir in ["XX", "lr"] {
-        let src = format!("digraph G {{ rankdir={dir} a -> b }}\n");
-        let g = dot::parse(&src).must("must parse");
-        assert_eq!(g.attributes.get("flow"), Some("east"), "{src:?}");
-    }
-    // quoted values unescape exactly once
-    let g = dot::parse("digraph G { rankdir=\"LR\" a -> b }\n").must("must parse");
-    assert_eq!(g.attributes.get("flow"), Some("east"), "quoted value");
-    // applies from inside a bare scope too, and the last statement wins
-    let g = dot::parse("digraph G { { rankdir=RL } a -> b }\n").must("must parse");
-    assert_eq!(
-        g.attributes.get("flow"),
-        Some("west"),
-        "inside a bare scope"
-    );
-    let g = dot::parse("digraph G { rankdir=TB; rankdir=BT a }\n").must("must parse");
-    assert_eq!(
-        g.attributes.get("flow"),
-        Some("north"),
-        "last statement wins"
-    );
 }
 
 /// ge.dot_parser.p4 (c4): a named subgraph becomes a model group with the
@@ -341,204 +309,12 @@ fn p4() {
     }
 }
 
-/// ge.dot_parser.p5 (c5): record labels (shape=record with a vertical bar)
-/// and HTML-like table labels autosplit into `name.N` part nodes, port
-/// markers stripped and edges reattached to the referenced part; plain
-/// endpoints of a split node reattach to its first part; the failing
-/// constructs (nameless `subgraph`, malformed HTML-like label, unresolvable
-/// port reference) produce the oracle's typed errors and no partial graph.
-#[test]
-fn p5() {
-    // record label WITHOUT shape=record: no split — the label stays an attr
-    let g = dot::parse("digraph G { a [label=\"A|B\"] a -> b }\n").must("must parse");
-    assert_eq!(g.nodes.len(), 2, "no autosplit without shape=record");
-    assert_eq!(g.nodes[node(&g, "a")].attributes.get("label"), Some("A|B"));
-
-    // shape=record without a pipe: no split either
-    let g = dot::parse("digraph G { a [shape=record label=\"AB\"] }\n").must("must parse");
-    assert_eq!(g.nodes.len(), 1, "no autosplit without a vertical bar");
-    assert_eq!(g.nodes[0].name, "a");
-
-    // record autosplit: parts a.0/a.1, the original becomes the label text
-    // with `basename` set (observed: `[ A|B ] { basename: a; }`), and the
-    // plain endpoint reattaches to the first part
-    let g = dot::parse("digraph G { a [shape=record label=\"A|B\"] a -> b }\n").must("must parse");
-    node(&g, "a.0");
-    node(&g, "a.1");
-    node(&g, "b");
-    assert_eq!(
-        g.edges[0].from,
-        node(&g, "a.0"),
-        "plain endpoint reattaches to the first part"
-    );
-    assert_eq!(g.edges[0].to, node(&g, "b"));
-    let orig = g
-        .nodes
-        .iter()
-        .position(|n| n.name == "A|B")
-        .must("renamed original");
-    assert_eq!(
-        g.nodes[orig].attributes.get("basename"),
-        Some("a"),
-        "record split pins basename"
-    );
-
-    // explicit ports resolve to their parts; compass ports resolve to part 0
-    let g = dot::parse("digraph G { a [shape=record label=\"A|B\"] a:0 -> b c -> a:1 }\n")
-        .must("must parse");
-    assert_eq!(
-        (g.edges[0].from, g.edges[0].to),
-        (node(&g, "a.0"), node(&g, "b"))
-    );
-    assert_eq!(
-        (g.edges[1].from, g.edges[1].to),
-        (node(&g, "c"), node(&g, "a.1"))
-    );
-    let g =
-        dot::parse("digraph G { a [shape=record label=\"A|B\"] a:n -> b }\n").must("must parse");
-    assert_eq!(
-        g.edges[0].from,
-        node(&g, "a.0"),
-        "compass port resolves to the first part"
-    );
-
-    html_table_autosplits();
-    failing_constructs_are_typed_errors();
-}
-
-/// ge.dot_parser.p4 (c4): bare scopes as edge-chain endpoints (gently-2n5,
-/// gh-4) under the oracle's node-stack semantics — the stack survives
-/// scope boundaries, an edge operator links EVERY node on it, and the
-/// statement's edge attributes land on every linked edge.
-fn scope_stack_endpoints() {
-    // {a b} -> c links BOTH scope nodes (gh-4 input b)
-    let g = dot::parse("digraph G { {foo bar} -> baz }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("foo", "baz"), ("bar", "baz")]);
-
-    // gh-4 input a: the pre-declared nodes leak into the scope's stack, so
-    // the pinned spurious self-edge fires FIRST (baz->baz), then both scope
-    // nodes — and rankdir/title land per c3/c1 (gh-4-nodes-first.observed)
-    let g = dot::parse(
-        "digraph {\n  rankdir=\"LR\"\n\n  foo\n  bar [label=\"bar-label!\"]\n  baz\n\n  {foo bar} -> baz\n}\n",
-    )
-    .must("gh-4 input a must parse");
-    assert_eq!(g.attributes.get("flow"), Some("east"));
-    assert_eq!(g.attributes.get("title"), Some("unnamed"));
-    assert_eq!(
-        edge_pairs(&g),
-        vec![("baz", "baz"), ("foo", "baz"), ("bar", "baz")],
-        "gh-4 input a: leaked stack first"
-    );
-    assert_eq!(
-        g.nodes[node(&g, "bar")].attributes.get("label"),
-        Some("bar-label!")
-    );
-
-    // the endpoint form links every scope node from the left side, and the
-    // chain continues through the scope (observed add_edge order)
-    let g = dot::parse("digraph G { a -> { b c } -> d }\n").must("must parse");
-    assert_eq!(
-        edge_pairs(&g),
-        vec![("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")]
-    );
-    // chains continue after a statement-position scope too
-    let g = dot::parse("digraph G { {a b} -> c -> d }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("a", "c"), ("b", "c"), ("c", "d")]);
-    // a named subgraph as an endpoint links its nodes — no node for its name
-    let g = dot::parse("digraph G { subgraph g { x } -> y }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("x", "y")]);
-    assert!(
-        g.node_by_name("g").is_none(),
-        "no node for the subgraph name"
-    );
-    // statement-end attributes land on every edge the statement linked
-    let g = dot::parse("digraph G { {a b} -> c [color=red] }\n").must("must parse");
-    assert_eq!(g.edges.len(), 2);
-    assert_eq!(g.edges[0].attributes.get("color"), Some("red"));
-    assert_eq!(g.edges[1].attributes.get("color"), Some("red"));
-}
-
-/// ge.dot_parser.p4 (c4): the stack resets at a plain `}` — a scope with no
-/// inner edge links nothing; a nested scope's `}` cuts the leak; an
-/// operator with nothing on the stack is the oracle's not-recognized error;
-/// an attribute list after a scope is dropped (no operator) or fatal.
-fn scope_stack_resets() {
-    // no inner edge: nothing links, the stack does not leak out
-    let g = dot::parse("digraph G { a -> b; { c } }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("a", "b")]);
-    let g = dot::parse("digraph G { a; { c } b -> d }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("b", "d")]);
-    // a nested bare scope's plain `}` cuts the leak at its boundary
-    let g = dot::parse("digraph G { { a { b } c -> d } }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("c", "d")]);
-    // an operator with an empty stack is the oracle's not-recognized error
-    for src in [
-        "digraph G { { } -> b }\n",
-        "digraph G { { a b } [x=1] -> c }\n",
-    ] {
-        let err = dot::parse(src).expect_err("empty-stack operator must fail");
-        assert!(err.line >= 1, "{src:?} must name a line");
-        assert!(
-            err.message.contains("not recognized"),
-            "{src:?}: {}",
-            err.message
-        );
-    }
-    // an attribute list after a scope with no operator is dropped
-    let g = dot::parse("digraph G { a -> { b } [x=1] }\n").must("must parse");
-    assert_eq!(edge_pairs(&g), vec![("a", "b")]);
-}
-
 /// The (from, to) name pairs of the graph's edges, in creation order.
 fn edge_pairs(g: &Graph) -> Vec<(&str, &str)> {
     g.edges
         .iter()
         .map(|e| (g.nodes[e.from].name.as_str(), g.nodes[e.to].name.as_str()))
         .collect()
-}
-
-/// HTML-like table label autosplits into one part per <TD> cell.
-fn html_table_autosplits() {
-    let g = dot::parse(
-        "digraph G { a [label=<<TABLE><TR><TD>one</TD><TD>two</TD></TR></TABLE>>] a -> b }\n",
-    )
-    .must("must parse");
-    node(&g, "a.0");
-    node(&g, "a.1");
-    assert_eq!(g.edges[0].from, node(&g, "a.0"));
-}
-
-/// The failing constructs: typed errors naming a line and quoting the
-/// offending input (tokenizing) or the `base:port` and edge id (ports).
-fn failing_constructs_are_typed_errors() {
-    // malformed HTML-like label (non-tag text inside the label)
-    let err = dot::parse("digraph G { a [label=<<table>...</table>>] }\n")
-        .expect_err("malformed HTML-like label must fail");
-    assert!(err.line >= 1);
-    assert!(
-        err.message.contains("<<table>...</table>>"),
-        "error quotes the input: {}",
-        err.message
-    );
-    // unresolvable port reference names base:port and the edge id
-    for src in [
-        "digraph G { b:p1 -> c }\n",
-        "digraph G { a [shape=record label=\"A|B\"] a:zz -> b }\n",
-        "digraph G { b:nw -> c }\n",
-    ] {
-        let err = dot::parse(src).expect_err("port without a matching part must fail");
-        let head = err.message.split(" on edge").next().unwrap_or("");
-        assert!(
-            head.starts_with("Cannot find autosplit node for ") && head.contains(':'),
-            "oracle error text for {src:?}, got: {}",
-            err.message
-        );
-        assert!(
-            err.message.contains(" on edge "),
-            "the edge id is named: {}",
-            err.message
-        );
-    }
 }
 
 /// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
