@@ -35,9 +35,10 @@ pub(crate) fn p4() {
         ("bold", " ━━━\n┃ x ┃\n ━━━\n"),
         ("dot-dot-dash", "╭·-·╮\n│ x │\n╰·-·╯\n"),
     ] {
-        let mut g = bordered_node(border);
-        let n = g.nodes.len() - 1;
-        g.set_attr(Scope::Node(n), "shape", "rounded");
+        let g = super::asserts::with(bordered_node(border), |g| {
+            let n = g.nodes.len() - 1;
+            g.set_attr(Scope::Node(n), "shape", "rounded");
+        });
         assert_eq!(render(&g), want, "rounded + border {border}");
     }
 }

@@ -9,54 +9,50 @@ use super::*;
 /// model-equality predicate for the parser-supported feature subset (see
 /// the documented deviation in p3).
 pub(crate) fn model_equivalent(a: &Graph, b: &Graph) -> bool {
-    let node_names = |g: &Graph| -> Vec<String> {
-        let mut v: Vec<String> = g.nodes.iter().map(|n| n.name.clone()).collect();
-        v.sort();
-        v
-    };
+    let node_names =
+        |g: &Graph| -> Vec<String> { sorted(g.nodes.iter().map(|n| n.name.clone()).collect()) };
     let node_attrs = |g: &Graph| -> Vec<(String, gently_core::graph::AttributeTable)> {
-        let mut v: Vec<_> = g
-            .nodes
-            .iter()
-            .map(|n| (n.name.clone(), n.attributes.clone()))
-            .collect();
-        v.sort_by(|x, y| x.0.cmp(&y.0));
-        v
+        sorted_by(
+            g.nodes
+                .iter()
+                .map(|n| (n.name.clone(), n.attributes.clone()))
+                .collect(),
+            |x, y| x.0.cmp(&y.0),
+        )
     };
     let edge_keys = |g: &Graph| -> Vec<(String, String, bool, bool, bool)> {
-        let mut v: Vec<_> = g
-            .edges
-            .iter()
-            .map(|e| {
-                (
-                    g.nodes[e.from].name.clone(),
-                    g.nodes[e.to].name.clone(),
-                    e.directed,
-                    e.arrows.start,
-                    e.arrows.end,
-                )
-            })
-            .collect();
-        v.sort();
-        v
+        sorted(
+            g.edges
+                .iter()
+                .map(|e| {
+                    (
+                        g.nodes[e.from].name.clone(),
+                        g.nodes[e.to].name.clone(),
+                        e.directed,
+                        e.arrows.start,
+                        e.arrows.end,
+                    )
+                })
+                .collect(),
+        )
     };
     let group_keys = |g: &Graph| -> Vec<(String, Vec<String>, gently_core::graph::AttributeTable)> {
-        let mut v: Vec<_> = g
-            .groups
-            .iter()
-            .map(|grp| {
-                (
-                    grp.name.clone(),
-                    grp.members
-                        .iter()
-                        .map(|&m| g.nodes[m].name.clone())
-                        .collect(),
-                    grp.attributes.clone(),
-                )
-            })
-            .collect();
-        v.sort_by(|x, y| x.0.cmp(&y.0));
-        v
+        sorted_by(
+            g.groups
+                .iter()
+                .map(|grp| {
+                    (
+                        grp.name.clone(),
+                        grp.members
+                            .iter()
+                            .map(|&m| g.nodes[m].name.clone())
+                            .collect(),
+                        grp.attributes.clone(),
+                    )
+                })
+                .collect(),
+            |x, y| x.0.cmp(&y.0),
+        )
     };
     node_names(a) == node_names(b)
         && node_attrs(a) == node_attrs(b)
@@ -175,13 +171,32 @@ pub(crate) fn labels_do_not_survive_the_supported_subset() {
 /// the tb.oracle companions).
 pub(crate) fn strip_pin_header(bytes: &[u8]) -> &[u8] {
     let s = std::str::from_utf8(bytes).must("companion must be utf-8 text");
-    let mut rest = s;
-    while let Some(idx) = rest.find('\n') {
-        if rest[..idx].starts_with("# oracle: ") {
-            rest = &rest[idx + 1..];
-        } else {
-            break;
-        }
-    }
-    rest.as_bytes()
+    // Byte offset of the first line that is not an oracle pin-header.
+    let first_body = s.lines().position(|l| !l.starts_with("# oracle: "));
+    let off: usize = s
+        .lines()
+        .take(first_body.unwrap_or(usize::MAX))
+        .map(|l| l.len() + 1)
+        .sum();
+    &s.as_bytes()[off.min(s.len())..]
+}
+
+/// A collection sorted by its natural order.
+fn sorted<T: Ord>(mut v: Vec<T>) -> Vec<T> {
+    v.sort();
+    v
+}
+
+/// A collection sorted by `cmp`.
+fn sorted_by<T>(mut v: Vec<T>, cmp: impl Fn(&T, &T) -> std::cmp::Ordering) -> Vec<T> {
+    v.sort_by(cmp);
+    v
+}
+
+/// Build a `Graph` by applying `f` to a fresh default graph — keeps the
+/// call sites' bindings immutable.
+fn built(f: impl FnOnce(&mut Graph)) -> Graph {
+    let mut g = Graph::default();
+    f(&mut g);
+    g
 }

@@ -23,22 +23,24 @@ pub(crate) fn assert_border_attachments_keep_their_glyphs() {
             "┏━━━┓     ┌───┐\n┃ a ┃ ──> │ b │\n┗━━━┛     └───┘\n",
         ),
     ] {
-        let mut g = Graph::default();
-        let a = g.add_node("a");
-        let b = g.add_node("b");
-        g.add_edge(a, b, true).must("live endpoints");
-        g.set_attr(Scope::Node(a), "border", border);
+        let g = built(|g| {
+            let a = g.add_node("a");
+            let b = g.add_node("b");
+            g.add_edge(a, b, true).must("live endpoints");
+            g.set_attr(Scope::Node(a), "border", border);
+        });
         assert_eq!(render(&g), want, "border {border} + solid edge");
     }
 }
 
 /// The none-border box with a straight edge: label column intact.
 pub(crate) fn assert_none_border_box() {
-    let mut g = Graph::default();
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    g.add_edge(a, b, true).must("live endpoints");
-    g.set_attr(Scope::Node(a), "border", "none");
+    let g = built(|g| {
+        let a = g.add_node("a");
+        let b = g.add_node("b");
+        g.add_edge(a, b, true).must("live endpoints");
+        g.set_attr(Scope::Node(a), "border", "none");
+    });
     assert_eq!(render(&g), "        ┌───┐\n a  ──> │ b │\n        └───┘\n");
 }
 
@@ -92,4 +94,18 @@ pub(crate) fn assert_bidirectional_arrowheads() {
         render(&bidirectional()),
         "┌───┐      ┌───┐\n│ a │ <──> │ b │\n└───┘      └───┘\n"
     );
+}
+
+/// Build a `Graph` by applying `f` to a fresh default graph — keeps the
+/// call sites' bindings immutable.
+pub(crate) fn built(f: impl FnOnce(&mut Graph)) -> Graph {
+    let mut g = Graph::default();
+    f(&mut g);
+    g
+}
+
+/// Same, from an existing graph.
+pub(crate) fn with(mut g: Graph, f: impl FnOnce(&mut Graph)) -> Graph {
+    f(&mut g);
+    g
 }
