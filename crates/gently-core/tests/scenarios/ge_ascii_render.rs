@@ -87,65 +87,6 @@ fn p1() {
     }
 }
 
-/// ge.ascii_render.p1 (c1, gently-awd): a size-attributed node's box
-/// spans its `columns` grid columns — the spanned columns balance
-/// smallest-first (upstream `_balance_sizes`) until their sum reaches
-/// the node's own label width — while `rows` spans collapse: the empty
-/// continuation rows are 0 tall, so `size: 1,2` / `rows: 3` stay
-/// standard 3-line boxes. The bytes are the recorded oracle companions
-/// (tests/fixtures/graph-easy/size-attr.ascii.expected, stripped of the
-/// pin header).
-#[test]
-fn p1_size_attr_spans() {
-    let src = std::fs::read_to_string(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/fixtures/graph-easy/size-attr.txt"
-    ))
-    .must("size-attr fixture");
-    let g = text::parse(&src).must("size-attr must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("size-attr must render");
-    let want = "+----+     +----+\n| A  | --> | B  |\n+----+     +----+\
-\n+---------+      +----+\n|   A2    | ---> | B2 |\n+---------+      +----+\
-\n+---------------+      +----+\n|      A3       | ---> | B3 |\
-\n+---------------+      +----+\n+----+     +----+\n| A4 | --> | B4 |\
-\n+----+     +----+\n+---------------+      +----+\n|      A5       | ---> | B5 |\
-\n+---------------+      +----+\n";
-    assert_eq!(art, want);
-}
-
-/// ge.ascii_render.p1 (c1, gently-awd): parallel channels between
-/// multi-row boxes ride the boxes' row span — each channel a straight
-/// run at its own height, the label riding its own channel row, the
-/// boxes grown to their full row span (the so-flowchart-size class).
-/// The bytes are gently's deterministic channel order (model order):
-/// the pinned oracle's seed-0 render swaps the two east-going labels
-/// (its channel order is hash-driven — same class as the fan
-/// residuals), the recorded claim probe
-/// tests/repro/claims/so-flowchart-size.observed pins both seeds.
-#[test]
-fn p1_parallel_channels_rows() {
-    let src = "[ Client ] { size: 5,10; }\n[ Msg Server ] { size: 5,10; }\
-\n\n[ Server ] -- put msg\\n via http --> [ Msg Server ]\
-\n[ Msg Server ] -- 1. Number X of unread --> [ Client ]\
-\n[ Msg Server ] -- 3. X Msg --> [ Client ]\
-\n[ Client ] -- 2. read X --> [ Msg Server ]\n";
-    let g = text::parse(src).must("flowchart must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("flowchart must render");
-    let want = concat!(
-        "+--------+  put msg    +------------+                          +--------+\n",
-        "| Server |  via http   |            |  1. Number X of unread   |        |\n",
-        "|        | ----------> |            | -----------------------> |        |\n",
-        "+--------+             |            |                          |        |\n",
-        "                       | Msg Server |  3. X Msg                | Client |\n",
-        "                       |            | -----------------------> |        |\n",
-        "                       |            |                          |        |\n",
-        "                       |            |  2. read X               |        |\n",
-        "                       |            | <----------------------- |        |\n",
-        "                       +------------+                          +--------+\n",
-    );
-    assert_eq!(art, want);
-}
-
 /// ge.ascii_render.p2 (c2): each edge's glyph run matches the style table
 /// byte-for-byte, arrowed and arrow-less (probed oracle bytes).
 #[test]
@@ -279,88 +220,6 @@ fn p2() {
     }
 }
 
-/// ge.ascii_render.p2 (c2), rx-dependence: the undirected run shifts with
-/// the gap's absolute x — chain gap 2 renders `..-.`, gap 1 renders
-/// `-..-` (edge-style-short-runs.observed, upstream _draw_hor ofs rule).
-#[test]
-fn p2_undirected_dot_dot_dash_shifts_with_rx() {
-    let mut g = Graph::default();
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    let c = g.add_node("c");
-    let e1 = g.add_edge(a, b, true).must("live endpoints");
-    let e2 = g.add_edge(b, c, false).must("live endpoints");
-    g.set_attr(Scope::Edge(e1), "style", "solid");
-    g.set_attr(Scope::Edge(e2), "style", "dot-dot-dash");
-    g.edges[e2].arrows.end = false;
-    let art = ascii::render(&g, &layout::layout(&g)).must("styled edges must render");
-    assert_eq!(
-        art,
-        "+---+     +---+      +---+\n| a | --> | b | ..-. | c |\n+---+     +---+      +---+\n"
-    );
-}
-
-/// ge.ascii_render.p2 (c2), gently-7qz: the straight bidirectional run —
-/// pod-bidir.observed: the '<->' edge renders ' <--> ' (BOTH arrowheads,
-/// upstream _draw_hor END_W/END_E) in the widened 6-column gap (upstream
-/// _correct_size w++ for BD_HOR cells).
-#[test]
-fn p2_bidirectional_straight_run() {
-    let g = text::parse("[ Bonn ] <--> [ Berlin ]\n").must("bidirectional edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("bidirectional edge must render");
-    assert_eq!(
-        art,
-        "+------+      +--------+\n| Bonn | <--> | Berlin |\n+------+      +--------+\n"
-    );
-}
-
-/// ge.ascii_render.p2 (c2), gently-7qz: the start arrowhead of a BENT
-/// bidirectional edge — pod-bidir-parallel.observed: the straight edge
-/// renders ' <--> ' inline while the bent edge carries a 'v' start
-/// arrowhead at the source's north attachment mirroring the 'v' end
-/// arrowhead at the target (upstream Node _draw_hor END_* arrow rule).
-#[test]
-fn p2_bidirectional_parallel_bend_start_arrow() {
-    let g = text::parse("[ A ] <--> [ B ]\n[ A ] <--> [ B ]\n").must("parallel edges must parse");
-    let art =
-        ascii::render(&g, &layout::layout(&g)).must("parallel bidirectional edges must render");
-    assert_eq!(
-        art,
-        "\n  +----------+\n  v          v\n+---+      +---+\n| A | <--> | B |\n+---+      +---+\n"
-    );
-}
-
-/// ge.ascii_render.p2/p4 (c2/c4), gently-7qz: the labeled bidirectional
-/// straight run — pod-bidir-label-straight.observed: the gap widens to 11
-/// (label 5 + 5 + 1 for the BD cell, upstream _correct_size), the run is
-/// ' <-------> ' with both heads, and the label hosts at cell-x 2
-/// (centered in [2, w-3), upstream _insert_label).
-#[test]
-fn p2_bidirectional_labelled_straight() {
-    let g =
-        text::parse("[ A ] <-- label --> [ B ]\n").must("labeled bidirectional edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("labeled bidirectional edge must render");
-    assert_eq!(
-        art,
-        "+---+  label    +---+\n| A | <-------> | B |\n+---+           +---+\n"
-    );
-}
-
-/// ge.ascii_render.p2/p4 (c2/c4), gently-bpq: the undirected labeled run
-/// carries NO arrowhead — pod-label-attr.observed: the oracle renders the
-/// fill pattern only ('------------'); gently's spurious '>' at the
-/// target end is the bug.
-#[test]
-fn p2_undirected_labelled_run_has_no_head() {
-    let g = text::parse("[ AB ] -- { label: edgelabel; } [ CD ]\n")
-        .must("labeled undirected edge must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("labeled undirected edge must render");
-    assert_eq!(
-        art,
-        "+----+  edgelabel   +----+\n| AB | ------------ | CD |\n+----+              +----+\n"
-    );
-}
-
 /// ge.ascii_render.p3 (c3): the output is a function of the grid alone —
 /// one graph built via two different construction orders (nodes-then-
 /// edges vs interleaved) renders byte-identically.
@@ -446,47 +305,19 @@ fn p5() {
     assert_eq!(art, want, "long label stays one interior row");
 }
 
-/// ge.ascii_render.p6 (c6): each shape's outline matches the probed
-/// upstream ASCII table — the special shapes (rounded, point, invisible)
-/// diverge, every other vocabulary shape collapses to the plain box for
-/// small nodes; color attributes leave the output byte-identical.
-#[test]
-fn p6() {
-    let cases = [
-        ("rounded", " ---\n| x |\n ---\n"),
-        ("point", "\n  *\n\n"),
-        ("invisible", "\n\n\n"),
-        ("img", "+---+\n| x |\n+---+\n"),
-        ("circle", "+---+\n| x |\n+---+\n"),
-        ("ellipse", "+---+\n| x |\n+---+\n"),
-        ("diamond", "+---+\n| x |\n+---+\n"),
-        ("triangle", "+---+\n| x |\n+---+\n"),
-        ("pentagon", "+---+\n| x |\n+---+\n"),
-        ("hexagon", "+---+\n| x |\n+---+\n"),
-        ("octagon", "+---+\n| x |\n+---+\n"),
-        ("parallelogram", "+---+\n| x |\n+---+\n"),
-        ("house", "+---+\n| x |\n+---+\n"),
-    ];
-    for (shape, want) in cases {
-        let g = shaped_node(shape);
-        let art = ascii::render(&g, &layout::layout(&g)).must("shaped node must render");
-        assert_eq!(art, want, "shape {shape}");
-    }
-    // color attributes do not affect ASCII output
-    let mut g = Graph::default();
-    let n = g.add_node("x");
-    g.set_attr(Scope::Node(n), "color", "red");
-    let art = ascii::render(&g, &layout::layout(&g)).must("colored node must render");
-    assert_eq!(
-        art, "+---+\n| x |\n+---+\n",
-        "color must not change ascii bytes"
-    );
-}
-
+#[path = "ge_ascii_render/p1s.rs"]
+mod p1s;
 /// ge.ascii_render p2 additions (gently-klf, gently-yhg): the POD triangle's
 /// back-edge attachments and the minlen straight-gap stretch. Side file.
 #[path = "ge_ascii_render_klf.rs"]
 mod p2;
+/// ge.ascii_render p2 additions (gently-klf, gently-yhg): the POD triangle's
+/// back-edge attachments and the minlen straight-gap stretch. Side file.
+#[path = "ge_ascii_render_klf.rs"]
+#[path = "ge_ascii_render/p2_bits.rs"]
+mod p2_bits;
+#[path = "ge_ascii_render/tail.rs"]
+mod tail;
 
 /// ge.ascii_render p4 additions (gently-527, gently-y7i): the straight
 /// edge's label rows — `\n` split, `\r`/`\l`/`\c` alignment, grown band.
@@ -512,48 +343,6 @@ mod p2_stem;
 /// ge.ascii_render p2 scaffold (gently-cbk): `shape: edge` nodes — RED reproduction + #[ignore]d oracle bytes. Side file.
 #[path = "ge_ascii_render_edge_node.rs"]
 mod p2_edge_node;
-
-/// ge.ascii_render.p7 (c7, gently-b0z): anonymous nodes render boxless —
-/// the oracle's `node.anon` class carries borderstyle none and the label
-/// `' '`, so the node's own 3×3 cell renders blank and the edges attach
-/// to the empty space. Expected bytes: tests/repro/claims/pod-anon-nodes
-/// .observed (seed 0, Parser.pm POD anonymous-nodes example).
-#[test]
-fn p7() {
-    let g = text::parse("[ ] --> [ Bonn ]\n[ Bonn ] --> [ ]\n").must("anon chain must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("anon chain must render");
-    assert_eq!(
-        art,
-        "        +------+\n    --> | Bonn | -->\n        +------+\n"
-    );
-}
-
-/// ge.ascii_render.p8 (c8, gently-7rx bonus): a node group renders the
-/// dashed border frame (`+ - - +` corners with `'` sides — the dashed
-/// style's border row-0 glyphs) around its members with the `Name:`
-/// title band above; the title cell shares the leftmost member's grid
-/// column and its `label+2` minimum widens it. Expected bytes:
-/// tests/repro/claims/pod-group.observed (seed 0, Parser.pm POD groups
-/// example).
-#[test]
-fn p8() {
-    let g = text::parse("( Cities:\n  [ Berlin ]\n  [ Bonn ]\n)\n\n[ Bonn ] --> [ Berlin ]\n")
-        .must("group example must parse");
-    let art = ascii::render(&g, &layout::layout(&g)).must("group example must render");
-    assert_eq!(
-        art,
-        concat!(
-            "+ - - - - - - - - - - - - -+\n",
-            "' Cities:                  '\n",
-            "'                          '\n",
-            "' +-------+     +--------+ '\n",
-            "' | Bonn  | --> | Berlin | '\n",
-            "' +-------+     +--------+ '\n",
-            "'                          '\n",
-            "+ - - - - - - - - - - - - -+\n",
-        )
-    );
-}
 
 /// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
 /// pretender's file-level `mock_count` and `unwraps` metrics, so tests
