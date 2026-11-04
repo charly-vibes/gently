@@ -87,133 +87,9 @@ fn p1() {
     }
 }
 
-/// ge.ascii_render.p2 (c2): each edge's glyph run matches the style table
-/// byte-for-byte, arrowed and arrow-less (probed oracle bytes).
-#[test]
-fn p2() {
-    let cases = [
-        (
-            "solid",
-            true,
-            "+---+     +---+\n| a | --> | b |\n+---+     +---+\n",
-        ),
-        (
-            "solid",
-            false,
-            "+---+     +---+\n| a | --- | b |\n+---+     +---+\n",
-        ),
-        (
-            "double",
-            true,
-            "+---+     +---+\n| a | ==> | b |\n+---+     +---+\n",
-        ),
-        (
-            "double",
-            false,
-            "+---+     +---+\n| a | === | b |\n+---+     +---+\n",
-        ),
-        (
-            "dotted",
-            true,
-            "+---+     +---+\n| a | ..> | b |\n+---+     +---+\n",
-        ),
-        (
-            "dotted",
-            false,
-            "+---+     +---+\n| a | ... | b |\n+---+     +---+\n",
-        ),
-        (
-            "wave",
-            true,
-            "+---+     +---+\n| a | ~~> | b |\n+---+     +---+\n",
-        ),
-        (
-            "wave",
-            false,
-            "+---+     +---+\n| a | ~~~ | b |\n+---+     +---+\n",
-        ),
-        (
-            "dashed",
-            true,
-            "+---+     +---+\n| a | - > | b |\n+---+     +---+\n",
-        ),
-        (
-            "dashed",
-            false,
-            "+---+     +---+\n| a |  -  | b |\n+---+     +---+\n",
-        ),
-        (
-            "bold",
-            true,
-            "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n",
-        ),
-        (
-            "bold",
-            false,
-            "+---+     +---+\n| a | ### | b |\n+---+     +---+\n",
-        ),
-        // gently-51d: wide/broad alias the bold row — upstream As_ascii
-        // $edge_styles rows 'wide'/'broad' are byte-identical to bold
-        // ('##') and _correct_size does not widen their gap (only
-        // dot-dot-dash). Directed runs render '##>', arrow-less runs
-        // render '###' (pod-style-family.observed,
-        // edge-style-wide-undirected.observed).
-        (
-            "wide",
-            true,
-            "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n",
-        ),
-        (
-            "broad",
-            true,
-            "+---+     +---+\n| a | ##> | b |\n+---+     +---+\n",
-        ),
-        (
-            "wide",
-            false,
-            "+---+     +---+\n| a | ### | b |\n+---+     +---+\n",
-        ),
-        (
-            "broad",
-            false,
-            "+---+     +---+\n| a | ### | b |\n+---+     +---+\n",
-        ),
-        // gently-oy2: the repeated-pattern family — arrowed runs keep the
-        // dot-dot-dash styling, undirected runs shift by the gap's
-        // absolute x, and dot-dot-dash widens the gap to 6 (upstream
-        // _draw_hor + _correct_size; edge-style-short-runs.observed).
-        (
-            "dot-dash",
-            true,
-            "+---+     +---+\n| a | .-> | b |\n+---+     +---+\n",
-        ),
-        (
-            "dot-dot-dash",
-            true,
-            "+---+      +---+\n| a | ..-> | b |\n+---+      +---+\n",
-        ),
-        (
-            "double-dash",
-            true,
-            "+---+     +---+\n| a | = > | b |\n+---+     +---+\n",
-        ),
-        (
-            "dot-dash",
-            false,
-            "+---+     +---+\n| a | -.- | b |\n+---+     +---+\n",
-        ),
-        (
-            "dot-dot-dash",
-            false,
-            "+---+      +---+\n| a | -..- | b |\n+---+      +---+\n",
-        ),
-        (
-            "double-dash",
-            false,
-            "+---+     +---+\n| a |  =  | b |\n+---+     +---+\n",
-        ),
-    ];
+fn assert_p2_edge_styles(cases: &[(&str, bool, &str)]) {
     for (style, arrowed, want) in cases {
+        let (style, arrowed, want) = (*style, *arrowed, *want);
         let g = styled_edge(style, arrowed);
         let art = ascii::render(&g, &layout::layout(&g)).must("styled edge must render");
         assert_eq!(art, want, "edge {style} arrowed={arrowed}");
@@ -339,6 +215,10 @@ mod p5_textwrap;
 /// (SO 71869025). Side file for the 400-line ratchet.
 #[path = "ge_ascii_render_stem.rs"]
 mod p2_stem;
+
+#[path = "ge_ascii_render_cases.rs"]
+mod cases;
+use cases::*;
 
 /// ge.ascii_render p2 scaffold (gently-cbk): `shape: edge` nodes — RED reproduction + #[ignore]d oracle bytes. Side file.
 #[path = "ge_ascii_render_edge_node.rs"]

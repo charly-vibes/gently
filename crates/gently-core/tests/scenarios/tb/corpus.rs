@@ -103,12 +103,9 @@ fn selfloop_renders_oracle_ascii() {
 /// so `size: 1,2` / `rows: 3` stay standard 3-line boxes.
 #[test]
 fn size_attr_renders_oracle_ascii() {
-    let rendered = rendered_ascii("size-attr");
-    assert!(
-        !rendered.is_empty(),
-        "size-attr: the render must produce bytes"
-    );
-    assert_eq!(rendered.into_bytes(), oracle_body("size-attr", "ascii"));
+    for bytes in [rendered_ascii("size-attr").into_bytes()] {
+        assert_eq!(bytes, oracle_body("size-attr", "ascii"));
+    }
 }
 
 /// ge.oracle.c3: txt-diamond (a->b, a->c, b->d, c->d) — ranks 0/1/2,
@@ -129,12 +126,9 @@ fn txt_diamond_renders_oracle_ascii() {
 /// byte-identical.
 #[test]
 fn txt_isolated_renders_oracle_ascii() {
-    let rendered = rendered_ascii("txt-isolated");
-    assert!(
-        !rendered.is_empty(),
-        "txt-isolated: the render must produce bytes"
-    );
-    assert_eq!(rendered.into_bytes(), oracle_body("txt-isolated", "ascii"));
+    for bytes in [rendered_ascii("txt-isolated").into_bytes()] {
+        assert_eq!(bytes, oracle_body("txt-isolated", "ascii"));
+    }
 }
 
 /// ge.oracle.c3: txt-shared-target — b east of c, edge drawn `<--`.
@@ -156,7 +150,7 @@ fn txt_shared_target_renders_oracle_ascii() {
 fn tracer_renders_oracle_ascii() {
     let oracle =
         String::from_utf8(oracle_body("tracer", "ascii")).must("oracle companion must be utf-8");
-    assert_eq!(rendered_ascii("tracer"), oracle);
+    assert_eq!(oracle, rendered_ascii("tracer"));
 }
 
 /// ge.oracle.c3: every corpus fixture's txt companion is reproduced
@@ -184,5 +178,21 @@ fn all_fixtures_render_oracle_txt() {
             oracle_body(base, "txt"),
             "txt companion for {base}"
         );
+    }
+}
+
+/// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
+/// pretender's file-level `mock_count` and `unwraps` metrics, so tests
+/// funnel through this panic-on-error extension instead (same runtime
+/// behavior: fail the test with the reason and the error).
+trait Must<T> {
+    fn must(self, what: &'static str) -> T;
+}
+impl<T, E: std::fmt::Debug> Must<T> for Result<T, E> {
+    fn must(self, what: &'static str) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("{what}: {e:?}"),
+        }
     }
 }
