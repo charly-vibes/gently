@@ -1,463 +1,277 @@
-//! ge.boxart_render (gently-css): the Unicode boxart renderer contract —
-//! each property row of specs/ge-boxart_render.md is one test below, named
-//! for its id. Expected bytes are the probed pinned oracle (Graph::Easy
-//! v0.69 @ ededa3d7; tests/repro/claims/boxart-render-tables.observed),
-//! captured via `as_boxart` (the same render path as `as_ascii` with
-//! `_ascii_style = 1`).
-//!
-//! Scope notes (probed):
-//! - Junction/neighbourhood cells do NOT combine glyphs (c2): a border
-//!   cell keeps its own glyph where an edge attaches, and a polyline
-//!   corner is the edge style's own corner glyph for its neighbourhood —
-//!   p2 pins the observed junction bytes.
-//! - A bend's vertical pieces attach two chars into the node's column
-//!   (upstream draws corner cells at fixed cell-x 2), which for standard
-//!   boxes is the label column.
-//! - Westward single-headed edges are not expressible in the upstream
-//!   text format (`<--` alone is a parse error; only bidirectional `<->`
-//!   exists), so westward runs stay out of p3's generator, as in
-//!   ge.ascii_render.
-//! - `box` is not a valid upstream shape (parse-rejected; recorded in
-//!   shape-outline-collapse.observed), so p4's generator uses `rect` for
-//!   the plain box.
-//! - The oracle hangs on multiline labels; label wrapping stays out by
-//!   design (same exclusion as ge.ascii_render).
+//! ge.txt_render (gently-3hv): the canonical txt serialization contract —
+//! each property row of specs/ge-txt_render.md is one test below, named for
+//! its id. The upstream oracle (Graph::Easy 0.69 As_txt.pm @
+//! ededa3d787ad89ac532c578c06390e8a7b270499) is authoritative; expected
+//! forms here were captured from it.
 
-use gently_core::graph::{Graph, Scope};
-use gently_core::layout;
-use gently_core::render::boxart;
+use gently_core::graph::{Graph, ObjectKind, Scope};
+use gently_core::parse::text;
+use gently_core::render::ascii;
+use gently_core::render::txt;
 
-/// `[ x ] { border: <style>; }`.
-fn bordered_node(style: &str) -> Graph {
-    let mut g = Graph::default();
-    let n = g.add_node("x");
-    g.set_attr(Scope::Node(n), "border", style);
-    g
+#[path = "ge_txt_render/shapes.rs"]
+mod shapes;
+use shapes::*;
+
+/// Add two nodes and a live edge between them; returns the edge index.
+fn chain_edge(g: &mut Graph, a: &str, b: &str, directed: bool) -> usize {
+    let from = g.add_node(a);
+    let to = g.add_node(b);
+    g.add_edge(from, to, directed).must("live endpoints")
 }
 
-/// `[ a ] --> { style: <style>; } [ b ]`, arrowless when `arrowed` is false.
-fn styled_edge(style: &str, arrowed: bool) -> Graph {
-    let mut g = Graph::default();
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    let e = g.add_edge(a, b, arrowed).must("live endpoints");
-    g.set_attr(Scope::Edge(e), "style", style);
-    if !arrowed {
-        g.edges[e].arrows.end = false;
-    }
-    g
-}
-
-/// `[ x ] { shape: <shape>; }`.
-fn shaped_node(shape: &str) -> Graph {
-    let mut g = Graph::default();
-    let n = g.add_node("x");
-    g.set_attr(Scope::Node(n), "shape", shape);
-    g
-}
-
-/// The mixed-style junction chain x →(dashed) a →(double) b →(dotted) c.
-fn mixed_chain() -> Graph {
-    let mut g = Graph::default();
-    let x = g.add_node("x");
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    let c = g.add_node("c");
-    let e1 = g.add_edge(x, a, true).must("live endpoints");
-    let e2 = g.add_edge(a, b, true).must("live endpoints");
-    let e3 = g.add_edge(b, c, true).must("live endpoints");
-    g.set_attr(Scope::Edge(e1), "style", "dashed");
-    g.set_attr(Scope::Edge(e2), "style", "double");
-    g.set_attr(Scope::Edge(e3), "style", "dotted");
-    g
-}
-
-/// The cycle a → b → a, first edge `style_a`, return edge `style_b`.
-fn cycle(style_a: &str, style_b: &str) -> Graph {
-    let mut g = Graph::default();
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    let e1 = g.add_edge(a, b, true).must("live endpoints");
-    let e2 = g.add_edge(b, a, true).must("live endpoints");
-    g.set_attr(Scope::Edge(e1), "style", style_a);
-    g.set_attr(Scope::Edge(e2), "style", style_b);
-    g
-}
-
-/// The two-node graph `[ a ] <--> [ b ]` (arrowheads at both ends).
-fn bidirectional() -> Graph {
-    let mut g = Graph::default();
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    let e = g.add_edge(a, b, true).must("live endpoints");
+/// Set the bidirectional arrows on an edge (arrowheads at both ends).
+fn make_bidirectional(g: &mut Graph, e: usize) {
     g.edges[e].arrows.start = true;
+    g.edges[e].arrows.end = true;
+}
+
+/// The p2 composite: one edge per style/direction, an attribute-bearing
+/// edge-less node, and a bare isolated node (oracle-verified shapes).
+fn styled_graph() -> Graph {
+    let mut g = Graph::default();
+    chain_edge(&mut g, "a", "b", true);
+    chain_edge(&mut g, "c", "d", false);
+    let ef = chain_edge(&mut g, "e", "f", true);
+    make_bidirectional(&mut g, ef);
+    let gh = chain_edge(&mut g, "g", "h", true);
+    g.set_attr(Scope::Edge(gh), "style", "dotted");
+    let ij = chain_edge(&mut g, "i", "j", true);
+    g.set_attr(Scope::Edge(ij), "style", "dashed");
+    g.set_attr(Scope::Edge(ij), "label", "go");
+    let kl = chain_edge(&mut g, "k", "l", true);
+    g.set_attr(Scope::Edge(kl), "style", "bold");
+    g.add_node("solo");
+    let n = g.add_node("n");
+    g.set_attr(Scope::Node(n), "color", "red");
     g
 }
 
-fn render(g: &Graph) -> String {
-    boxart::render(g, &layout::layout(g)).must("must render")
-}
-
-/// p1 (c1): each node border style yields its Unicode glyph set, one
-/// character per cell — including the shifted repeat units of the dash
-/// styles over a wide label.
+/// ge.txt_render.p1 (c1): the output starts with class attribute sections
+/// for graph, node, edge, and group classes, emitted in sorted class order
+/// with sorted attribute order.
 #[test]
 fn p1() {
-    for (style, want) in [
-        ("solid", "┌───┐\n│ x │\n└───┘\n"),
-        ("dotted", "┌⋯⋯⋯┐\n⋮ x ⋮\n└⋯⋯⋯┘\n"),
-        ("dashed", "┌−−−┐\n╎ x ╎\n└−−−┘\n"),
-        ("double", "╔═══╗\n║ x ║\n╚═══╝\n"),
-        ("wave", "┌∼∼∼┐\n≀ x ≀\n└∼∼∼┘\n"),
-        ("bold", "┏━━━┓\n┃ x ┃\n┗━━━┛\n"),
-        ("wide", "█████\n█ x █\n█████\n"),
-        ("broad", "▛▀▀▀▜\n▌ x ▐\n▙▄▄▄▟\n"),
-        ("dot-dash", "┌-·-┐\n! x !\n└-·-┘\n"),
-        ("dot-dot-dash", "┌·-·┐\n│ x │\n└·-·┘\n"),
-        ("double-dash", "╔ ═ ╗\n∥ x ∥\n╚ ═ ╝\n"),
-        ("bold-dash", "┏ ━ ┓\n╻ x ╻\n┗ ━ ┛\n"),
-        ("none", "\n x\n\n"),
-    ] {
-        assert_eq!(render(&bordered_node(style)), want, "border {style}");
-    }
-    // repeat units over a wide label: the horizontal pattern is cycled
-    // from offset 1 across the interior (upstream h_run shift rule).
-    for (style, want) in [
-        ("solid", "┌────────────┐\n│ xxxxxxxxxx │\n└────────────┘\n"),
-        (
-            "dot-dash",
-            "┌-·-·-·-·-·-·┐\n! xxxxxxxxxx !\n└-·-·-·-·-·-·┘\n",
-        ),
-        (
-            "dot-dot-dash",
-            "┌·-··-··-··-·┐\n│ xxxxxxxxxx │\n└·-··-··-··-·┘\n",
-        ),
-        (
-            "double-dash",
-            "╔ ═ ═ ═ ═ ═ ═╗\n∥ xxxxxxxxxx ∥\n╚ ═ ═ ═ ═ ═ ═╝\n",
-        ),
-        (
-            "bold-dash",
-            "┏ ━ ━ ━ ━ ━ ━┓\n╻ xxxxxxxxxx ╻\n┗ ━ ━ ━ ━ ━ ━┛\n",
-        ),
-    ] {
-        let mut g = bordered_node(style);
-        let n = g.nodes.len() - 1;
-        g.nodes[n].name = "xxxxxxxxxx".to_string();
-        assert_eq!(render(&g), want, "border {style} wide label");
-    }
+    let mut g = Graph::default();
+    g.add_node("a");
+    g.set_attr(Scope::Graph, "title", "T");
+    g.set_attr(
+        Scope::Class(ObjectKind::Node, String::new()),
+        "color",
+        "blue",
+    );
+    g.set_attr(Scope::Class(ObjectKind::Edge, String::new()), "label", "E");
+    g.set_attr(Scope::Class(ObjectKind::Group, String::new()), "label", "G");
+    let out = txt::render(&g);
+    // sections first: sorted classes (edge < graph < group < node), each
+    // with its attributes sorted by key (oracle: Graph::Easy 0.69 as_txt)
+    let head =
+        "edge { label: E; }\ngraph { title: T; }\ngroup { label: G; }\nnode { color: blue; }\n";
+    assert!(
+        out.starts_with(head),
+        "class sections must come first, sorted: {out:?}"
+    );
+    // the body follows after the sections' separating blank line
+    assert_eq!(&out[head.len()..], "\n[ a ]\n");
+
+    multi_attribute_class_section_is_multi_line_and_sorted();
 }
 
-/// p2 (c2): junction cells — border cells keep their own glyph where an
-/// edge attaches (no glyph combining is observed), bend corners are the
-/// edge style's own corner glyphs for their neighbourhood, and the
-/// straight/mixed/bend/selfloop/bidirectional neighbourhoods render the
-/// probed combined bytes.
+/// A class with more than one attribute uses the multi-line form with
+/// attribute keys sorted.
+fn multi_attribute_class_section_is_multi_line_and_sorted() {
+    let mut g = Graph::default();
+    g.set_attr(Scope::Class(ObjectKind::Node, String::new()), "label", "N");
+    g.set_attr(
+        Scope::Class(ObjectKind::Node, String::new()),
+        "color",
+        "blue",
+    );
+    let out = txt::render(&g);
+    assert!(
+        out.starts_with("node {\n  color: blue;\n  label: N;\n}\n\n"),
+        "multi-attribute class section must be multi-line and sorted: {out:?}"
+    );
+}
+
+/// ge.txt_render.p2 (c2): every node is emitted with its name (and its
+/// instance attributes), and every edge as an operator chain whose
+/// operator matches the edge style and direction. In the graph below each
+/// object appears exactly once: attribute-bearing nodes are edge-less,
+/// and edges connect attribute-less nodes (upstream as_txt order and
+/// forms, verified against the oracle).
 #[test]
 fn p2() {
-    // sanity: the junction generator is the mixed chain it claims to be
-    // (the neighbourhood assertions live in the helpers below).
-    assert_eq!(mixed_chain().edges.len(), 3);
-    assert_mixed_style_chain();
-    assert_border_attachments_keep_their_glyphs();
-    assert_none_border_box();
-    assert_bend_corners();
-    assert_selfloop_elbows();
-    assert_bidirectional_arrowheads();
+    let out = txt::render(&styled_graph());
+    let expected = "[ n ] { color: red; }\n\
+                    \n\
+                    [ a ] --> [ b ]\n\
+                    [ c ] -- [ d ]\n\
+                    [ e ] <--> [ f ]\n\
+                    [ g ] ..> [ h ]\n\
+                    [ i ] -  go - > [ j ]\n\
+                    [ k ] --> { style: bold; } [ l ]\n\
+                    [ solo ]\n";
+    assert_eq!(out, expected);
 }
 
-/// The mixed-style chain: every edge cell carries its own style's glyphs.
-fn assert_mixed_style_chain() {
-    assert_eq!(
-        render(&mixed_chain()),
-        "┌───┐     ┌───┐     ┌───┐     ┌───┐\n\
-         │ x │ ╴╴> │ a │ ══> │ b │ ··> │ c │\n\
-         └───┘     └───┘     └───┘     └───┘\n"
-    );
-}
-
-/// Border attachments keep the border's own glyphs (dashed ╎ / bold ┃);
-/// a none-border box shows no glyphs at all.
-fn assert_border_attachments_keep_their_glyphs() {
-    for (border, want) in [
-        (
-            "dashed",
-            "┌−−−┐     ┌───┐\n╎ a ╎ ──> │ b │\n└−−−┘     └───┘\n",
-        ),
-        (
-            "bold",
-            "┏━━━┓     ┌───┐\n┃ a ┃ ──> │ b │\n┗━━━┛     └───┘\n",
-        ),
-    ] {
-        let mut g = Graph::default();
-        let a = g.add_node("a");
-        let b = g.add_node("b");
-        g.add_edge(a, b, true).must("live endpoints");
-        g.set_attr(Scope::Node(a), "border", border);
-        assert_eq!(render(&g), want, "border {border} + solid edge");
-    }
-}
-
-/// The none-border box with a straight edge: label column intact.
-fn assert_none_border_box() {
-    let mut g = Graph::default();
-    let a = g.add_node("a");
-    let b = g.add_node("b");
-    g.add_edge(a, b, true).must("live endpoints");
-    g.set_attr(Scope::Node(a), "border", "none");
-    assert_eq!(render(&g), "        ┌───┐\n a  ──> │ b │\n        └───┘\n");
-}
-
-/// Bend (cycle) neighbourhoods: corners are the edge style's SE/SW
-/// corner glyphs, verticals the ver glyphs, arrowheads '∨'.
-fn assert_bend_corners() {
-    assert_eq!(
-        render(&cycle("solid", "solid")),
-        "\n  ┌─────────┐\n  ∨         │\n┌───┐     ┌───┐\n│ a │ ──> │ b │\n└───┘     └───┘\n"
-    );
-    assert_eq!(
-        render(&cycle("dashed", "double")),
-        "\n  ╔═════════╗\n  ∨         ║\n┌───┐     ┌───┐\n│ a │ ╴╴> │ b │\n└───┘     └───┘\n"
-    );
-}
-
-/// Selfloop elbows: edge-style corners/hor/ver glyphs above the box;
-/// an arrowless loop attaches the ver glyph on both sides.
-fn assert_selfloop_elbows() {
-    for (style, arrowed, want) in [
-        (
-            "solid",
-            true,
-            "\n  ┌──┐\n  ∨  │\n┌──────┐\n│  a   │\n└──────┘\n",
-        ),
-        (
-            "double",
-            true,
-            "\n  ╔══╗\n  ∨  ║\n┌──────┐\n│  a   │\n└──────┘\n",
-        ),
-        (
-            "solid",
-            false,
-            "\n  ┌──┐\n  │  │\n┌──────┐\n│  a   │\n└──────┘\n",
-        ),
-    ] {
-        let mut g = Graph::default();
-        let a = g.add_node("a");
-        let e = g.add_edge(a, a, arrowed).must("live endpoints");
-        g.set_attr(Scope::Edge(e), "style", style);
-        if !arrowed {
-            g.edges[e].arrows.end = false;
-        }
-        assert_eq!(render(&g), want, "selfloop {style} arrowed={arrowed}");
-    }
-}
-
-/// Bidirectional: arrowheads at both ends, gap one wider.
-fn assert_bidirectional_arrowheads() {
-    assert_eq!(
-        render(&bidirectional()),
-        "┌───┐      ┌───┐\n│ a │ <──> │ b │\n└───┘      └───┘\n"
-    );
-}
-
-/// p3 (c3): each edge style renders with the exact upstream Unicode
-/// glyphs — arrowed and arrowless — with repeat units spanning the same
-/// column counts as upstream (the dot-dot-dash gap is one wider, and
-/// labelled runs cycle the horizontal pattern).
+/// ge.txt_render.p3 (c3): parsing the emitted text with ge.text_parser
+/// reproduces a model with the same nodes, edges, styles, labels,
+/// directions, attributes, and group membership as the source model.
+/// Bound to the parser-supported feature subset (see the documented
+/// deviation below).
 #[test]
 fn p3() {
-    for (style, arrowed, want) in [
-        (
-            "solid",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ──> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "solid",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ─── │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "double",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ══> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "double",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ═══ │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "dotted",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ··> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "dotted",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ··· │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "wave",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ∼∼> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "wave",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ∼∼∼ │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "dashed",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ╴╴> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "dashed",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ╴╴╴ │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "bold",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ━━> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "bold",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ━━━ │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "wide",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ██> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "wide",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ███ │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "broad",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ▬▬> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "broad",
-            false,
-            "┌───┐     ┌───┐\n│ a │ ▬▬▬ │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "dot-dash",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ·-> │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "dot-dash",
-            false,
-            "┌───┐     ┌───┐\n│ a │ -·- │ b │\n└───┘     └───┘\n",
-        ),
-        // dot-dot-dash: the gap column is one char wider (repeat unit).
-        (
-            "dot-dot-dash",
-            true,
-            "┌───┐      ┌───┐\n│ a │ ··-> │ b │\n└───┘      └───┘\n",
-        ),
-        (
-            "dot-dot-dash",
-            false,
-            "┌───┐      ┌───┐\n│ a │ -··- │ b │\n└───┘      └───┘\n",
-        ),
-        (
-            "double-dash",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ═ > │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "double-dash",
-            false,
-            "┌───┐     ┌───┐\n│ a │  ═  │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "bold-dash",
-            true,
-            "┌───┐     ┌───┐\n│ a │ ━ > │ b │\n└───┘     └───┘\n",
-        ),
-        (
-            "bold-dash",
-            false,
-            "┌───┐     ┌───┐\n│ a │  ━  │ b │\n└───┘     └───┘\n",
-        ),
-    ] {
-        assert_eq!(
-            render(&styled_edge(style, arrowed)),
-            want,
-            "edge {style} arrowed={arrowed}"
+    for g in &round_trip_sources() {
+        let txt = txt::render(g);
+        let reparsed =
+            text::parse(&txt).unwrap_or_else(|e| panic!("emitted txt must re-parse: {e}\n{txt}"));
+        assert!(
+            model_equivalent(g, &reparsed),
+            "round-trip lost the model\nsource: {g:?}\ntxt: {txt:?}\nre-parsed: {reparsed:?}"
         );
     }
-    // labelled straight edges: the label hosts on the box-top row, the
-    // run cycles the style's horizontal pattern plus the '>' head.
-    for (style, want) in [
-        (
-            "solid",
-            "┌───┐  go   ┌───┐\n│ a │ ────> │ b │\n└───┘       └───┘\n",
-        ),
-        (
-            "dotted",
-            "┌───┐  go   ┌───┐\n│ a │ ····> │ b │\n└───┘       └───┘\n",
-        ),
-        (
-            "dot-dot-dash",
-            "┌───┐  go    ┌───┐\n│ a │ ··-··> │ b │\n└───┘        └───┘\n",
-        ),
-    ] {
-        let mut g = styled_edge(style, true);
-        let e = g.edges.len() - 1;
-        g.set_attr(Scope::Edge(e), "label", "go");
-        assert_eq!(render(&g), want, "labelled edge {style}");
+    labels_do_not_survive_the_supported_subset();
+}
+
+/// ge.txt_render.p4 (c4): every recorded upstream fixture under
+/// `tests/fixtures/graph-easy/` — input `.txt` plus expected canonical-text
+/// companion `.txt.expected`, captured from the pinned upstream revision —
+/// renders byte-identically. Re-recording expectations is a deliberate,
+/// separately reviewed change, never a side effect of code edits.
+#[test]
+fn p4() {
+    use std::path::PathBuf;
+
+    fn fixture_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/graph-easy")
+    }
+
+    /// The pinned oracle (ge.txt_render.c4): every recorded companion
+    /// names exactly this revision in its header.
+    const PIN: &str = "Graph::Easy v0.69 @ ededa3d787ad89ac532c578c06390e8a7b270499";
+
+    let mut names: Vec<String> = std::fs::read_dir(fixture_dir())
+        .must("fixture dir")
+        .map(|e| {
+            e.must("dir entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|n| n.ends_with(".txt"))
+        .collect();
+    names.sort();
+    assert!(names.len() >= 5, "fixture corpus must be non-trivial");
+    for name in &names {
+        let input = std::fs::read(fixture_dir().join(name)).must("fixture input");
+        let companion = fixture_dir().join(format!("{name}.expected"));
+        let expected = std::fs::read(&companion)
+            .unwrap_or_else(|e| panic!("missing recorded companion {}: {e}", companion.display()));
+        // the pin header is recorder metadata: verify it names the pinned
+        // revision, then strip it before the byte-identical comparison
+        let header = std::str::from_utf8(&expected)
+            .must("companion must be utf-8")
+            .lines()
+            .next()
+            .unwrap_or("")
+            .to_string();
+        assert_eq!(
+            header,
+            format!("# oracle: {PIN}"),
+            "{name}.expected must carry the pinned-revision header (ge.txt_render.c4)"
+        );
+        let g = text::parse(std::str::from_utf8(&input).must("fixture must be utf-8"))
+            .unwrap_or_else(|e| panic!("fixture {name} must parse: {e}"));
+        let got = txt::render(&g);
+        assert_eq!(
+            got.as_bytes(),
+            strip_pin_header(&expected),
+            "fixture {name} must render byte-identically to the recorded oracle companion"
+        );
     }
 }
 
-/// p4 (c4): a node's shape attribute changes the outline per the upstream
-/// Unicode shape table — `rounded` overlays the ╭╮╯╰ corner set for the
-/// solid|dotted|dashed|dot-dash|dot-dot-dash border styles, blanks the
-/// corners for bold|wide|broad|double|double-dash|bold-dash, and KEEPS
-/// the corners for wave (upstream quirk); `point` swaps the label for a
-/// centered ★; `invisible` draws nothing; every other vocabulary name
-/// collapses to the plain box.
+/// ge.txt_render (gently-awd): the multi-cell size canonicalization —
+/// upstream As_txt.pm merges `columns`/`rows` into the shorter `size: W,H;`
+/// form whenever `columns` is present, never outputs the default `1,1`,
+/// and leaves a lone `rows` attribute alone (`rows: 2;` is shorter than
+/// `size: 1,2;`).
 #[test]
-fn p4() {
-    for (shape, want) in [
-        ("rect", "┌───┐\n│ x │\n└───┘\n"),
-        ("rounded", "╭───╮\n│ x │\n╰───╯\n"),
-        ("point", "\n  ★\n\n"),
-        ("circle", "┌───┐\n│ x │\n└───┘\n"),
-        ("ellipse", "┌───┐\n│ x │\n└───┘\n"),
-        ("diamond", "┌───┐\n│ x │\n└───┘\n"),
-        ("triangle", "┌───┐\n│ x │\n└───┘\n"),
-        ("pentagon", "┌───┐\n│ x │\n└───┘\n"),
-        ("hexagon", "┌───┐\n│ x │\n└───┘\n"),
-        ("octagon", "┌───┐\n│ x │\n└───┘\n"),
-        ("parallelogram", "┌───┐\n│ x │\n└───┘\n"),
-        ("house", "┌───┐\n│ x │\n└───┘\n"),
-        ("invisible", "\n\n\n"),
-        ("img", "┌───┐\n│ x │\n└───┘\n"),
-    ] {
-        assert_eq!(render(&shaped_node(shape)), want, "shape {shape}");
+fn p5() {
+    fn node_attrs(source: &str) -> String {
+        let g = text::parse(source).must("parse");
+        txt::render(&g)
     }
-    // rounded × border style: overlay, blank, or keep (wave quirk).
-    for (border, want) in [
-        ("double", " ═══\n║ x ║\n ═══\n"),
-        ("dotted", "╭⋯⋯⋯╮\n⋮ x ⋮\n╰⋯⋯⋯╯\n"),
-        ("wave", "┌∼∼∼┐\n≀ x ≀\n└∼∼∼┘\n"),
-        ("bold", " ━━━\n┃ x ┃\n ━━━\n"),
-        ("dot-dot-dash", "╭·-·╮\n│ x │\n╰·-·╯\n"),
-    ] {
-        let mut g = bordered_node(border);
-        let n = g.nodes.len() - 1;
-        g.set_attr(Scope::Node(n), "shape", "rounded");
-        assert_eq!(render(&g), want, "rounded + border {border}");
-    }
+
+    // columns present → merged into size, rows defaulted to 1
+    assert_eq!(
+        node_attrs("[ A ] { columns: 3; }"),
+        "[ A ] { size: 3,1; }\n\n",
+        "columns merges into size: W,1"
+    );
+    // columns + rows together merge too
+    assert_eq!(
+        node_attrs("[ A ] { columns: 2; rows: 5; }"),
+        "[ A ] { size: 2,5; }\n\n",
+        "columns+rows merge into size: W,H"
+    );
+    // a lone rows attribute is already shorter — stays rows
+    assert_eq!(
+        node_attrs("[ A ] { rows: 3; }"),
+        "[ A ] { rows: 3; }\n\n",
+        "lone rows stays rows"
+    );
+    // the default 1,1 is dropped
+    assert_eq!(
+        node_attrs("[ A ] { size: 1,1; }"),
+        "[ A ]\n",
+        "default size 1,1 is not output"
+    );
+    assert_eq!(
+        node_attrs("[ A ] { columns: 1; rows: 1; }"),
+        "[ A ]\n",
+        "columns 1,1 collapses to no attribute"
+    );
+}
+
+/// ge.txt_render.p6 (c6, gently-278): the group-endpoint ORACLE defect —
+/// class (b), gently is right(er); recorded upstream, DECIDED NOT TO FILE
+/// (user decision 2026-10-14 — this bead is the item-3 evidence). The
+/// repro `( [ Bonn ] ) -> [ Berlin ]` makes the closed group the edge's
+/// endpoint; upstream as_txt prints only the group block and DROPS
+/// Berlin (its declaration pass never reaches a node whose only edge
+/// predecessor is the group) while upstream as_ascii renders BOTH boxes
+/// — upstream self-inconsistent. gently lists Berlin in both renderers.
+/// Expected bytes are gently's own CURRENT bytes — the class-b
+/// raw-scaling pin tests/repro/claims/as-txt-group-endpoint-omission.observed
+/// (verified against gently's invariants under ge.layout c1, NOT the
+/// pinned oracle; the oracle's defect bytes live in
+/// pod-anon-group.observed). Each example its OWN graph.
+#[test]
+fn p6() {
+    // as_txt: the group block AND [ Berlin ]
+    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").must("the repro must parse");
+    let expected_txt = "( Group \\#0\n  [ Bonn ]\n)\n\n[ Berlin ]\n";
+    assert_eq!(
+        txt::render(&g),
+        expected_txt,
+        "as_txt must list the group-endpoint-connected node"
+    );
+
+    // as_ascii: the dashed group border with both boxes — own graph
+    let g = text::parse("( [ Bonn ] ) -> [ Berlin ]\n").must("the repro must parse");
+    let expected_ascii = concat!(
+        "+ - - - - - -+\n' Group #0   '\n'            '\n",
+        "' +--------+ '   +--------+\n' |  Bonn  | '   | Berlin |\n",
+        "' +--------+ '   +--------+\n'            '\n+ - - - - - -+\n"
+    );
+    let laid = gently_core::layout::layout(&g);
+    assert_eq!(
+        ascii::render(&g, &laid).must("the repro must render"),
+        expected_ascii,
+        "as_ascii must draw the dashed group border with both boxes"
+    );
 }
 
 /// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
