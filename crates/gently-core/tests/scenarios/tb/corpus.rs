@@ -61,8 +61,13 @@ fn chain_renders_oracle_ascii() {
 /// isolated node as its own left-aligned box below.
 #[test]
 fn mixed_isolated_renders_oracle_ascii() {
+    let rendered = rendered_ascii("mixed_isolated");
+    assert!(
+        !rendered.is_empty(),
+        "mixed_isolated: the render must produce bytes"
+    );
     assert_eq!(
-        rendered_ascii("mixed_isolated").into_bytes(),
+        rendered.into_bytes(),
         oracle_body("mixed_isolated", "ascii")
     );
 }
@@ -71,20 +76,23 @@ fn mixed_isolated_renders_oracle_ascii() {
 /// above the boxes.
 #[test]
 fn parallel_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("parallel").into_bytes(),
-        oracle_body("parallel", "ascii")
-    );
+    let oracle =
+        String::from_utf8(oracle_body("parallel", "ascii")).must("oracle companion must be utf-8");
+    assert_eq!(rendered_ascii("parallel"), oracle);
 }
 
 /// ge.oracle.c3: selfloop (a->a) — loop elbow above the box with a
 /// `v` arrowhead.
 #[test]
 fn selfloop_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("selfloop").into_bytes(),
-        oracle_body("selfloop", "ascii")
+    let oracle =
+        String::from_utf8(oracle_body("selfloop", "ascii")).must("oracle companion must be utf-8");
+    let rendered = rendered_ascii("selfloop");
+    assert!(
+        !rendered.is_empty(),
+        "selfloop: the render must produce bytes"
     );
+    assert_eq!(rendered, oracle);
 }
 
 /// ge.oracle.c3: size-attr (gently-awd) — five size-attributed chains:
@@ -95,49 +103,60 @@ fn selfloop_renders_oracle_ascii() {
 /// so `size: 1,2` / `rows: 3` stay standard 3-line boxes.
 #[test]
 fn size_attr_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("size-attr").into_bytes(),
-        oracle_body("size-attr", "ascii")
+    let rendered = rendered_ascii("size-attr");
+    assert!(
+        !rendered.is_empty(),
+        "size-attr: the render must produce bytes"
     );
+    assert_eq!(rendered.into_bytes(), oracle_body("size-attr", "ascii"));
 }
 
 /// ge.oracle.c3: txt-diamond (a->b, a->c, b->d, c->d) — ranks 0/1/2,
 /// c below rank 1, vertical segments + arrowheads as recorded.
 #[test]
 fn txt_diamond_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("txt-diamond").into_bytes(),
-        oracle_body("txt-diamond", "ascii")
+    let oracle = String::from_utf8(oracle_body("txt-diamond", "ascii"))
+        .must("oracle companion must be utf-8");
+    let rendered = rendered_ascii("txt-diamond");
+    assert!(
+        !rendered.is_empty(),
+        "txt-diamond: the render must produce bytes"
     );
+    assert_eq!(rendered, oracle);
 }
 
 /// ge.oracle.c3: txt-isolated — already-passing shape stays
 /// byte-identical.
 #[test]
 fn txt_isolated_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("txt-isolated").into_bytes(),
-        oracle_body("txt-isolated", "ascii")
+    let rendered = rendered_ascii("txt-isolated");
+    assert!(
+        !rendered.is_empty(),
+        "txt-isolated: the render must produce bytes"
     );
+    assert_eq!(rendered.into_bytes(), oracle_body("txt-isolated", "ascii"));
 }
 
 /// ge.oracle.c3: txt-shared-target — b east of c, edge drawn `<--`.
 #[test]
 fn txt_shared_target_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("txt-shared-target").into_bytes(),
-        oracle_body("txt-shared-target", "ascii")
+    let oracle = String::from_utf8(oracle_body("txt-shared-target", "ascii"))
+        .must("oracle companion must be utf-8");
+    let rendered = rendered_ascii("txt-shared-target");
+    assert!(
+        !rendered.is_empty(),
+        "txt-shared-target: the render must produce bytes"
     );
+    assert_eq!(rendered, oracle);
 }
 
 /// ge.oracle.c3: tracer — already-passing shape stays
 /// byte-identical.
 #[test]
 fn tracer_renders_oracle_ascii() {
-    assert_eq!(
-        rendered_ascii("tracer").into_bytes(),
-        oracle_body("tracer", "ascii")
-    );
+    let oracle =
+        String::from_utf8(oracle_body("tracer", "ascii")).must("oracle companion must be utf-8");
+    assert_eq!(rendered_ascii("tracer"), oracle);
 }
 
 /// ge.oracle.c3: every corpus fixture's txt companion is reproduced
