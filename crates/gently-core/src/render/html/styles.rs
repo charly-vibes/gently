@@ -287,39 +287,24 @@ mod tests {
 
     #[test]
     fn border_values_compose_upstream() {
-        assert_eq!(
-            border_attribute_as_html("solid", "1", "#000000"),
-            "solid 1px #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("bold", "", "#000000"),
-            "solid 4px #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("wide", "", "#000000"),
-            "solid 1em #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("broad", "", "#000000"),
-            "solid 0.5em #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("double", "", "#000000"),
-            "double #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("double-dash", "", "#000000"),
-            "double #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("bold-dash", "", "#000000"),
-            "dashed 4px #000000"
-        );
-        assert_eq!(
-            border_attribute_as_html("solid", "2", "red"),
-            "solid 2px #ff0000"
-        );
-        assert_eq!(border_attribute_as_html("none", "1", "#000000"), "none");
+        let cases = [
+            ("solid", "1", "#000000", "solid 1px #000000"),
+            ("bold", "", "#000000", "solid 4px #000000"),
+            ("wide", "", "#000000", "solid 1em #000000"),
+            ("broad", "", "#000000", "solid 0.5em #000000"),
+            ("double", "", "#000000", "double #000000"),
+            ("double-dash", "", "#000000", "double #000000"),
+            ("bold-dash", "", "#000000", "dashed 4px #000000"),
+            ("solid", "2", "red", "solid 2px #ff0000"),
+            ("none", "1", "#000000", "none"),
+        ];
+        for (style, width, color, want) in cases {
+            assert_eq!(
+                border_attribute_as_html(style, width, color),
+                want,
+                "border {style}/{width}/{color}"
+            );
+        }
     }
 
     #[test]
