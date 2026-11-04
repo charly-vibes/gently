@@ -33,6 +33,8 @@ pub(super) struct Border {
 /// dies on unknown style strings at attribute-validation time; gently's
 /// model stores values verbatim, so the renderer falls back the same way
 /// the ascii renderer does).
+use super::edge_table::{DEFAULT_EDGE, EDGE_TABLE};
+
 pub(super) fn border(style: &str) -> Border {
     BORDER_TABLE
         .iter()
@@ -234,25 +236,27 @@ pub(super) fn shifted_run(pattern: &str, inner: usize) -> String {
 /// bold|wide|broad|double|double-dash|bold-dash; and wave — listed in
 /// neither upstream branch — KEEPS its corners (observed quirk).
 pub(super) fn rounded(style: &str) -> Border {
-    let mut b = border(style);
-    if matches!(
+    let corners: [char; 4] = if matches!(
         style,
         "solid" | "dotted" | "dashed" | "dot-dash" | "dot-dot-dash"
     ) {
-        b.tl = '╭';
-        b.tr = '╮';
-        b.br = '╯';
-        b.bl = '╰';
+        ['╭', '╮', '╯', '╰']
     } else if matches!(
         style,
         "bold" | "wide" | "broad" | "double" | "double-dash" | "bold-dash"
     ) {
-        b.tl = ' ';
-        b.tr = ' ';
-        b.br = ' ';
-        b.bl = ' ';
+        [' ', ' ', ' ', ' ']
+    } else {
+        let b = border(style);
+        [b.tl, b.tr, b.br, b.bl]
+    };
+    Border {
+        tl: corners[0],
+        tr: corners[1],
+        br: corners[2],
+        bl: corners[3],
+        ..border(style)
     }
-    b
 }
 
 /// One edge style's Unicode glyph set (row 1 of the upstream
@@ -269,68 +273,11 @@ pub(super) struct Edge {
 
 /// The Unicode edge-style table. Unknown styles render solid.
 pub(super) fn edge(style: &str) -> Edge {
-    match style {
-        "double" => Edge {
-            hor: "═",
-            ver: '║',
-            corners: ['╔', '╗', '╚', '╝'],
-        },
-        "double-dash" => Edge {
-            hor: "═ ",
-            ver: '∥',
-            corners: ['╔', '╗', '╚', '╝'],
-        },
-        "dotted" => Edge {
-            hor: "·",
-            ver: ':',
-            corners: ['┌', '┐', '└', '┘'],
-        },
-        "dashed" => Edge {
-            hor: "╴",
-            ver: '╵',
-            corners: ['┌', '┐', '╵', '┘'],
-        },
-        "dot-dash" => Edge {
-            hor: "·-",
-            ver: '!',
-            corners: ['┌', '┐', '└', '┘'],
-        },
-        "dot-dot-dash" => Edge {
-            hor: "··-",
-            ver: '!',
-            corners: ['┌', '┐', '└', '┘'],
-        },
-        "wave" => Edge {
-            hor: "∼",
-            ver: '≀',
-            corners: ['┌', '┐', '└', '┘'],
-        },
-        "bold" => Edge {
-            hor: "━",
-            ver: '┃',
-            corners: ['┏', '┓', '┗', '┛'],
-        },
-        "bold-dash" => Edge {
-            hor: "━ ",
-            ver: '╻',
-            corners: ['┏', '┓', '┗', '┛'],
-        },
-        "broad" => Edge {
-            hor: "▬",
-            ver: '▮',
-            corners: ['█', '█', '█', '█'],
-        },
-        "wide" => Edge {
-            hor: "█",
-            ver: '█',
-            corners: ['█', '█', '█', '█'],
-        },
-        _ => Edge {
-            hor: "─",
-            ver: '│',
-            corners: ['┌', '┐', '└', '┘'],
-        },
-    }
+    EDGE_TABLE
+        .iter()
+        .find(|(names, _)| names.contains(&style))
+        .map(|(_, e)| *e)
+        .unwrap_or(DEFAULT_EDGE)
 }
 
 /// The arrowhead glyph for one direction of travel, boxart row of the
@@ -364,70 +311,5 @@ pub(super) fn cell_bonus(style: &str, bidirectional_arrowed: bool) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::polyline::Dir;
-    use super::{arrow, border, edge, h_run, rounded, shifted_run, Edge, POINT};
-
-    #[test]
-    fn solid_and_double_border_glyphs() {
-        let b = border("solid");
-        assert_eq!(h_run(&b, 3), "───");
-        assert_eq!(b.side_l, '│');
-        let d = border("double");
-        assert_eq!(h_run(&d, 3), "═══");
-        assert_eq!((d.tl, d.tr, d.br, d.bl), ('╔', '╗', '╝', '╚'));
-    }
-
-    #[test]
-    fn shifted_h_runs_match_probe() {
-        assert_eq!(h_run(&border("dot-dash"), 3), "-·-");
-        assert_eq!(h_run(&border("dot-dot-dash"), 3), "·-·");
-        assert_eq!(h_run(&border("double-dash"), 3), " ═ ");
-        assert_eq!(h_run(&border("bold-dash"), 3), " ━ ");
-        assert_eq!(shifted_run("··-", 12), "·-··-··-··-·");
-    }
-
-    #[test]
-    fn broad_border_has_distinct_edges() {
-        let b = border("broad");
-        assert_eq!(
-            (b.h_top, b.h_bottom, b.side_l, b.side_r),
-            ("▀", "▄", '▌', '▐')
-        );
-    }
-
-    #[test]
-    fn rounded_overlays_blanks_or_keeps_per_style() {
-        assert_eq!(rounded("solid").tl, '╭');
-        assert_eq!(rounded("dotted").tl, '╭');
-        assert_eq!(rounded("dot-dot-dash").tl, '╭');
-        assert_eq!(rounded("double").tl, ' ');
-        assert_eq!(rounded("bold").tl, ' ');
-        assert_eq!(rounded("broad").tl, ' ');
-        // upstream quirk: wave is in neither branch and keeps its corners
-        assert_eq!(rounded("wave").tl, '┌');
-    }
-
-    #[test]
-    fn edge_glyph_sets_match_probe() {
-        let e = edge("double");
-        assert_eq!(
-            e,
-            Edge {
-                hor: "═",
-                ver: '║',
-                corners: ['╔', '╗', '╚', '╝']
-            }
-        );
-        assert_eq!(edge("dashed").ver, '╵');
-        assert_eq!(edge("dotted").ver, ':');
-        assert_eq!(edge("bold").corners, ['┏', '┓', '┗', '┛']);
-    }
-
-    #[test]
-    fn arrows_and_point_match_probe() {
-        assert_eq!((arrow(Dir::East), arrow(Dir::South)), ('>', '∨'));
-        assert_eq!(arrow(Dir::North), '∧');
-        assert_eq!(POINT, '★');
-    }
-}
+#[path = "styles_tests.rs"]
+mod tests;

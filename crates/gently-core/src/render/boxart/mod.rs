@@ -18,6 +18,9 @@ mod columns;
 mod polyline;
 mod styles;
 
+#[path = "edge_table.rs"]
+pub(super) mod edge_table;
+
 use crate::graph::Graph;
 use crate::layout::Layout;
 use crate::render::ascii::RenderError;
