@@ -34,6 +34,13 @@ mod p12;
 #[path = "ge_text_parser_p13.rs"]
 mod p13;
 
+#[path = "ge_text_parser/arrows.rs"]
+mod arrows;
+use arrows::*;
+#[path = "ge_text_parser/quotes.rs"]
+mod quotes;
+use quotes::*;
+
 /// ge.text_parser.p1 (c1): named tokens intern and reuse; a bare `[ ]`
 /// creates an anonymous `#N` that a later escaped `[ \#N ]` reuses.
 #[test]
@@ -66,69 +73,6 @@ fn p2() {
     bidirectional_ops_mark_both_ends();
     broken_edges_are_errors();
     style_only_styles_come_via_the_attribute();
-}
-
-/// Every directed operator maps to its documented style (solid edges carry
-/// no style attribute — solid is the default).
-fn directed_ops_map_to_styles() {
-    let cases = [
-        ("->", None),
-        (".>", Some("dotted")),
-        ("~>", Some("wave")),
-        ("- >", Some("dashed")),
-        (".->", Some("dot-dash")),
-        ("..->", Some("dot-dot-dash")),
-        ("= >", Some("double-dash")),
-    ];
-    for (op, want) in cases {
-        let src = format!("[ a ] {op} [ b ]\n");
-        let g = text::parse(&src).unwrap_or_else(|e| panic!("{op:?} must parse: {e}"));
-        assert_eq!(style(&g, 0), want.map(String::from), "operator {op:?}");
-    }
-}
-
-/// `<`-prefixed operators keep the style and mark both arrow ends.
-fn bidirectional_ops_mark_both_ends() {
-    let cases = [
-        ("<->", None),
-        ("<=>", Some("double")),
-        ("<.>", Some("dotted")),
-        ("<~>", Some("wave")),
-        ("<- >", Some("dashed")),
-        ("<.->", Some("dot-dash")),
-        ("<..->", Some("dot-dot-dash")),
-        ("<= >", Some("double-dash")),
-    ];
-    for (op, want) in cases {
-        let src = format!("[ a ] {op} [ b ]\n");
-        let g = text::parse(&src).unwrap_or_else(|e| panic!("{op:?} must parse: {e}"));
-        assert_eq!(style(&g, 0), want.map(String::from), "operator {op:?}");
-        let e = &g.edges[0];
-        assert!(
-            e.directed && e.arrows.start && e.arrows.end,
-            "{op:?} bidirectional"
-        );
-    }
-}
-
-/// A lone `<`, a missing left node and a missing right node are errors.
-fn broken_edges_are_errors() {
-    for src in ["[ a ] <--\n", "--> [ b ]\n", "[ a ] -->\n"] {
-        let err = text::parse(src).expect_err("must be a parse error");
-        assert!(err.line >= 1, "{src:?} must name a line");
-    }
-}
-
-/// bold/wide/broad have no operator spelling; `{ style: X; }` works.
-fn style_only_styles_come_via_the_attribute() {
-    let g = text::parse("[ a ] --> { style: bold; } [ b ]\n").must("must parse");
-    assert_eq!(style(&g, 0), Some(String::from("bold")));
-    for src in ["[ a ] bold [ b ]\n", "[ a ] wide [ b ]\n"] {
-        assert!(
-            text::parse(src).is_err(),
-            "{src:?} has no operator spelling"
-        );
-    }
 }
 
 /// ge.text_parser.p3 (c3): a chain creates one edge per adjacent pair, sharing repeated names.
@@ -311,72 +255,6 @@ fn p9() {
     plain_singles_are_errors();
 }
 
-/// Directed: mixed/repeated units accepted, style = last unit.
-fn directed_style_follows_the_last_unit() {
-    let cases = [
-        ("..-..-..>", Some("dotted")),
-        (".-..-..>", Some("dotted")),
-        (".--->", None),
-        ("--.>", Some("dotted")),
-        (".->", Some("dot-dash")),
-        ("- >", Some("dashed")),
-        ("= >", Some("double-dash")),
-    ];
-    for (op, want) in cases {
-        let src = format!("[ a ] {op} [ b ]\n");
-        let g = text::parse(&src).unwrap_or_else(|e| panic!("{op:?} must parse: {e}"));
-        assert_eq!(style(&g, 0), want.map(String::from), "operator {op:?}");
-    }
-}
-
-/// Arrow-less: single `.-`/`..-` valid; mixed dot-units inherit (solid).
-fn arrowless_dot_singles_are_valid() {
-    let cases = [
-        (".-", Some("dot-dash")),
-        ("..-", Some("dot-dot-dash")),
-        (".-.-", Some("dot-dash")),
-        ("..", Some("dotted")),
-        ("..-.-", None),
-    ];
-    for (op, want) in cases {
-        let src = format!("[ a ] {op} [ b ]\n");
-        let g = text::parse(&src).unwrap_or_else(|e| panic!("{op:?} must parse: {e}"));
-        assert_eq!(style(&g, 0), want.map(String::from), "operator {op:?}");
-        assert!(!g.edges[0].directed, "{op:?} is arrow-less (undirected)");
-    }
-}
-
-/// Arrow-less plain units: homogeneous reps name the style; mixed inherit.
-fn arrowless_plain_units() {
-    let cases = [
-        ("[ a ] == [ b ]", None),
-        ("[ a ] ==[ b ]", Some("double")),
-        ("[ a ] ~~ [ b ]", Some("wave")),
-        ("[ a ] -- [ b ]", None),
-        ("[ a ] - -[ b ]", Some("dot-dot-dash")),
-        ("[ a ] - - [ b ]", Some("dashed")),
-        ("[ a ] = = [ b ]", Some("double-dash")),
-    ];
-    for (src, want) in cases {
-        let g = text::parse(src).unwrap_or_else(|e| panic!("{src:?} must parse: {e}"));
-        assert_eq!(style(&g, 0), want.map(String::from), "operator in {src:?}");
-        assert!(!g.edges[0].directed, "{src:?} is arrow-less (undirected)");
-    }
-}
-
-/// Single-character arrow-less patterns are parse errors.
-fn plain_singles_are_errors() {
-    for src in [
-        "[ a ] . [ b ]\n",
-        "[ a ] = [ b ]\n",
-        "[ a ] - [ b ]\n",
-        "[ a ] ~ [ b ]\n",
-    ] {
-        let err = text::parse(src).expect_err("single plain unit must error");
-        assert!(err.line >= 1);
-    }
-}
-
 /// ge.text_parser.p10 (c10): attribute-value unquoting, pinned by attr-quote-value.observed.
 #[test]
 fn p10() {
@@ -388,91 +266,6 @@ fn p10() {
     percent_entity_decode();
     quote_split_rules();
     names_and_labels_are_parser_layer_only();
-}
-
-/// Double-, single-, mixed-end, greedy, and mid-value quote handling.
-fn quote_pairs_strip() {
-    let g = text::parse("[ a ] { label: \"hello world\"; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("hello world"));
-    // mixed ends strip (greedy first-and-last, either quote char)
-    let g = text::parse("[ a ] { label: \"mixed'; } --> [ b ]\n").must("must parse");
-    assert_eq!(
-        g.get_attr(Scope::Node(0), "label"),
-        Some("mixed"),
-        "mismatched ends strip"
-    );
-    // greedy: only the first and last quote go
-    let g = text::parse("[ a ] { label: \"a\" \"b\"; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a\" \"b"));
-    // mid-value quotes are kept verbatim
-    let g = text::parse("[ a ] { label: x\"y\"z; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("x\"y\"z"));
-}
-
-/// The store-layer unescape set: `\"`, `\'`, `\;`, `\\` — and the
-/// unterminated-quote and empty-value forms.
-fn store_unescape_set() {
-    let g = text::parse("[ a ] { label: \"a\\\"b\"; } --> [ b ]\n").must("must parse");
-    assert_eq!(
-        g.get_attr(Scope::Node(0), "label"),
-        Some("a\"b"),
-        "escaped quote inside quotes"
-    );
-    let g = text::parse("[ a ] { label: a\\'b; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a'b"));
-    let g = text::parse("[ a ] { label: a\\;b; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a;b"));
-    let g = text::parse("[ a ] { label: a\\\\b; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("a\\b"));
-    // unterminated quote: accepted verbatim, `;` still terminates
-    let g = text::parse("[ a ] { label: \"abc; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("\"abc"));
-    // empty quoted value
-    let g = text::parse("[ a ] { label: \"\"; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some(""));
-}
-
-/// The store-layer %XX layer (vs the oracle's unquote_attribute): printable
-/// band decodes, exploit band strips, bare `%` with no hex-pair tail stays.
-fn percent_entity_decode() {
-    let cases = [
-        ("%41", "A"),
-        ("a%41b", "aAb"),
-        ("%20", " "),
-        ("%2B", "+"),
-        ("%7f", ""),
-        ("%00", ""),
-        ("%9f", ""),
-        ("%A1", ""),
-        ("%1A", ""),
-        ("100%", "100%"),
-        ("%zz", "%zz"),
-        ("%7F", "\u{7f}"),
-    ];
-    for (src, want) in cases {
-        let text = format!("[ a ] {{ label: {src}; }} --> [ b ]\n");
-        let g = text::parse(&text).unwrap_or_else(|e| panic!("{src:?} must parse: {e}"));
-        assert_eq!(
-            g.get_attr(Scope::Node(0), "label"),
-            Some(want),
-            "value {src:?}"
-        );
-    }
-}
-
-/// The quoted-branch terminator: a closing quote must be followed by `;`
-/// or the end of the block — otherwise the unquoted branch takes the
-/// whole run; a properly closed value shields `;` from splitting.
-fn quote_split_rules() {
-    let g = text::parse("[ a ] { label: \"a\" x; } --> [ b ]\n").must("must parse");
-    assert_eq!(
-        g.get_attr(Scope::Node(0), "label"),
-        Some("\"a\" x"),
-        "no early quote close"
-    );
-    let g = text::parse("[ a ] { label: \"x; y\"; color: red; } --> [ b ]\n").must("must parse");
-    assert_eq!(g.get_attr(Scope::Node(0), "label"), Some("x; y"));
-    assert_eq!(g.get_attr(Scope::Node(0), "color"), Some("red"));
 }
 
 /// Node names and edge labels are parser-layer only — no store unquoting.
