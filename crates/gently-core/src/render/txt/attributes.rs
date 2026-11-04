@@ -54,39 +54,11 @@ pub fn class_section(class: &str, table: &AttributeTable, kind: ObjectKind) -> S
 /// emitted last, matching the upstream subclass position).
 pub fn instance_attributes(table: &AttributeTable, kind: ObjectKind) -> String {
     let mut att = String::new();
-    let mut class_value = "";
-    // Multi-cell size canonicalization (gently-awd, upstream As_txt.pm):
-    // when `columns` is present, emit the merged `size: W,H` form instead
-    // of rows/columns (defaulting rows to 1), and never output the default
-    // `1,1`. A lone `rows` is already shorter — it stays `rows`.
-    let size_merge = table.get("columns").map(|c| {
-        let r = table.get("rows").unwrap_or("1");
-        let size = format!("{c},{r}");
-        (size.clone(), size != "1,1")
-    });
-    for (key, value) in table.sorted_entries() {
-        if let Some((size, emit)) = &size_merge {
-            if key == "columns" || key == "rows" {
-                if *emit && key == "columns" {
-                    att.push_str(&format!("size: {}; ", size));
-                }
-                continue;
-            }
-            // else: no columns anywhere — a lone `rows` stays `rows`
-        }
-        if key.starts_with("border") || value.is_empty() {
-            continue;
-        }
+    let mut class_value = String::new();
+    for (key, value) in visible_entries(table, kind) {
+        let (key, value) = (key.as_str(), value.as_str());
         if key == "class" {
-            class_value = value;
-            continue;
-        }
-        if key == "label" && kind == ObjectKind::Edge {
-            // the label is shown in the operator chain, not here
-            continue;
-        }
-        if key == "style" && kind == ObjectKind::Edge && !style_visible_in_operator(table) {
-            // the operator already shows the style
+            class_value = value.to_string();
             continue;
         }
         att.push_str(&format!("{key}: {}; ", encode_value(value)));
@@ -98,13 +70,68 @@ pub fn instance_attributes(table: &AttributeTable, kind: ObjectKind) -> String {
         att.push_str(&format!("border: {border}; "));
     }
     if !class_value.is_empty() {
-        att.push_str(&format!("class: {}; ", encode_value(class_value)));
+        att.push_str(&format!("class: {}; ", encode_value(&class_value)));
     }
     if att.is_empty() {
         String::new()
     } else {
         format!(" {{ {att}}}")
     }
+}
+
+/// The (key, value) entries the txt emitter shows as instance
+/// attributes: size-canonicalized, border keys handled separately,
+/// class captured, and edge label/style shown in the operator instead.
+fn visible_entries(table: &AttributeTable, kind: ObjectKind) -> Vec<(String, String)> {
+    // Multi-cell size canonicalization (gently-awd, upstream As_txt.pm):
+    // when `columns` is present, emit the merged `size: W,H` form instead
+    // of rows/columns (defaulting rows to 1), and never output the default
+    // `1,1`. A lone `rows` is already shorter — it stays `rows`.
+    let size_merge = table.get("columns").map(|c| {
+        let r = table.get("rows").unwrap_or("1");
+        let size = format!("{c},{r}");
+        (size.clone(), size != "1,1")
+    });
+    let size_merge_ref = &size_merge;
+    table
+        .sorted_entries()
+        .into_iter()
+        .filter_map(|(key, value)| {
+            visible_entry(table, kind, size_merge_ref, key, value)
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+        })
+        .collect()
+}
+
+/// Whether one sorted entry survives the emitter's skip rules.
+fn visible_entry<'a>(
+    table: &AttributeTable,
+    kind: ObjectKind,
+    size_merge: &'a Option<(String, bool)>,
+    key: &'a str,
+    value: &'a str,
+) -> Option<(&'a str, &'a str)> {
+    if let Some((size, emit)) = size_merge {
+        if key == "columns" || key == "rows" {
+            if *emit && key == "columns" {
+                return Some(("size", size.as_str()));
+            }
+            return None;
+        }
+        // else: no columns anywhere — a lone `rows` stays `rows`
+    }
+    if key.starts_with("border") || value.is_empty() {
+        return None;
+    }
+    if key == "label" && kind == ObjectKind::Edge {
+        // the label is shown in the operator chain, not here
+        return None;
+    }
+    if key == "style" && kind == ObjectKind::Edge && !style_visible_in_operator(table) {
+        // the operator already shows the style
+        return None;
+    }
+    Some((key, value))
 }
 
 /// Edge styles whose operator stays `--` keep a visible `style:` attribute;
@@ -128,14 +155,15 @@ pub fn border_attribute(table: &AttributeTable, kind: ObjectKind) -> String {
     if style == "none" {
         return "none".to_string();
     }
-    let mut width = table.get("border_width").unwrap_or("");
-    if width == "1" {
-        width = "";
-    }
-    let mut color = table.get("border_color").unwrap_or("");
-    if color == "#000000" {
-        color = "";
-    }
+    // upstream defaults: width 1 and black are omitted from the attribute
+    let width = match table.get("border_width").unwrap_or("") {
+        "1" => "",
+        w => w,
+    };
+    let color = match table.get("border_color").unwrap_or("") {
+        "#000000" => "",
+        c => c,
+    };
     if default_border_style(kind) == style && width.is_empty() && color.is_empty() {
         return String::new();
     }
@@ -184,15 +212,16 @@ pub fn encode_value(value: &str) -> String {
     if !critical {
         return value.to_string();
     }
-    let mut out = String::with_capacity(value.len());
-    for b in value.bytes() {
-        if b == b';' || b == b'"' || b == b'%' || b < 0x20 {
-            out.push_str(&format!("%{b:02x}"));
-        } else {
-            out.push(b as char);
-        }
-    }
-    out
+    value
+        .bytes()
+        .map(|b| {
+            if b == b';' || b == b'"' || b == b'%' || b < 0x20 {
+                format!("%{b:02x}")
+            } else {
+                (b as char).to_string()
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]

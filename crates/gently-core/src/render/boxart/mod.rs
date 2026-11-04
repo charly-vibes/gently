@@ -37,12 +37,9 @@ pub fn render(graph: &Graph, layout: &Layout) -> Result<String, RenderError> {
 /// Draw every node and edge onto a fresh canvas; the first edge error
 /// (if any) is returned alongside the canvas for the caller to raise.
 fn draw_all(graph: &Graph, layout: &Layout) -> (Canvas, Result<(), RenderError>) {
+    let edge_count = graph.edges.len();
     let mut canvas = Canvas::new(graph, layout);
     canvas.draw_nodes(graph, layout);
-    for edge_index in 0..graph.edges.len() {
-        if let Err(e) = canvas.draw_edge(graph, layout, edge_index) {
-            return (canvas, Err(e));
-        }
-    }
-    (canvas, Ok(()))
+    let outcome = (0..edge_count).try_for_each(|i| canvas.draw_edge(graph, layout, i));
+    (canvas, outcome)
 }

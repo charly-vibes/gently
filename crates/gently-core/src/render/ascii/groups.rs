@@ -43,6 +43,30 @@ fn title_text(name: &str) -> String {
 /// widens that column — the member box then fills the widened column
 /// with its label re-centered (observed: `Cities:` widens the westmost
 /// member's box from 8 to 9 columns, `Verylonggroupname:` to 20).
+/// The bounding box (left, right, top, bottom) of a group's members in
+/// canvas coordinates.
+fn member_bounds(
+    group: &crate::graph::Group,
+    layout: &Layout,
+    col_width: &[usize],
+    offsets: &[usize],
+    band_tops: &[usize],
+    row_height: &[usize],
+) -> (isize, isize, isize, isize) {
+    group.members.iter().fold(
+        (isize::MAX, isize::MIN, isize::MAX, isize::MIN),
+        |(left, right, top, bottom), &m| {
+            let (cx, cy) = layout.node_cells[m];
+            (
+                left.min(offsets[cx] as isize),
+                right.max((offsets[cx] + col_width[cx]) as isize - 1),
+                top.min(band_tops[cy] as isize),
+                bottom.max((band_tops[cy] + row_height[cy] - 1) as isize),
+            )
+        },
+    )
+}
+
 pub(super) fn title_widths(graph: &Graph, layout: &Layout) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     for group in &graph.groups {
@@ -78,17 +102,8 @@ pub(super) fn frames(
         if group.name.is_empty() || group.members.is_empty() {
             continue;
         }
-        let mut left = isize::MAX;
-        let mut right = isize::MIN;
-        let mut top = isize::MAX;
-        let mut bottom = isize::MIN;
-        for &m in &group.members {
-            let (cx, cy) = layout.node_cells[m];
-            left = left.min(offsets[cx] as isize);
-            right = right.max((offsets[cx] + col_width[cx]) as isize - 1);
-            top = top.min(band_tops[cy] as isize);
-            bottom = bottom.max((band_tops[cy] + row_height[cy] - 1) as isize);
-        }
+        let (left, right, top, bottom) =
+            member_bounds(group, layout, col_width, offsets, band_tops, row_height);
         out.push(Frame {
             left: left - 2,
             right: right + 2,
@@ -125,16 +140,17 @@ pub(super) fn margins(
     width: usize,
     height: usize,
 ) -> (usize, usize, usize, usize) {
-    let mut ml = 0isize;
-    let mut mt = 0isize;
-    let mut mr = 0isize;
-    let mut mb = 0isize;
-    for f in frames {
-        ml = ml.max(-f.left);
-        mt = mt.max(-f.top);
-        mr = mr.max(f.right + 1 - width as isize);
-        mb = mb.max(f.bottom + 1 - height as isize);
-    }
+    let demanded = frames
+        .iter()
+        .fold((0isize, 0isize, 0isize, 0isize), |(ml, mt, mr, mb), f| {
+            (
+                ml.max(-f.left),
+                mt.max(-f.top),
+                mr.max(f.right + 1 - width as isize),
+                mb.max(f.bottom + 1 - height as isize),
+            )
+        });
+    let (ml, mt, mr, mb) = demanded;
     (
         ml.max(0) as usize,
         mt.max(0) as usize,

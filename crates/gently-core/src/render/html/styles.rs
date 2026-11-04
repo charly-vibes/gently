@@ -228,11 +228,7 @@ pub(in crate::render) fn border_attribute_as_html(style: &str, width: &str, colo
     } else {
         color_as_hex(color)
     };
-    // width: 2px for double would collapse to one line
-    let mut width = width.trim().to_string();
-    if style.starts_with("double") {
-        width = String::new();
-    }
+    let mut width = remap_border_width(style.trim(), width);
     if let Some((_, css_style, css_width)) = BORDER_REMAPS.iter().find(|(s, _, _)| **s == style) {
         style = (*css_style).to_string();
         if !css_width.is_empty() {
@@ -249,6 +245,16 @@ pub(in crate::render) fn border_attribute_as_html(style: &str, width: &str, colo
     // in the whole style attribute) before emission
     let val = format!("{style} {width} {hex}");
     val.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The html border width: `2px` for double would collapse to one line,
+/// so the double family emits no width.
+fn remap_border_width(style: &str, width: &str) -> String {
+    if style.starts_with("double") {
+        String::new()
+    } else {
+        width.trim().to_string()
+    }
 }
 
 /// Escape label text for HTML: `&` first, then `>`, then `<` (upstream
