@@ -24,6 +24,11 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
+#[path = "e3_faithfulness/e3.rs"]
+mod e3;
+#[path = "e3_faithfulness/rows.rs"]
+mod rows;
+
 /// Stage the dumps observe: the wrapper wraps `Graph::Easy::_prepare_layout`.
 const STAGE: &str = "layout.place";
 
@@ -293,96 +298,6 @@ const FIXTURES: [&str; 5] = [
     "so-start-port-index.dump.txt",
 ];
 
-/// Clause 2: per fixture, canonically-ordered state snapshots normalize
-/// identically regardless of dump ordering. We reverse the oracle's line
-/// order inside every band (the hash-order permutation the producer
-/// already sorted away) and require the identical normalized trace, for
-/// every seed block of every fixture.
-#[test]
-fn e3_normalization_is_order_insensitive() {
-    for fixture in FIXTURES {
-        let dump = load_dump(fixture);
-        let blocks = seed_blocks(&dump);
-        assert!(!blocks.is_empty(), "{fixture}: no seed blocks parsed");
-        for (seed, block) in &blocks {
-            let refs: Vec<&str> = block.iter().map(String::as_str).collect();
-            let canon = normalize_block(&refs);
-            let permuted = permute_block(block);
-            let perms: Vec<&str> = permuted.iter().map(String::as_str).collect();
-            let after = normalize_block(&perms);
-            assert_eq!(
-                canon, after,
-                "{fixture} seed {seed}: normalization is order-sensitive"
-            );
-        }
-    }
-}
-
-/// Clause 1 (pairwise): for every pair of corpus fixtures whose oracle
-/// dumps differ at stage S, the normalized traces must differ in S's
-/// image. Also asserted per fixture across seeds: when the oracle's raw
-/// stage image differs between seeds (fan-layout fan-OUT placement),
-/// normalization must preserve the difference, not collapse it.
-#[test]
-fn e3_pairwise_faithfulness() {
-    let mut raw: BTreeMap<&str, Vec<String>> = BTreeMap::new();
-    let mut norm: BTreeMap<&str, Trace> = BTreeMap::new();
-    for fixture in FIXTURES {
-        let dump = load_dump(fixture);
-        let blocks = seed_blocks(&dump);
-        // stage image = concat over seeds (seed tagged by the marker in
-        // raw form; the raw compare uses the full block text)
-        raw.insert(
-            fixture,
-            blocks.iter().flat_map(|(_, b)| b.clone()).collect(),
-        );
-        let merged: Trace = blocks
-            .iter()
-            .flat_map(|(_seed, b)| {
-                let refs: Vec<&str> = b.iter().map(String::as_str).collect();
-                normalize_block(&refs)
-            })
-            .collect();
-        norm.insert(fixture, merged);
-    }
-
-    for (i, &a) in FIXTURES.iter().enumerate() {
-        for &b in FIXTURES.iter().skip(i + 1) {
-            let raw_differs = raw[a] != raw[b];
-            if raw_differs {
-                assert_ne!(
-                    norm[a], norm[b],
-                    "{a} vs {b}: dumps differ at {STAGE} but normalized traces collide"
-                );
-            }
-        }
-    }
-
-    // Seed-level: fan-layout's case0 placement is genuinely hash-seed
-    // dependent (C/D vs B/D at the flanks); normalization must keep the
-    // two seeds distinct. Every other fixture is seed-stable, and its
-    // two seeds must normalize identically.
-    for fixture in FIXTURES {
-        let dump = load_dump(fixture);
-        let blocks = seed_blocks(&dump);
-        let [b0, b1] = blocks.as_slice() else {
-            panic!("{fixture}: expected exactly two seed blocks");
-        };
-        let r0: Vec<&str> = b0.1.iter().map(String::as_str).collect();
-        let r1: Vec<&str> = b1.1.iter().map(String::as_str).collect();
-        let n0 = normalize_block(&r0);
-        let n1 = normalize_block(&r1);
-        if raw_stage_image(&b0.1) != raw_stage_image(&b1.1) {
-            assert_ne!(
-                n0, n1,
-                "{fixture}: seeds differ at {STAGE} but normalization collapsed them"
-            );
-        } else {
-            assert_eq!(n0, n1, "{fixture}: seeds agree but normalization diverged");
-        }
-    }
-}
-
 // ---- D2 normalization-table row enforcement (tests/repro/trace/normalization-table.md)
 // Each row of the committed table is enforced by one named subtest; a
 // table edit without a matching normalizer change fails here.
@@ -397,106 +312,3 @@ band y=0 nodes=2 edge-cells=3 group-cells=0
 band y=4 nodes=1 edge-cells=0 group-cells=0
   C @ (0,4) 7x3 cx=1 cy=2
 ";
-
-fn normalize_str(dump: &str) -> Vec<(i64, Trace)> {
-    seed_blocks(dump)
-        .iter()
-        .map(|(s, b)| {
-            let refs: Vec<&str> = b.iter().map(String::as_str).collect();
-            (*s, normalize_block(&refs))
-        })
-        .collect()
-}
-
-/// N1: the `# dump:` pin header is metadata, never a trace event.
-#[test]
-fn row_n1_header_is_metadata() {
-    let with_header = format!("# dump: totally different pin header\n{BARE}");
-    assert_eq!(normalize_str(&with_header), normalize_str(BARE));
-}
-
-/// N2: seed markers are block scope, never an event — the trace is
-/// identical for every seed of identical content.
-#[test]
-fn row_n2_seed_not_an_event() {
-    let both = format!("{BARE}-- seed 7\n== invocation 1 (case0, format: ascii) nodes=2 edge-cells=3 group-cells=0\nband y=0 nodes=2 edge-cells=3 group-cells=0\n  A @ (0,0) 5x3\n  B @ (6,0) 5x3\nband y=4 nodes=1 edge-cells=0 group-cells=0\n  C @ (0,4) 7x3 cx=1 cy=2\n");
-    let blocks = normalize_str(&both);
-    assert_eq!(blocks.len(), 2);
-    assert_eq!(blocks[0].1, blocks[1].1);
-    assert!(blocks
-        .iter()
-        .all(|(_, t)| t.iter().all(|e| !e.contains("seed"))));
-}
-
-/// N3: invocation + case are scope keys on every event.
-#[test]
-fn row_n3_invocation_scope_keys() {
-    let t = &normalize_str(BARE)[0].1;
-    assert!(
-        t.iter().all(|e| e.contains("inv=1") && e.contains("case0")),
-        "{t:?}"
-    );
-}
-
-/// N4: band lines become verbatim-count band events.
-#[test]
-fn row_n4_band_event() {
-    let t = &normalize_str(BARE)[0].1;
-    assert!(
-        t.iter()
-            .any(|e| e.contains("band y=0 nodes=2 edge-cells=3 group-cells=0")),
-        "{t:?}"
-    );
-    assert!(
-        t.iter()
-            .any(|e| e.contains("band y=4 nodes=1 edge-cells=0 group-cells=0")),
-        "{t:?}"
-    );
-}
-
-/// N5: absent spans default to cx=1 cy=1.
-#[test]
-fn row_n5_node_span_defaults() {
-    let t = &normalize_str(BARE)[0].1;
-    assert!(
-        t.iter().any(|e| e.contains("node=A @ (0,0) 5x3 cx=1 cy=1")),
-        "{t:?}"
-    );
-}
-
-/// N6: explicit spans are carried verbatim.
-#[test]
-fn row_n6_node_explicit_spans() {
-    let t = &normalize_str(BARE)[0].1;
-    assert!(
-        t.iter().any(|e| e.contains("node=C @ (0,4) 7x3 cx=1 cy=2")),
-        "{t:?}"
-    );
-}
-
-/// N7: line ordering never leaks (reversed members, same trace) —
-/// the row-level form of E3 clause 2.
-#[test]
-fn row_n7_ordering_never_leaks() {
-    let blocks = seed_blocks(BARE);
-    let block = &blocks[0].1;
-    let refs: Vec<&str> = block.iter().map(String::as_str).collect();
-    let canon = normalize_block(&refs);
-    let permuted = permute_block(block);
-    let perms: Vec<&str> = permuted.iter().map(String::as_str).collect();
-    assert_eq!(canon, normalize_block(&perms));
-}
-
-/// N8: (inv, case, band y / name) keying dedups identical states and
-/// keeps distinct ones distinct.
-#[test]
-fn row_n8_key_dedup() {
-    let dup = format!("{BARE}  B @ (6,0) 5x3\n"); // duplicate of an existing node line
-    let t = &normalize_str(&dup)[0].1;
-    let count = t.iter().filter(|e| e.contains("node=B")).count();
-    assert_eq!(count, 1, "duplicate node line must dedup: {t:?}");
-    // distinct state (different position) stays a distinct event
-    let t = &normalize_str(BARE)[0].1;
-    let count = t.iter().filter(|e| e.contains("node=B")).count();
-    assert_eq!(count, 1);
-}
