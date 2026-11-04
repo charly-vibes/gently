@@ -151,9 +151,10 @@ pub(crate) fn diamond_shape() -> Graph {
 /// the full ge.text_parser grammar (gently-bzx implemented c4 — the
 /// earlier tracer-era deviation, "labels cannot be read back", is gone).
 pub(crate) fn labels_do_not_survive_the_supported_subset() {
-    let mut g = Graph::default();
-    let e = chain_edge(&mut g, "a", "b", true);
-    g.set_attr(Scope::Edge(e), "label", "go");
+    let g = built(|g| {
+        let e = chain_edge(g, "a", "b", true);
+        g.set_attr(Scope::Edge(e), "label", "go");
+    });
     let txt = txt::render(&g);
     assert_eq!(txt, "[ a ] -- go --> [ b ]\n");
     let reparsed =
