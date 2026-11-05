@@ -167,19 +167,21 @@ impl Chains {
     /// incident edge read along the flow (`<>` reads both ways), self-
     /// loops and multi-edge duplicates dropped, model order kept.
     fn successors(&self, graph: &Graph, cur: usize, cid: usize) -> Vec<usize> {
-        let mut sucs: Vec<usize> = Vec::new();
-        for &ei in &self.at[cur] {
+        self.at[cur].iter().fold(Vec::new(), |mut sucs, &ei| {
             let e = &graph.edges[ei];
-            let mut to = e.to;
-            if e.directed && e.arrows.start && e.arrows.end && to == cur {
-                to = e.from;
-            }
+            // `<>` reads both ways: a self-loop on a bidirectional edge
+            // reads along the flow
+            let to = if e.directed && e.arrows.start && e.arrows.end && e.to == cur {
+                e.from
+            } else {
+                e.to
+            };
             if to == cur || sucs.contains(&to) || self.chain_of[to] == Some(cid) {
-                continue;
+                return sucs;
             }
             sucs.push(to);
-        }
-        sucs
+            sucs
+        })
     }
 
     /// Absorb `k`'s node list from `s` onwards into `cid` (upstream
@@ -252,17 +254,15 @@ impl<'a> Emitter<'a> {
     /// the previous member; every node is placed by the first chain to
     /// claim it (upstream's _todo race).
     fn place_members(&mut self, nodes: &[usize]) {
-        let mut opened = false;
         for (i, &m) in nodes.iter().enumerate() {
             if self.claimed[m] {
                 continue;
             }
             self.claimed[m] = true;
             if i == 0 {
-                let ei = self.start_edge(m, nodes.len() >= 2 && !opened, nodes);
+                let ei = self.start_edge(m, nodes.len() >= 2, nodes);
                 if let Some(ei) = ei {
                     self.emit(ei);
-                    opened = true;
                 }
             } else if let Some(&ei) = self
                 .pair_edges
