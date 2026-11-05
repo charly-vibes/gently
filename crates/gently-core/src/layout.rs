@@ -20,11 +20,13 @@ mod chains;
 mod flow;
 mod paths;
 mod placement;
+mod ports;
 
 use crate::graph::{Graph, ObjectKind, Scope};
 use flow::Flow;
 use paths::{assemble_rows, required_slots, route_edges};
 use placement::arrange;
+use ports::{indexed_slot, node_span, port_dip};
 
 /// A grid cell: `(column, row)` — column grows eastward, row southward.
 pub type Cell = (usize, usize);
@@ -106,35 +108,6 @@ pub(super) enum Route {
     Slot { end: bool, n: usize },
 }
 
-/// Which way a port-constrained edge must dip (gently-89r). Upstream
-/// Attributes.pm `_flow_as_side` maps the flow-relative spellings onto
-/// sides: right = inflow+90 = south, left = north, front/forward = the
-/// flow direction itself (the default attachment), back = the opposite;
-/// absolute spellings (south/north/east/west, down/up, degrees) map
-/// through `_direction_as_side`. Only the east pipeline honors ports (the
-/// non-east flows realize a transformed canonical layout — no tier-1
-/// fixture pins ports there), so the sides are read in flow space and
-/// matched against the canonical east axes. Indexed forms (`front,N`)
-/// select a numbered slot on the side — variable node heights, out of
-/// scope (gently-byq). Conflicting sides on the two ends fall back to the
-/// unported route (no recorded shape pins one).
-fn port_dip(graph: &Graph, ei: usize) -> Option<Route> {
-    let side = |v: Option<&str>| match v?.split(',').next()? {
-        "right" | "south" | "down" | "180" => Some(Route::PortBelow),
-        "left" | "north" | "up" | "0" => Some(Route::PortAbove),
-        // front/forward/east and back/west keep the default attachment;
-        // anything else (unknown spelling) is ignored.
-        _ => None,
-    };
-    let start = side(graph.get_attr(Scope::Edge(ei), "start"));
-    let end = side(graph.get_attr(Scope::Edge(ei), "end"));
-    match (start, end) {
-        (Some(s), None) | (None, Some(s)) => Some(s),
-        (Some(s), Some(e)) if s == e => Some(s),
-        _ => None,
-    }
-}
-
 /// Where every node sits and how every edge travels.
 pub(super) struct Placement {
     /// `(column-rank, band)` per node, all `Some` after placement.
@@ -153,159 +126,6 @@ pub(super) struct Rows {
     pub(super) row_of_band: Vec<usize>,
     pub(super) gap_rows: Vec<Vec<usize>>,
     pub(super) height: usize,
-}
-
-/// Grid-cell span of node `idx` in columns and rows (gently-awd):
-/// the `columns`/`rows` attributes — derived from `size: W,H` in the
-/// attribute store — parsed as grid cells. Upstream `_calc_size` reads
-/// `abs($attr || 1)`, so an absent, empty, or `0` value is one cell.
-/// An INDEXED port attached to the node grows the span (gently-byq,
-/// upstream Node.pm ~1170 + Path.pm): an indexed `front,N`-style slot on
-/// one of the node's horizontal sides (start port on an edge leaving it,
-/// end port on an edge entering it) needs row `N` of the node, so the
-/// row span grows to `max(cy, N+1)` — the max-side rule `min_y =
-/// max(need.west, need.east)`. Vertical sides (`right,left,south,north`)
-/// would grow the column span — no recorded fixture pins them, so they
-/// contribute nothing here.
-fn node_span(graph: &Graph, idx: usize) -> (usize, usize) {
-    let side = |key: &str| {
-        graph
-            .get_attr(Scope::Node(idx), key)
-            .and_then(|v| v.parse::<usize>().ok())
-            .filter(|&n| n > 0)
-            .unwrap_or(1)
-    };
-    let (cx, cy) = (side("columns"), side("rows"));
-    grow_free_ports(graph, idx, cx, cy)
-}
-
-/// The free-ports growth loop (gently-a6g, upstream Node.pm `_grow`):
-/// a node carrying FOUR OR MORE unspecified edge-ends grows until every
-/// end has a free port. Free ports per side: `1 + (size - cnt - portnr)
-/// / 2`, summed over north/south (the column span) and east/west (the
-/// row span) — a pure sink skips its front side (east for the east
-/// flow), so the fan-in hub grows on its row span (four sources: 1+1+1
-/// = 3 < 4, then 1+1+2 = 4 → a 3-row span, the fan-layout.observed
-/// hub). Each grow step bumps the row span (then the column span) by
-/// two — upstream's grow_what order for the east flow. Fewer than four
-/// unspecified ends keep the base span (upstream's shortcut), so the
-/// two-parallel corpus pair stays 1×1.
-fn grow_free_ports(graph: &Graph, idx: usize, cx: usize, cy: usize) -> (usize, usize) {
-    // Per-side port counts over the ends attached to this node: side-
-    // constrained without a number (cnt), indexed (portnr + max slot).
-    // Horizontal spellings land on east/west (si 2), vertical on
-    // north/south (si 3); the scan mirrors node_span's single sweep —
-    // one branch pair per edge, port classification only at the ends
-    // that touch `idx` (a String per visit would dominate the layout,
-    // ge.layout.c6).
-    let mut cnt = [0usize; 4];
-    let mut portnr = [0usize; 4];
-    let mut max = [0usize; 4];
-    let mut unspecified = 0usize;
-    let mut outgoing = 0usize;
-    let mut slot_floor = 0usize;
-    for (ei, e) in graph.edges.iter().enumerate() {
-        if e.from == idx {
-            outgoing += 1;
-            classify_port(
-                graph,
-                ei,
-                false,
-                &mut cnt,
-                &mut portnr,
-                &mut max,
-                &mut unspecified,
-                &mut slot_floor,
-            );
-        }
-        if e.to == idx {
-            classify_port(
-                graph,
-                ei,
-                true,
-                &mut cnt,
-                &mut portnr,
-                &mut max,
-                &mut unspecified,
-                &mut slot_floor,
-            );
-        }
-    }
-    if unspecified < 4 {
-        // The port-growth floor still applies (gently-byq: an indexed
-        // slot needs row N+1).
-        return (cx, cy.max(slot_floor));
-    }
-    // Minimum spans demanded by the constrained ports (upstream min_x
-    // from north/south, min_y from east/west).
-    let mut cx = cx.max(max[0]).max(max[1]);
-    let mut cy = cy.max(max[2]).max(max[3]);
-    // Free ports: north/south spend the column span, east/west the row
-    // span; a pure sink skips its front side (east, east flow).
-    let free = |cx: usize, cy: usize| -> usize {
-        let mut free = 0;
-        for (si, size) in [(0, cx), (1, cx), (2, cy), (3, cy)] {
-            if outgoing == 0 && si == 2 {
-                continue;
-            }
-            free += 1 + (size.saturating_sub(cnt[si] + portnr[si])) / 2;
-        }
-        free
-    };
-    let mut grow_cy = true;
-    while free(cx, cy) < unspecified {
-        if grow_cy {
-            cy += 2;
-        } else {
-            cx += 2;
-        }
-        grow_cy = !grow_cy;
-    }
-    (cx, cy)
-}
-
-/// Classify one edge end attached to the growing node (start port when
-/// `end == false`): indexed horizontal slots count as east/west ports
-/// (plus the row floor), unindexed side spellings count on their side,
-/// anything else is an unspecified end.
-#[allow(clippy::too_many_arguments)]
-fn classify_port(
-    graph: &Graph,
-    ei: usize,
-    end: bool,
-    cnt: &mut [usize; 4],
-    portnr: &mut [usize; 4],
-    max: &mut [usize; 4],
-    unspecified: &mut usize,
-    slot_floor: &mut usize,
-) {
-    if let Some(n) = indexed_slot(graph, ei, end) {
-        portnr[2] += 1;
-        max[2] = max[2].max(n + 1);
-        *slot_floor = (*slot_floor).max(n + 1);
-        return;
-    }
-    let head = graph
-        .get_attr(Scope::Edge(ei), if end { "end" } else { "start" })
-        .map(|v| v.split(',').next().unwrap_or(""));
-    match head {
-        Some("front" | "forward" | "east" | "back" | "west") => cnt[2] += 1,
-        Some("right" | "south" | "down" | "left" | "north" | "up") => cnt[3] += 1,
-        _ => *unspecified += 1,
-    }
-}
-
-/// The indexed port slot one edge carries: `start: <side>,N` (on the
-/// edge's start, `end: false`) or `end: <side>,N` (on its end, `end:
-/// true`) — the side must be a horizontal spelling (flow front/back,
-/// east/west; upstream Attributes.pm `_flow_as_side`) and `N` a number.
-/// Unindexed spellings and vertical sides give `None`.
-pub(crate) fn indexed_slot(graph: &Graph, ei: usize, end: bool) -> Option<usize> {
-    let raw = graph.get_attr(Scope::Edge(ei), if end { "end" } else { "start" })?;
-    let (side, n) = raw.split_once(',')?;
-    let horizontal = matches!(side, "front" | "forward" | "east" | "back" | "west");
-    let n = n.trim().parse::<usize>().ok()?;
-    horizontal.then_some(n)
 }
 
 /// Grid columns of every node: upstream places multi-celled nodes at
@@ -351,26 +171,68 @@ fn node_columns(graph: &Graph, placement: &Placement) -> Vec<usize> {
 pub fn layout(graph: &Graph) -> Layout {
     let flow = Flow::of(graph);
     let Some(placement) = arrange(graph, flow == Flow::East) else {
-        return Layout {
-            node_cells: Vec::new(),
-            edge_paths: Vec::new(),
-            label_cells: Vec::new(),
-            width: 0,
-            height: 0,
-            spans: Vec::new(),
-            slot_labels: Vec::new(),
-        };
+        return empty_layout();
     };
-    // One span pass serves the gap slots, the row assembly, the column
-    // map, and the router (node_span scans the edges — recomputing it
-    // per phase would be an O(n·e) multiplier, ge.layout.c6).
+    let grid = assemble_grid(graph, &placement);
+    let labels = label_cells(graph, &grid.edge_paths);
+    let slot_labels = slot_label_cells(graph, &placement.route, &grid.edge_paths);
+    flow::realize(
+        Layout {
+            label_cells: labels,
+            slot_labels,
+            ..grid
+        },
+        flow,
+    )
+}
+
+/// The assembled grid: spans (one span pass serves the gap slots, the
+/// row assembly, the column map, and the router — recomputing it per
+/// phase would be an O(n·e) multiplier, ge.layout.c6), gap slots, rows,
+/// columns, node cells, and routed edge paths.
+fn assemble_grid(graph: &Graph, placement: &Placement) -> Layout {
     let spans: Vec<(usize, usize)> = (0..graph.nodes.len())
         .map(|i| node_span(graph, i))
         .collect();
-    let slots = required_slots(graph, &placement, &spans);
-    let rows = assemble_rows(&placement, &spans, &slots);
-    let cols = node_columns(graph, &placement);
-    let node_cells: Vec<Cell> = placement
+    let slots = required_slots(graph, placement, &spans);
+    let rows = assemble_rows(placement, &spans, &slots);
+    let cols = node_columns(graph, placement);
+    let node_cells = anchor_cells(placement, &cols, &rows);
+    // The eastmost occupied column: a multi-celled node sticks out
+    // east over its whole column span (gently-awd). A dodge channel
+    // (gently-byq) can lie east of every node — the routed edge cells
+    // must be covered too, so the paths are realized first.
+    let max_x = eastmost_column(&cols, &spans);
+    let edge_paths = route_edges(graph, placement, &node_cells, &rows, max_x, &spans);
+    let width = grid_width(&edge_paths, max_x);
+    trace_pass(graph, &node_cells, &edge_paths);
+    Layout {
+        node_cells,
+        edge_paths,
+        width,
+        height: rows.height,
+        spans,
+        label_cells: Vec::new(),
+        slot_labels: Vec::new(),
+    }
+}
+
+/// The empty layout of an unplaceable graph.
+fn empty_layout() -> Layout {
+    Layout {
+        node_cells: Vec::new(),
+        edge_paths: Vec::new(),
+        label_cells: Vec::new(),
+        width: 0,
+        height: 0,
+        spans: Vec::new(),
+        slot_labels: Vec::new(),
+    }
+}
+
+/// The grid cell of each node: its accumulated column and its band's row.
+fn anchor_cells(placement: &Placement, cols: &[usize], rows: &Rows) -> Vec<Cell> {
+    placement
         .cell
         .iter()
         .enumerate()
@@ -378,75 +240,78 @@ pub fn layout(graph: &Graph) -> Layout {
             let (_, band) = c.unwrap();
             (cols[i], rows.row_of_band[band])
         })
-        .collect();
-    // The eastmost occupied column: a multi-celled node sticks out
-    // east over its whole column span (gently-awd). A dodge channel
-    // (gently-byq) can lie east of every node — the routed edge cells
-    // must be covered too, so the paths are realized first.
-    let max_x = cols
-        .iter()
-        .zip(&spans)
+        .collect()
+}
+
+/// The eastmost node cell over every node's column span.
+fn eastmost_column(cols: &[usize], spans: &[(usize, usize)]) -> usize {
+    cols.iter()
+        .zip(spans)
         .map(|(&c, &(cx, _))| c + cx - 1)
         .max()
-        .unwrap_or(0);
-    let edge_paths = route_edges(graph, &placement, &node_cells, &rows, max_x, &spans);
-    let width = edge_paths
+        .unwrap_or(0)
+}
+
+/// The grid width: the routed cells' east extent over the nodes'.
+fn grid_width(edge_paths: &[Vec<Cell>], max_x: usize) -> usize {
+    edge_paths
         .iter()
         .flatten()
         .map(|&(c, _)| c + 1)
         .max()
         .unwrap_or(0)
-        .max(max_x + 1);
-    // Env-gated decision-trace prototype (gently-asc): `layout.place` —
-    // the grid cell and span each node occupies; `render.route` — the
-    // per-edge path cell walk with its bend count. No effect when
-    // GENTLY_TRACE is unset. Anchored here (before the label pass) so
-    // the E1 driver can inject the identical block onto pre-fix
-    // revisions, where `spans` does not exist (crate::trace::node_span_of
-    // re-reads the attrs instead).
+        .max(max_x + 1)
+}
+
+/// Env-gated decision-trace prototype (gently-asc): `layout.place` —
+/// the grid cell and span each node occupies; `render.route` — the
+/// per-edge path cell walk with its bend count. No effect when
+/// GENTLY_TRACE is unset. Anchored here (before the label pass) so
+/// the E1 driver can inject the identical block onto pre-fix
+/// revisions, where `spans` does not exist (crate::trace::node_span_of
+/// re-reads the attrs instead).
+fn trace_pass(graph: &Graph, node_cells: &[Cell], edge_paths: &[Vec<Cell>]) {
     if crate::trace::enabled("layout.place") {
-        for (i, &(c, r)) in node_cells.iter().enumerate() {
-            let (cx, cy) = crate::trace::node_span_of(graph, i);
-            crate::trace::emit(
-                "layout.place",
-                &format!(
-                    "place {} x={} y={} cx={} cy={}",
-                    graph.nodes[i].name, c, r, cx, cy
-                ),
-            );
-        }
+        trace_place(graph, node_cells);
     }
     if crate::trace::enabled("render.route") {
-        for (ei, path) in edge_paths.iter().enumerate() {
-            let bends = path
-                .windows(3)
-                .filter(|w| (w[1].0 != w[0].0) != (w[2].0 != w[1].0))
-                .count();
-            crate::trace::emit(
-                "render.route",
-                &format!(
-                    "route e{} {}->{} cells={} bends={}",
-                    ei,
-                    graph.nodes[graph.edges[ei].from].name,
-                    graph.nodes[graph.edges[ei].to].name,
-                    path.len(),
-                    bends
-                ),
-            );
-        }
+        trace_route(graph, edge_paths);
     }
-    let labels = label_cells(graph, &edge_paths);
-    let slot_labels = slot_label_cells(graph, &placement.route, &edge_paths);
-    let grid = Layout {
-        node_cells,
-        label_cells: labels,
-        edge_paths,
-        width,
-        height: rows.height,
-        spans: spans.clone(),
-        slot_labels,
-    };
-    flow::realize(grid, flow)
+}
+
+/// Emit one `layout.place` line per node.
+fn trace_place(graph: &Graph, node_cells: &[Cell]) {
+    for (i, &(c, r)) in node_cells.iter().enumerate() {
+        let (cx, cy) = crate::trace::node_span_of(graph, i);
+        crate::trace::emit(
+            "layout.place",
+            &format!(
+                "place {} x={} y={} cx={} cy={}",
+                graph.nodes[i].name, c, r, cx, cy
+            ),
+        );
+    }
+}
+
+/// Emit one `render.route` line per edge: path cell count and bends.
+fn trace_route(graph: &Graph, edge_paths: &[Vec<Cell>]) {
+    for (ei, path) in edge_paths.iter().enumerate() {
+        let bends = path
+            .windows(3)
+            .filter(|w| (w[1].0 != w[0].0) != (w[2].0 != w[1].0))
+            .count();
+        crate::trace::emit(
+            "render.route",
+            &format!(
+                "route e{} {}->{} cells={} bends={}",
+                ei,
+                graph.nodes[graph.edges[ei].from].name,
+                graph.nodes[graph.edges[ei].to].name,
+                path.len(),
+                bends
+            ),
+        );
+    }
 }
 
 /// The label cell of each edge: the middle cell of its routed path when
