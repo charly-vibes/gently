@@ -1,168 +1,31 @@
-//! Purpose: the placement phase of the deterministic grid layout
-//! (gently-0of) — one chain-order pass over the edges that assigns
-//! every node a `(column-rank, band)` slot and classifies every edge's
-//! travel.
-//! Responsibilities: extend east on the source's band else attach below;
-//! attach an unplaced endpoint to a placed one west-then-east; start fresh
-//! chains on their own band; give isolated nodes their own band at column
-//! 0; line edgeless graphs up on band 0; count per-pair edges for parallel
-//! bends. Rationale: extracted from the monolithic layout() so each phase
-//! stays under the tidy gates; placement rules shaped by the recorded
-//! v0.69 @ ededa3d7 companions.
+//! Purpose: the placement state machine for ge.layout — the `Placer`
+//! owns node slots, band allocation, per-edge routes, and the port
+//! overrides applied after the chain pass. Rationale: extracted from the
+//! placement orchestrator so each file stays under the gate limits; all
+//! decisions mirror the upstream placement behavior exactly.
 
-use std::collections::HashMap;
-
-use super::chains::chain_order;
-use super::{node_span, Placement, Route};
-use crate::graph::Graph;
-
-/// Arrange the placement for the configured flow: the oracle-compatible
-/// insertion-order pipeline for the default east flow, the strictly-
-/// ranked layering for every other flow (whose outputs no tier-1 fixture
-/// pins). `None` for the empty graph.
-pub(super) fn arrange(graph: &Graph, east: bool) -> Option<Placement> {
-    if east {
-        place(graph)
-    } else {
-        Some(layered(graph))
-    }
-}
-
-/// The strictly-ranked layering (ge.layout.c3): rank = longest-path
-/// layer over the non-selfloop edges (cycle edges capped by the round
-/// bound — they route against the flow, as the probed oracle does),
-/// bands = first-seen order within each rank. Node indices order the
-/// bands, so the pass stays a pure function (ge.layout.c1).
-pub(super) fn layered(graph: &Graph) -> Placement {
-    let n = graph.nodes.len();
-    let ranks = rank_pass(graph);
-    let max_rank = ranks.iter().max().copied().unwrap_or(0);
-    let mut cell = vec![None; n];
-    let mut next_band = vec![0usize; max_rank + 1];
-    let mut bands = 0usize;
-    for (node, &rank) in ranks.iter().enumerate() {
-        let band = next_band[rank];
-        next_band[rank] = band + 1;
-        bands = bands.max(band + 1);
-        cell[node] = Some((rank, band));
-    }
-    let route = classify(graph, &cell);
-    Placement { cell, route, bands }
-}
-
-/// Longest-path ranks over the non-selfloop edges: relax in model edge
-/// order for at most `n` rounds — a DAG converges strictly earlier, and
-/// cycle edges hit the round cap and simply stop inflating (deterministic
-/// pure function, ge.layout.c1).
-fn rank_pass(graph: &Graph) -> Vec<usize> {
-    let n = graph.nodes.len();
-    let mut rank = vec![0usize; n];
-    for _ in 0..n {
-        let mut changed = false;
-        for e in &graph.edges {
-            if e.from != e.to && rank[e.from] + 1 > rank[e.to] {
-                rank[e.to] = rank[e.from] + 1;
-                changed = true;
-            }
-        }
-        if !changed {
-            break;
-        }
-    }
-    rank
-}
-
-/// Classify every edge's travel over pre-assigned cells: self-loop,
-/// parallel bend (same band, prior edge on the pair), or grew (straight
-/// when the bands align, bend/multi-band otherwise — the routing pass
-/// decides by geometry).
-fn classify(graph: &Graph, cell: &[Option<(usize, usize)>]) -> Vec<Route> {
-    let mut pairs: HashMap<(usize, usize), usize> = HashMap::new();
-    let spans: Vec<(usize, usize)> = (0..graph.nodes.len())
-        .map(|i| node_span(graph, i))
-        .collect();
-    graph
-        .edges
-        .iter()
-        .map(|e| {
-            let key = (e.from.min(e.to), e.from.max(e.to));
-            let prior = pairs.entry(key).or_insert(0);
-            let count = *prior;
-            *prior += 1;
-            let pu = cell[e.from].unwrap();
-            let pv = cell[e.to].unwrap();
-            if e.from == e.to {
-                Route::Selfloop
-            } else if count >= 1 && pu.1 == pv.1 {
-                let cy = spans[e.from].1.max(spans[e.to].1);
-                if cy > 1 && count < cy {
-                    Route::Stacked(count)
-                } else {
-                    Route::Parallel(count)
-                }
-            } else {
-                Route::Grew
-            }
-        })
-        .collect()
-}
-
-/// Place every node: one chain-order pass over the edges, then the
-/// isolated nodes. `None` for the empty graph.
-pub(super) fn place(graph: &Graph) -> Option<Placement> {
-    let n = graph.nodes.len();
-    if n == 0 {
-        return None;
-    }
-    let mut placer = Placer::new(graph.edges.len(), n);
-    placer.ranks = rank_pass(graph);
-    placer.spans = (0..n).map(|i| node_span(graph, i)).collect();
-    if graph.edges.is_empty() {
-        // Edgeless graphs line up on band 0 in insertion order — the
-        // tracer-era behavior pinned by the tb.ascii_render tests.
-        for (i, slot) in placer.cell.iter_mut().enumerate() {
-            *slot = Some((i, 0));
-        }
-        placer.next_band = 1;
-    } else {
-        for ei in chain_order(graph) {
-            let e = &graph.edges[ei];
-            if e.from == e.to {
-                placer.place_selfloop(ei, e.from);
-            } else {
-                placer.place_edge(ei, e.from, e.to);
-            }
-        }
-        placer.apply_ports(graph);
-        placer.place_isolated();
-    }
-    Some(Placement {
-        cell: placer.cell,
-        route: placer.route,
-        bands: placer.next_band,
-    })
-}
+use super::*;
 
 /// The placement pass state: node slots, taken slots, the next free band,
 /// per-edge travel kinds, and per-pair edge counts (keyed lookups only —
 /// never iterated, so the pass stays a pure function, c1).
-struct Placer {
-    cell: Vec<Option<(usize, usize)>>,
+pub(super) struct Placer {
+    pub(super) cell: Vec<Option<(usize, usize)>>,
     taken: Vec<(usize, usize)>,
-    next_band: usize,
-    route: Vec<Route>,
+    pub(super) next_band: usize,
+    pub(super) route: Vec<Route>,
     pairs: HashMap<(usize, usize), usize>,
     /// Longest-path rank of each node (gently-jrr): constrains the east
     /// extension column so a shared-middle bypass stays inline.
-    ranks: Vec<usize>,
+    pub(super) ranks: Vec<usize>,
     /// Grid-cell row span of each node (gently-awd): gates the stacked
     /// parallel channels (a multi-row pair stacks channels on its row
     /// span; a one-row pair keeps the bend shape).
-    spans: Vec<(usize, usize)>,
+    pub(super) spans: Vec<(usize, usize)>,
 }
 
 impl Placer {
-    fn new(edge_count: usize, node_count: usize) -> Placer {
+    pub(super) fn new(edge_count: usize, node_count: usize) -> Placer {
         Placer {
             cell: vec![None; node_count],
             taken: Vec::new(),
@@ -176,7 +39,7 @@ impl Placer {
 
     /// A self-loop marks its node; an unplaced self-loop node takes the
     /// next free column on band 0.
-    fn place_selfloop(&mut self, ei: usize, node: usize) {
+    pub(super) fn place_selfloop(&mut self, ei: usize, node: usize) {
         self.route[ei] = Route::Selfloop;
         if self.cell[node].is_none() {
             let col = self
@@ -194,7 +57,7 @@ impl Placer {
     }
 
     /// Place one edge's unplaced endpoint(s) and classify its travel.
-    fn place_edge(&mut self, ei: usize, u: usize, v: usize) {
+    pub(super) fn place_edge(&mut self, ei: usize, u: usize, v: usize) {
         let key = (u.min(v), u.max(v));
         let prior = *self.pairs.get(&key).unwrap_or(&0);
         self.pairs.insert(key, prior + 1);
@@ -227,7 +90,7 @@ impl Placer {
     /// tall boxes and grow them to their full span (the so-flowchart-size
     /// oracle shape); a one-row pair keeps the recorded bend shape
     /// (parallel.txt: channel 1 bends above the band).
-    fn place_both_placed(
+    pub(super) fn place_both_placed(
         &mut self,
         ei: usize,
         u: usize,
@@ -360,46 +223,74 @@ impl Placer {
     /// no-port chain lays Trier inline exactly like the ported one).
     /// Parallel channels, self-loops, and cross-band routes keep their
     /// recorded shapes (no recorded shape ports them).
-    fn apply_ports(&mut self, graph: &Graph) {
+    pub(super) fn apply_ports(&mut self, graph: &Graph) {
         for (ei, e) in graph.edges.iter().enumerate() {
+            if e.from == e.to || !self.horizontal(e.from, e.to) {
+                continue;
+            }
+            self.apply_port(graph, ei);
+        }
+    }
+
+    /// Both endpoints placed on the same band.
+    fn horizontal(&self, from: usize, to: usize) -> bool {
+        match (self.cell[from], self.cell[to]) {
+            (Some(pu), Some(pv)) => pu.1 == pv.1,
+            _ => false,
+        }
+    }
+
+    /// Port overrides for one horizontal edge: an INDEXED horizontal
+    /// port slot (gently-byq) overrides the parallel/stacked
+    /// classification too — the slot names the attachment row, whatever
+    /// the unported travel would be. A slot on BOTH ends is unpinned —
+    /// the start slot wins. Slot 0 is the default attachment (no route
+    /// change).
+    fn apply_port(&mut self, graph: &Graph, ei: usize) {
+        let slot = super::super::ports::indexed_slot(graph, ei, false)
+            .filter(|&n| n > 0)
+            .map(|n| Route::Slot { end: false, n })
+            .or_else(|| {
+                super::super::ports::indexed_slot(graph, ei, true)
+                    .filter(|&n| n > 0)
+                    .map(|n| Route::Slot { end: true, n })
+            });
+        if let Some(slot) = slot {
+            if !matches!(self.route[ei], Route::Selfloop) {
+                self.route[ei] = slot;
+            }
+        } else if let Some(port) = crate::layout::ports::port_dip(graph, ei) {
+            if matches!(self.route[ei], Route::Grew | Route::Around) {
+                self.route[ei] = port;
+            }
+        }
+    }
+
+    /// Edgeless graphs line up on band 0 in insertion order — the
+    /// tracer-era behavior pinned by the tb.ascii_render tests.
+    pub(super) fn place_edgeless(&mut self) {
+        for (i, slot) in self.cell.iter_mut().enumerate() {
+            *slot = Some((i, 0));
+        }
+        self.next_band = 1;
+    }
+
+    /// Every chain edge in upstream order: self-loops and pairs placed
+    /// as encountered.
+    pub(super) fn place_chained(&mut self, graph: &Graph) {
+        for ei in chain_order(graph) {
+            let e = &graph.edges[ei];
             if e.from == e.to {
-                continue;
-            }
-            let (pu, pv) = match (self.cell[e.from], self.cell[e.to]) {
-                (Some(pu), Some(pv)) => (pu, pv),
-                _ => continue,
-            };
-            if pu.1 != pv.1 {
-                continue;
-            }
-            // An INDEXED horizontal port slot (gently-byq) overrides the
-            // parallel/stacked classification too: the slot names the
-            // attachment row, whatever the unported travel would be. A
-            // slot on BOTH ends is unpinned — the start slot wins. Slot 0
-            // is the default attachment (no route change).
-            let slot = super::indexed_slot(graph, ei, false)
-                .filter(|&n| n > 0)
-                .map(|n| Route::Slot { end: false, n })
-                .or_else(|| {
-                    super::indexed_slot(graph, ei, true)
-                        .filter(|&n| n > 0)
-                        .map(|n| Route::Slot { end: true, n })
-                });
-            if let Some(slot) = slot {
-                if !matches!(self.route[ei], Route::Selfloop) {
-                    self.route[ei] = slot;
-                }
-            } else if let Some(port) = super::port_dip(graph, ei) {
-                if matches!(self.route[ei], Route::Grew | Route::Around) {
-                    self.route[ei] = port;
-                }
+                self.place_selfloop(ei, e.from);
+            } else {
+                self.place_edge(ei, e.from, e.to);
             }
         }
     }
 
     /// Isolated nodes (no incident edges) each take the next free band,
     /// column 0, in insertion order (oracle: d / z below the chain).
-    fn place_isolated(&mut self) {
+    pub(super) fn place_isolated(&mut self) {
         for node in 0..self.cell.len() {
             if self.cell[node].is_none() {
                 let band = self.fresh_band();
