@@ -30,16 +30,8 @@ pub(crate) fn column_geometry(
     node_lines: &[Vec<LabelLine>],
     spans: &[(usize, usize)],
 ) -> Vec<usize> {
-    let mut col_width = vec![0usize; layout.width];
-    let node_col = node_column_widths(
-        graph,
-        layout,
-        node_style,
-        selfloop_node,
-        node_lines,
-        spans,
-        &mut col_width,
-    );
+    let (mut col_width, node_col) =
+        seed_columns(graph, layout, node_style, selfloop_node, node_lines, spans);
     edge_column_floors(layout, &mut col_width);
     straight_single_edge_columns(graph, layout, edge_style, spans, &mut col_width);
     slot_label_widths(graph, layout, &mut col_width);
@@ -54,6 +46,30 @@ pub(crate) fn column_geometry(
     );
     absorb_title_widths(graph, layout, &mut col_width);
     col_width
+}
+
+/// The pass-1/2 width floor: node columns from the placed node shapes
+/// and labels, plus the node columns themselves (consumed later by the
+/// structural gap floors).
+fn seed_columns(
+    graph: &Graph,
+    layout: &Layout,
+    node_style: &[(String, Shape)],
+    selfloop_node: &[bool],
+    node_lines: &[Vec<LabelLine>],
+    spans: &[(usize, usize)],
+) -> (Vec<usize>, Vec<bool>) {
+    let mut col_width = vec![0usize; layout.width];
+    let node_col = node_column_widths(
+        graph,
+        layout,
+        node_style,
+        selfloop_node,
+        node_lines,
+        spans,
+        &mut col_width,
+    );
+    (col_width, node_col)
 }
 
 /// Group-title columns widen to their title width (title never wraps).
