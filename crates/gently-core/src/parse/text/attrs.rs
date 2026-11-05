@@ -83,28 +83,35 @@ fn split_declarations(content: &str) -> Vec<String> {
         // the name runs to the first `:` (`[^:]+?` upstream); without one
         // the rest is a single (invalid) declaration that parse_single
         // rejects, mirroring the upstream regex failure
-        let colon = (i..n).find(|&k| chars[k] == ':');
-        let end = match colon {
+        let end = match (i..n).find(|&k| chars[k] == ':') {
             None => {
                 out.push(chars[start..n].iter().collect());
                 break;
             }
-            Some(c) => {
-                let mut v = c + 1;
-                while v < n && chars[v].is_whitespace() {
-                    v += 1;
-                }
-                if v < n && chars[v] == '"' {
-                    quoted_branch_end(&chars, v).unwrap_or_else(|| unquoted_branch_end(&chars, v))
-                } else {
-                    unquoted_branch_end(&chars, v)
-                }
-            }
+            Some(c) => declaration_end(&chars, c),
         };
         out.push(chars[start..end].iter().collect());
         i = end + 1; // step past the `;` (or clamp at n for the final decl)
     }
     out
+}
+
+/// Exclusive end of one declaration whose `:` sits at `colon`: from the
+/// value start, the quoted branch when the value opens with `"` (with
+/// the unquoted branch as its backtrack), the unquoted branch otherwise.
+fn declaration_end(chars: &[char], colon: usize) -> usize {
+    let n = chars.len();
+    let v = colon
+        + 1
+        + chars[colon + 1..]
+            .iter()
+            .take_while(|&&c| c.is_whitespace())
+            .count();
+    if v < n && chars[v] == '"' {
+        quoted_branch_end(chars, v).unwrap_or_else(|| unquoted_branch_end(chars, v))
+    } else {
+        unquoted_branch_end(chars, v)
+    }
 }
 
 /// End of the quoted branch: the value from `open` (a `"`) through its
@@ -115,23 +122,13 @@ fn split_declarations(content: &str) -> Vec<String> {
 /// backtracks to the unquoted branch in exactly that case.
 fn quoted_branch_end(chars: &[char], open: usize) -> Option<usize> {
     let n = chars.len();
-    let mut prev_bs = false;
-    let mut k = open + 1;
-    while k < n {
-        let c = chars[k];
-        if c == '"' && !prev_bs {
-            break;
-        }
-        prev_bs = c == '\\';
-        k += 1;
-    }
-    if k >= n {
-        return None; // no closing quote
-    }
-    let mut m = k + 1;
-    while m < n && chars[m].is_whitespace() {
-        m += 1;
-    }
+    let close = (open + 1..n).find(|&k| chars[k] == '"' && chars[k - 1] != '\\')?;
+    let m = close
+        + 1
+        + chars[close + 1..]
+            .iter()
+            .take_while(|&&c| c.is_whitespace())
+            .count();
     if m == n {
         Some(n) // `\s*\z` terminator
     } else if chars[m] == ';' {
@@ -146,18 +143,9 @@ fn quoted_branch_end(chars: &[char], open: usize) -> Option<usize> {
 /// the last backslash — `\\;` does not split either), or the end of the
 /// content. Returns the index of the `;` (exclusive) or `n`.
 fn unquoted_branch_end(chars: &[char], from: usize) -> usize {
-    let n = chars.len();
-    let mut prev_bs = false;
-    let mut k = from;
-    while k < n {
-        let c = chars[k];
-        if c == ';' && !prev_bs {
-            return k;
-        }
-        prev_bs = c == '\\';
-        k += 1;
-    }
-    n
+    (from..chars.len())
+        .find(|&k| chars[k] == ';' && (k == from || chars[k - 1] != '\\'))
+        .unwrap_or(chars.len())
 }
 
 /// One `name : value` declaration; the first `:` separates.
@@ -205,20 +193,29 @@ fn strip_quote_pair(s: &str) -> String {
 /// The store-layer unescape: `\X` → X for X in `# " ' ; \` — upstream
 /// `s/\\([#"';\\])/$1/g`. Other backslashes stay literal.
 fn store_unescape(s: &str) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    let mut out = String::new();
-    let mut i = 0;
-    while i < chars.len() {
+    rewrite(s, |chars, i| {
         if chars[i] == '\\'
             && i + 1 < chars.len()
             && matches!(chars[i + 1], '#' | '"' | '\'' | ';' | '\\')
         {
-            out.push(chars[i + 1]);
-            i += 2;
+            (chars[i + 1].to_string(), 2)
         } else {
-            out.push(chars[i]);
-            i += 1;
+            (chars[i].to_string(), 1)
         }
+    })
+}
+
+/// Walk `s` char by char; at each index `step` returns the replacement
+/// text and how many source chars it consumed (≥ 1). Shared walker for
+/// the escape/percent layers.
+fn rewrite(s: &str, step: impl Fn(&[char], usize) -> (String, usize)) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        let (chunk, adv) = step(&chars, i);
+        out.push_str(&chunk);
+        i += adv;
     }
     out
 }
@@ -230,25 +227,19 @@ fn store_unescape(s: &str) -> String {
 /// `s/\\([\[\(\{\}\]\)#<>\-\.=])/$1/g` — each backslash is judged on
 /// its own successor, so `\\q` stays two literal backslashes + q).
 pub fn unescape(s: &str) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    let mut out = String::new();
-    let mut i = 0;
-    while i < chars.len() {
-        let special = |c: char| {
-            matches!(
-                c,
-                '[' | '(' | '{' | '}' | ']' | ')' | '#' | '<' | '>' | '-' | '.' | '='
-            )
-        };
+    let special = |c: char| {
+        matches!(
+            c,
+            '[' | '(' | '{' | '}' | ']' | ')' | '#' | '<' | '>' | '-' | '.' | '='
+        )
+    };
+    rewrite(s, |chars, i| {
         if chars[i] == '\\' && i + 1 < chars.len() && special(chars[i + 1]) {
-            out.push(chars[i + 1]);
-            i += 2;
+            (chars[i + 1].to_string(), 2)
         } else {
-            out.push(chars[i]);
-            i += 1;
+            (chars[i].to_string(), 1)
         }
-    }
-    out
+    })
 }
 
 /// The store-layer %XX pass (upstream `s/%[^2-7][a-fA-F0-9]|%7f//g` then
@@ -258,31 +249,24 @@ pub fn unescape(s: &str) -> String {
 /// followed by a hex digit decodes to its character, and anything else
 /// stays literal (e.g. `100%`, `%zz`).
 fn decode_percent_entities(s: &str) -> String {
-    let chars: Vec<char> = s.chars().collect();
     let hex = |c: char| c.is_ascii_hexdigit();
     let exploit = |head: char, tail: char| {
         hex(tail) && (!(('2'..='7').contains(&head)) || (head == '7' && tail == 'f'))
     };
-    let mut out = String::new();
-    let mut i = 0;
-    while i < chars.len() {
+    rewrite(s, |chars, i| {
         if chars[i] == '%' && i + 2 < chars.len() {
             let (head, tail) = (chars[i + 1], chars[i + 2]);
             if exploit(head, tail) {
-                i += 3; // drop the escape entirely
-                continue;
+                return (String::new(), 3); // drop the escape entirely
             }
             if hex(tail) && ('2'..='7').contains(&head) {
                 let v = head.to_digit(16).unwrap() * 16 + tail.to_digit(16).unwrap();
-                out.push(char::from_u32(v).expect("%20-%7f is a valid scalar"));
-                i += 3;
-                continue;
+                let c = char::from_u32(v).expect("%20-%7f is a valid scalar");
+                return (c.to_string(), 3);
             }
         }
-        out.push(chars[i]);
-        i += 1;
-    }
-    out
+        (chars[i].to_string(), 1)
+    })
 }
 
 /// Collapse whitespace runs to single spaces (upstream `_unquote`).
