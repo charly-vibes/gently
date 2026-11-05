@@ -15,6 +15,7 @@
 mod attrs;
 mod clean;
 mod edge;
+mod elements;
 mod node;
 
 use crate::graph::{Graph, ObjectKind, Scope};
@@ -109,47 +110,11 @@ impl Parser {
         loop {
             self.skip_all_ws();
             let line = self.line;
-            // decision-trace `parse` stage (specs/decision-trace.md c1):
-            // the statement dispatch is already materialized here, so one
-            // gated event per statement — no parse behavior change.
-            if crate::trace::enabled("parse") {
-                let kind = match self.peek() {
-                    Some('[') => "node",
-                    Some(',') => "comma",
-                    Some('(') => "group",
-                    Some(')') => "group_end",
-                    Some('{') => "attrs",
-                    Some(c) if edge::is_op_start(c) && !self.stack.is_empty() => "edge",
-                    Some(c) if c.is_ascii_alphabetic() => "class",
-                    _ => " unrecognized",
-                };
-                crate::trace::emit("parse", &format!("stmt line={line} kind={kind}"));
+            self.trace_statement_kind(line);
+            if self.statement_done(line, in_group)? {
+                return Ok(());
             }
-            match self.peek() {
-                None => {
-                    return if in_group {
-                        Err(self.err(line, "group is never closed: missing ')'"))
-                    } else {
-                        Ok(())
-                    }
-                }
-                Some('[') => self.parse_node_statement()?,
-                Some(',') => self.parse_comma_statement()?,
-                Some('(') => self.parse_group()?,
-                // `)` closes the innermost group (top level: a c8 error)
-                Some(')') => {
-                    self.parse_group_end()?;
-                    return Ok(());
-                }
-                Some('{') => self.parse_standalone_attrs()?,
-                // a statement-level operator continues the current statement
-                // (e.g. after a closed group); none in flight: c8 error
-                Some(c) if edge::is_op_start(c) && !self.stack.is_empty() => {
-                    self.parse_edge_statement()?;
-                }
-                Some(c) if c.is_ascii_alphabetic() => self.parse_class_section()?,
-                Some(c) => return Err(self.err(line, format!("'{c}' not recognized"))),
-            }
+            self.parse_statement()?;
         }
     }
 
