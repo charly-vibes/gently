@@ -7,8 +7,8 @@
 use super::canvas::{centered, Canvas};
 use super::edges::EdgeNodeEnds;
 use super::labels::{Align, LabelLine};
+
 use super::styles::{self, byte_width, edge_fill, edge_run_at};
-use crate::layout::Layout;
 
 /// The run mirrored for a westward edge: reversed, head flipped.
 fn mirror_run(run: &str) -> String {

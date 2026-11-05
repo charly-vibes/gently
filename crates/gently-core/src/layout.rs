@@ -26,7 +26,7 @@ use crate::graph::{Graph, ObjectKind, Scope};
 use flow::Flow;
 use paths::{assemble_rows, required_slots, route_edges};
 use placement::arrange;
-use ports::{indexed_slot, node_span, port_dip};
+use ports::node_span;
 
 /// A grid cell: `(column, row)` — column grows eastward, row southward.
 pub type Cell = (usize, usize);

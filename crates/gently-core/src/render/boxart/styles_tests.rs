@@ -1,5 +1,3 @@
-use super::*;
-
 use super::super::polyline::Dir;
 use super::{arrow, border, edge, h_run, rounded, shifted_run, Edge, POINT};
 

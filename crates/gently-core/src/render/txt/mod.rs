@@ -288,7 +288,7 @@ fn edge_chain(edge: &crate::graph::Edge) -> String {
 /// `style:` attribute (upstream dies; gently renders).
 fn chain_operator(edge: &crate::graph::Edge) -> String {
     let style = edge.attributes.get("style").unwrap_or("solid");
-    let base: &str = match style.as_ref() {
+    let base: &str = match style {
         "solid" => "--",
         "dotted" => "..",
         "double" => "==",

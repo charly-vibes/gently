@@ -32,7 +32,7 @@ use crate::graph::{Graph, ObjectKind, Scope};
 use crate::layout::{Cell, Layout};
 use crate::render::ascii::{display_width, RenderError};
 use css::css;
-use edges::{arrow_spans, cell_label, edge_style, edge_td};
+use edges::edge_td;
 use styles::{border_attribute_as_html, color_as_hex, escape_href, escape_text};
 
 /// What occupies a grid cell.

@@ -37,6 +37,15 @@ pub struct CutEvent {
     pub b: Option<String>,
 }
 
+fn cut_event(stage: &str, key: &str, a: Option<&str>, b: Option<&str>) -> Option<CutEvent> {
+    Some(CutEvent {
+        stage: stage.to_owned(),
+        key: key.to_owned(),
+        a: a.map(str::to_owned),
+        b: b.map(str::to_owned),
+    })
+}
+
 /// The typed byte-gate refusal (c3, 5.2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TraceDiffError {
@@ -156,24 +165,9 @@ fn diff_key(
 ) -> Option<CutEvent> {
     match (a, b) {
         (Some(pa), Some(pb)) if pa == pb => None,
-        (Some(pa), Some(pb)) => Some(CutEvent {
-            stage: stage.clone(),
-            key: key.clone(),
-            a: Some(pa.clone()),
-            b: Some(pb.clone()),
-        }),
-        (Some(pa), None) => Some(CutEvent {
-            stage: stage.clone(),
-            key: key.clone(),
-            a: Some(pa.clone()),
-            b: None,
-        }),
-        (None, Some(pb)) => Some(CutEvent {
-            stage: stage.clone(),
-            key: key.clone(),
-            a: None,
-            b: Some(pb.clone()),
-        }),
+        (Some(pa), Some(pb)) => cut_event(stage, key, Some(pa), Some(pb)),
+        (Some(pa), None) => cut_event(stage, key, Some(pa), None),
+        (None, Some(pb)) => cut_event(stage, key, None, Some(pb)),
         (None, None) => unreachable!("key came from one of the sides"),
     }
 }
@@ -259,9 +253,8 @@ impl DumpState {
             self.in_band0 = line.starts_with("band y=0 ");
             return;
         }
-        if self.in_band0 && line.starts_with("  ") {
-            return; // body line: keep collecting
-        }
+        // body line: keep collecting
+        if self.in_band0 && line.starts_with("  ") {}
     }
 
     fn collecting(&self) -> bool {

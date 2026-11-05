@@ -9,12 +9,11 @@
 //! rules live in styles.rs, pinned by the recorded claims
 //! (pod-bidir*.observed, pod-label-attr.observed).
 
-use super::canvas::{centered, Canvas, NodeGeom};
-use super::labels::{Align, LabelLine};
+use super::canvas::{Canvas, NodeGeom};
+use super::labels::LabelLine;
 use super::polyline;
 use super::runs::{draw_straight, draw_straight_ver};
 use super::styles::Shape;
-use super::styles::{self, byte_width, edge_fill, edge_run_at};
 use super::RenderError;
 use crate::graph::Graph;
 use crate::layout::Layout;
