@@ -157,12 +157,7 @@ pub fn minimal_cut(a: &str, b: &str) -> Vec<CutEvent> {
 }
 
 /// The cut event for one key whose two sides differ, if any.
-fn diff_key(
-    stage: &String,
-    key: &String,
-    a: Option<&String>,
-    b: Option<&String>,
-) -> Option<CutEvent> {
+fn diff_key(stage: &str, key: &str, a: Option<&String>, b: Option<&String>) -> Option<CutEvent> {
     match (a, b) {
         (Some(pa), Some(pb)) if pa == pb => None,
         (Some(pa), Some(pb)) => cut_event(stage, key, Some(pa), Some(pb)),
