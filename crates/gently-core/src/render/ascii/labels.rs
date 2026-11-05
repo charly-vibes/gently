@@ -69,6 +69,26 @@ pub(super) fn aligned_label(label: &str, default: Align) -> Vec<LabelLine> {
     let mut lines = Vec::new();
     let mut last_align = default;
     let mut part = String::new();
+    scan_segments(label, default, &mut lines, &mut last_align, &mut part);
+    // the remainder after the last terminator — never for an empty
+    // remainder (upstream: `push @lines, $label if $label ne ''`), and
+    // an escape-free empty label yields NO lines at all
+    if !part.is_empty() {
+        push_line(&mut lines, part, last_align);
+    }
+    lines
+}
+
+/// The segment scan: each `\n`/`\r`/`\l`/`\c` escape ends the current
+/// segment (flushed with the PREVIOUS terminator's alignment) and sets
+/// the next segment's; other escapes pass through into the segment.
+fn scan_segments(
+    label: &str,
+    default: Align,
+    lines: &mut Vec<LabelLine>,
+    last_align: &mut Align,
+    part: &mut String,
+) {
     let mut chars = label.chars();
     while let Some(c) = chars.next() {
         if c != '\\' {
@@ -76,39 +96,40 @@ pub(super) fn aligned_label(label: &str, default: Align) -> Vec<LabelLine> {
             continue;
         }
         match chars.next() {
-            // the escape ends this segment and aligns the next one;
-            // \n means "the object's default" (upstream: `$a = $al if $a eq 'n'`)
             Some(esc @ ('n' | 'r' | 'l' | 'c')) => {
-                lines.push(LabelLine {
-                    text: finish(part),
-                    align: last_align,
-                });
-                part = String::new();
-                last_align = match esc {
-                    'l' => Align::Left,
-                    'r' => Align::Right,
-                    'c' => Align::Center,
-                    _ => default,
-                };
+                push_line(lines, std::mem::take(part), *last_align);
+                *last_align = escape_align(esc, default);
             }
             Some('\\') => part.push('\\'),
-            Some(other) => {
-                part.push('\\');
-                part.push(other);
-            }
+            Some(other) => push_escaped_other(part, other),
             None => part.push('\\'),
         }
     }
-    // the remainder after the last terminator — never for an empty
-    // remainder (upstream: `push @lines, $label if $label ne ''`), and
-    // an escape-free empty label yields NO lines at all
-    if !part.is_empty() {
-        lines.push(LabelLine {
-            text: finish(part),
-            align: last_align,
-        });
+}
+
+/// Flush one finished segment onto the label lines.
+fn push_line(lines: &mut Vec<LabelLine>, part: String, align: Align) {
+    lines.push(LabelLine {
+        text: finish(part),
+        align,
+    });
+}
+
+/// The next segment's alignment from a terminator escape (upstream:
+/// `$a = $al if $a eq 'n'` — `\n` means "the object's default").
+fn escape_align(esc: char, default: Align) -> Align {
+    match esc {
+        'l' => Align::Left,
+        'r' => Align::Right,
+        'c' => Align::Center,
+        _ => default,
     }
-    lines
+}
+
+/// Any other escape passes through verbatim (upstream's fallthrough).
+fn push_escaped_other(part: &mut String, other: char) {
+    part.push('\\');
+    part.push(other);
 }
 
 /// Unescape (`\|` → `|`, `\\` → `\`) and trim one label part
@@ -214,19 +235,20 @@ fn flatten_escapes(label: &str) -> String {
 /// Collapse whitespace runs to single spaces, no trimming (upstream
 /// `s/\s+/ /g`).
 fn collapse_spaces(text: String) -> String {
-    let mut collapsed = String::with_capacity(text.len());
-    let mut spaces = 0usize;
-    for c in text.chars() {
-        if c.is_whitespace() {
-            spaces += 1;
-            if spaces == 1 {
-                collapsed.push(' ');
+    let (collapsed, _) = text.chars().fold(
+        (String::with_capacity(text.len()), false),
+        |(mut acc, in_ws), c| {
+            if c.is_whitespace() {
+                if !in_ws {
+                    acc.push(' ');
+                }
+                (acc, true)
+            } else {
+                acc.push(c);
+                (acc, false)
             }
-        } else {
-            spaces = 0;
-            collapsed.push(c);
-        }
-    }
+        },
+    );
     collapsed
 }
 
@@ -241,17 +263,22 @@ fn wrap_lines(text: &str, wrap_at: usize) -> Vec<String> {
     let mut lines: Vec<String> = Vec::new();
     let mut rest = text;
     while let Some((w, keep_hyphen)) = wrap_point(rest, wrap_at) {
-        let mut line = rest[..w].to_string();
-        if keep_hyphen {
-            line.push('-');
-        }
-        lines.push(line);
+        lines.push(wrap_line(rest, w, keep_hyphen));
         rest = &rest[w + 1..];
     }
     if !rest.is_empty() {
         lines.push(rest.to_string());
     }
     lines
+}
+
+/// One emitted wrap line: the slice, keeping the hyphen on the line.
+fn wrap_line(rest: &str, w: usize, keep_hyphen: bool) -> String {
+    if keep_hyphen {
+        format!("{}-", &rest[..w])
+    } else {
+        rest[..w].to_string()
+    }
 }
 
 /// The next wrap point of `text`: the byte offset whose line first
