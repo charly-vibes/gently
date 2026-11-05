@@ -52,12 +52,17 @@ pub(crate) fn column_geometry(
         spans,
         &mut col_width,
     );
+    absorb_title_widths(graph, layout, &mut col_width);
+    col_width
+}
+
+/// Group-title columns widen to their title width (title never wraps).
+fn absorb_title_widths(graph: &Graph, layout: &Layout, col_width: &mut [usize]) {
     for (c, w) in groups::title_widths(graph, layout) {
         if c < col_width.len() {
             col_width[c] = col_width[c].max(w);
         }
     }
-    col_width
 }
 
 /// Prefix offsets of the column widths.
