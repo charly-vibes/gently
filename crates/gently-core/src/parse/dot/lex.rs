@@ -79,36 +79,58 @@ impl Cursor {
 /// Tokenize `src`; unknown characters and unterminated strings/HTML-like
 /// strings are tokenizing errors (c5 — the no-partial-graph path).
 pub(super) fn lex(src: &str) -> Result<Vec<Token>, super::ParseError> {
-    let chars: Vec<char> = src.chars().collect();
-    let mut toks = Vec::new();
-    let mut cur = Cursor {
-        i: 0,
-        line: 1,
-        byte: 0,
+    let mut lx = Lexer {
+        chars: src.chars().collect(),
+        toks: Vec::new(),
+        cur: Cursor {
+            i: 0,
+            line: 1,
+            byte: 0,
+        },
     };
-    while cur.i < chars.len() {
-        let c = chars[cur.i];
-        let scanned = scan_token(&chars, cur.i, cur.line)?;
-        let (t, end, newlines) = match scanned {
-            Some(scanned) => scanned,
-            None => {
-                // whitespace: newline chars advance the error line
-                cur.line += usize::from(c == '\n');
-                cur.i += 1;
-                cur.byte += c.len_utf8();
-                continue;
+    lx.run()?;
+    Ok(lx.toks)
+}
+
+/// The tokenizer state: source chars, emitted tokens, cursor.
+struct Lexer {
+    chars: Vec<char>,
+    toks: Vec<Token>,
+    cur: Cursor,
+}
+
+impl Lexer {
+    fn run(&mut self) -> Result<(), super::ParseError> {
+        while self.cur.i < self.chars.len() {
+            let scanned = scan_token(&self.chars, self.cur.i, self.cur.line)?;
+            match scanned {
+                Some(scanned) => self.emit(scanned),
+                None => self.skip_whitespace(),
             }
-        };
-        toks.push(Token {
-            tok: t,
-            line: cur.line,
-            start: cur.byte,
-        });
-        cur.line += newlines;
-        cur.byte += Cursor::byte_len(&chars, cur.i, end);
-        cur.i = end;
+        }
+        Ok(())
     }
-    Ok(toks)
+
+    /// Push one scanned token and advance the cursor past it.
+    fn emit(&mut self, (t, end, newlines): (Tok, usize, usize)) {
+        let (line, byte) = (self.cur.line, self.cur.byte);
+        self.toks.push(Token {
+            tok: t,
+            line,
+            start: byte,
+        });
+        self.cur.line += newlines;
+        self.cur.byte += Cursor::byte_len(&self.chars, self.cur.i, end);
+        self.cur.i = end;
+    }
+
+    /// Whitespace is skipped; newline chars advance the error line.
+    fn skip_whitespace(&mut self) {
+        let c = self.chars[self.cur.i];
+        self.cur.line += usize::from(c == '\n');
+        self.cur.i += 1;
+        self.cur.byte += c.len_utf8();
+    }
 }
 
 /// Scan one token starting at `i`: `Some((tok, end-index, newlines-inside))`
@@ -198,25 +220,26 @@ fn quoted(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), 
 /// brackets stay part of the raw value (the oracle keeps them in the node
 /// name after autosplit).
 fn html(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), super::ParseError> {
-    let mut s = StrScan::at(i + 1);
-    s.raw.push('<');
-    s.j = i + 1;
+    let (raw, taken, newlines) =
+        html_body(&chars[i + 1..]).ok_or_else(|| err(line, "unterminated HTML-like string"))?;
+    Ok((Tok::Html(format!("<{raw}")), i + 1 + taken, newlines))
+}
+
+/// Scan an HTML-like body up to the balancing `>` (excluded): raw inner
+/// content, chars consumed, newlines seen.
+fn html_body(chars: &[char]) -> Option<(String, usize, usize)> {
     let mut depth = 1usize;
-    while let Some(&c) = chars.get(s.j) {
-        let closing = {
-            s.push(c);
-            if c == '<' {
-                depth += 1;
-            } else if c == '>' {
-                depth -= 1;
-            }
-            depth == 0
-        };
-        if closing {
-            return Ok((Tok::Html(s.raw), s.j, s.newlines));
+    let end = chars.iter().position(|&c| {
+        if c == '<' {
+            depth += 1;
+        } else if c == '>' {
+            depth -= 1;
         }
-    }
-    Err(err(line, "unterminated HTML-like string"))
+        depth == 0
+    })?;
+    let raw: String = chars[..=end].iter().collect();
+    let newlines = chars[..=end].iter().filter(|&&c| c == '\n').count();
+    Some((raw, end + 1, newlines))
 }
 
 /// An identifier: alphanumerics plus `_`, `.`, `$`, `+`.
