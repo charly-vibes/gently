@@ -17,12 +17,14 @@
 //! attributes has no class sections and the same edge chains.
 
 mod attributes;
+mod ranks;
 #[cfg(test)]
 mod tests;
 
 use crate::graph::{AttributeTable, Graph, ObjectKind};
 
 use attributes::{class_section, instance_attributes};
+use ranks::{assign_ranks, has_predecessors, ordered_nodes, sorted_successors, successors};
 
 /// Serialize the graph to the canonical Graph::Easy txt form.
 pub fn render(graph: &Graph) -> String {
@@ -38,24 +40,25 @@ pub fn render(graph: &Graph) -> String {
 /// Pass 1 (ge.txt_render.c1): the class attribute sections, plus the blank
 /// line that separates them from the body (upstream `$txt .= "\n" if ...`).
 fn class_pass(graph: &Graph) -> String {
-    let mut sections: Vec<(String, &AttributeTable, ObjectKind)> = Vec::new();
-    if !graph.attributes.is_empty() {
-        sections.push(("graph".to_string(), &graph.attributes, ObjectKind::Node));
-    }
-    for (kind, class, table) in &graph.class_attributes {
-        if table.is_empty() {
-            continue;
-        }
-        sections.push((class_name(*kind, class), table, *kind));
-    }
+    let mut sections: Vec<(String, &AttributeTable, ObjectKind)> =
+        std::iter::once(("graph".to_string(), &graph.attributes, ObjectKind::Node))
+            .filter(|(_, table, _)| !table.is_empty())
+            .chain(
+                graph
+                    .class_attributes
+                    .iter()
+                    .filter(|(_, _, table)| !table.is_empty())
+                    .map(|(kind, class, table)| (class_name(*kind, class), table, *kind)),
+            )
+            .collect();
     sections.sort_by(|x, y| x.0.cmp(&y.0));
 
-    let mut out = String::new();
-    for (name, table, kind) in sections {
-        out.push_str(&class_section(&name, table, kind));
-    }
+    let out: String = sections
+        .iter()
+        .map(|(name, table, kind)| class_section(name, table, *kind))
+        .collect();
     if !out.is_empty() {
-        out.push('\n');
+        return format!("{out}\n");
     }
     out
 }
@@ -87,11 +90,32 @@ fn declaration_pass(graph: &Graph) -> (String, std::collections::HashSet<usize>)
         .iter()
         .flat_map(|g| g.members.iter().copied())
         .collect();
-    // upstream As_txt marks a node for declaration only when its
-    // POST-canonicalization attribute text is non-empty ($att ne '' after
-    // attributes_as_txt) — a table whose every attribute collapses (e.g.
-    // size: 1,1 dropping to the default) leaves the node undeclared
-    // (gently-awd).
+    let declared = declared_nodes(graph, &members);
+    let out: String = declared
+        .iter()
+        .map(|&i| {
+            let node = &graph.nodes[i];
+            format!(
+                "{}{}\n",
+                node_line(&node.name),
+                instance_attributes(&node.attributes, ObjectKind::Node)
+            )
+        })
+        .collect();
+    let body = if declared.is_empty() {
+        out
+    } else {
+        format!("{out}\n")
+    };
+    (body, declared.into_iter().collect())
+}
+
+/// Upstream As_txt marks a node for declaration only when its
+/// POST-canonicalization attribute text is non-empty ($att ne '' after
+/// attributes_as_txt) — a table whose every attribute collapses (e.g.
+/// size: 1,1 dropping to the default) leaves the node undeclared
+/// (gently-awd). Sorted by name (name ties by model order).
+fn declared_nodes(graph: &Graph, members: &std::collections::HashSet<usize>) -> Vec<usize> {
     let mut declared: Vec<usize> = graph
         .nodes
         .iter()
@@ -110,17 +134,7 @@ fn declaration_pass(graph: &Graph) -> (String, std::collections::HashSet<usize>)
             .cmp(&graph.nodes[*y].name)
             .then(x.cmp(y))
     });
-    let mut out = String::new();
-    for &i in &declared {
-        let node = &graph.nodes[i];
-        out.push_str(&node_line(&node.name));
-        out.push_str(&instance_attributes(&node.attributes, ObjectKind::Node));
-        out.push('\n');
-    }
-    if !declared.is_empty() {
-        out.push('\n');
-    }
-    (out, declared.into_iter().collect())
+    declared
 }
 
 /// Pass 3: group sections, sorted by name (upstream Group::as_txt). A
@@ -134,33 +148,54 @@ fn declaration_pass(graph: &Graph) -> (String, std::collections::HashSet<usize>)
 fn group_pass(graph: &Graph, declared: &mut std::collections::HashSet<usize>) -> String {
     let mut groups: Vec<usize> = (0..graph.groups.len()).collect();
     groups.sort_by(|x, y| graph.groups[*x].name.cmp(&graph.groups[*y].name));
-    let mut out = String::new();
-    for &i in &groups {
-        let group = &graph.groups[i];
-        if group.members.is_empty() {
-            out.push_str(&group_line(&group.name));
-            out.push_str(&instance_attributes(&group.attributes, ObjectKind::Group));
-            out.push_str("\n\n");
-            continue;
-        }
-        out.push_str("( ");
-        out.push_str(&escape_chars(
-            &group.name,
-            &['[', ']', '(', ')', '{', '}', '#'],
-        ));
-        out.push('\n');
-        for &m in &group.members {
-            let node = &graph.nodes[m];
-            out.push_str("  ");
-            out.push_str(&node_line(&node.name));
-            out.push_str(&instance_attributes(&node.attributes, ObjectKind::Node));
-            out.push('\n');
-            declared.insert(m);
-        }
-        out.push(')');
-        out.push_str(&instance_attributes(&group.attributes, ObjectKind::Group));
-        out.push_str("\n\n");
+    groups
+        .iter()
+        .map(|&i| group_section(graph, i, declared))
+        .collect()
+}
+
+/// An empty group keeps the parser's `( name )` empty-section form.
+fn empty_group_section(group: &crate::graph::Group) -> String {
+    format!(
+        "{}{}\n\n",
+        group_line(&group.name),
+        instance_attributes(&group.attributes, ObjectKind::Group)
+    )
+}
+
+/// One group's section: a member-bearing group emits the upstream shape —
+/// header `( name`, each member's node declaration indented two spaces,
+/// then `)` (tests/repro/claims/group-edge-graphviz.observed) — so
+/// membership round-trips through ge.text_parser's group-scope rule (a
+/// node line inside a group scope joins that group, c6). Member nodes are
+/// marked declared so pass 4 does not re-emit them as isolated nodes.
+fn group_section(
+    graph: &Graph,
+    i: usize,
+    declared: &mut std::collections::HashSet<usize>,
+) -> String {
+    let group = &graph.groups[i];
+    if group.members.is_empty() {
+        return empty_group_section(group);
     }
+    let mut out = String::new();
+    out.push_str("( ");
+    out.push_str(&escape_chars(
+        &group.name,
+        &['[', ']', '(', ')', '{', '}', '#'],
+    ));
+    out.push('\n');
+    for &m in &group.members {
+        let node = &graph.nodes[m];
+        out.push_str("  ");
+        out.push_str(&node_line(&node.name));
+        out.push_str(&instance_attributes(&node.attributes, ObjectKind::Node));
+        out.push('\n');
+        declared.insert(m);
+    }
+    out.push(')');
+    out.push_str(&instance_attributes(&group.attributes, ObjectKind::Group));
+    out.push_str("\n\n");
     out
 }
 
@@ -175,11 +210,10 @@ fn edge_pass(
     let succs: Vec<Vec<usize>> = (0..graph.nodes.len())
         .map(|i| successors(graph, i))
         .collect();
-    let mut out = String::new();
-    for &i in &ordered_nodes(graph, ranks) {
-        out.push_str(&node_pass(graph, i, &succs, declared));
-    }
-    out
+    ordered_nodes(graph, ranks)
+        .iter()
+        .map(|&i| node_pass(graph, i, &succs, declared))
+        .collect()
 }
 
 /// One node's contribution to pass 4: an isolated bare line when the node
@@ -192,30 +226,35 @@ fn node_pass(
     declared: &std::collections::HashSet<usize>,
 ) -> String {
     let succ = sorted_successors(graph, &succs[node], succs);
-    let mut out = String::new();
     let name = &graph.nodes[node].name;
-    if succ.is_empty() && !has_predecessors(graph, node) && !declared.contains(&node) {
-        // a single node without any connection
-        out.push_str(&node_line(name));
-        out.push('\n');
-    }
+    let isolated = succ.is_empty() && !has_predecessors(graph, node) && !declared.contains(&node);
+    let bare = if isolated {
+        format!("{}\n", node_line(name))
+    } else {
+        String::new()
+    };
     let first = node_line(name);
-    for &other in &succ {
-        out.push_str(&edge_lines(graph, &first, node, other));
-    }
-    out
+    let chains: String = succ
+        .iter()
+        .map(|&other| edge_lines(graph, &first, node, other))
+        .collect();
+    format!("{bare}{chains}")
 }
 
 /// Every `from -> to` edge in model order: `[ from ] <chain> [ to ]`.
 fn edge_lines(graph: &Graph, first: &str, from: usize, to: usize) -> String {
-    let mut out = String::new();
-    for edge in graph.edges.iter().filter(|e| e.from == from && e.to == to) {
-        out.push_str(first);
-        out.push_str(&edge_chain(edge));
-        out.push_str(&node_line(&graph.nodes[to].name));
-        out.push('\n');
-    }
-    out
+    graph
+        .edges
+        .iter()
+        .filter(|e| e.from == from && e.to == to)
+        .map(|edge| {
+            format!(
+                "{first}{}{}\n",
+                edge_chain(edge),
+                node_line(&graph.nodes[to].name)
+            )
+        })
+        .collect()
 }
 
 /// The upstream operator mapping (Edge::_as_txt `$styles`) plus the
@@ -225,24 +264,7 @@ fn edge_lines(graph: &Graph, first: &str, from: usize, to: usize) -> String {
 /// dies; gently renders).
 fn edge_chain(edge: &crate::graph::Edge) -> String {
     let label = edge.attributes.get("label").unwrap_or("");
-    let style = edge.attributes.get("style").unwrap_or("solid");
-    let operator: &str = match style {
-        "solid" => "--",
-        "dotted" => "..",
-        "double" => "==",
-        "double-dash" => "= ",
-        "dashed" => "- ",
-        "dot-dash" => ".-",
-        "dot-dot-dash" => "..-",
-        "wave" => "~~",
-        _ => "--",
-    };
-    let undirected = !edge.arrows.start && !edge.arrows.end;
-    let mut operator = operator.to_string();
-    if undirected && operator.as_bytes().get(1) == Some(&b' ') {
-        // upstream: "make ` -  ` into ` - -  `"
-        operator = format!("{operator}{operator}");
-    }
+    let operator = chain_operator(edge);
     let left = if edge.arrows.start { " <" } else { " " };
     let right = if edge.arrows.end { "> " } else { " " };
     let mid = if label.is_empty() {
@@ -259,6 +281,31 @@ fn edge_chain(edge: &crate::graph::Edge) -> String {
         format!("{} ", attrs.trim_start())
     };
     format!("{left}{mid}{operator}{right}{tail}")
+}
+
+/// The upstream operator mapping (Edge::_as_txt `$styles`) plus the
+/// arrowhead-driven form; unknown styles keep `--` plus a visible
+/// `style:` attribute (upstream dies; gently renders).
+fn chain_operator(edge: &crate::graph::Edge) -> String {
+    let style = edge.attributes.get("style").unwrap_or("solid");
+    let base: &str = match style.as_ref() {
+        "solid" => "--",
+        "dotted" => "..",
+        "double" => "==",
+        "double-dash" => "= ",
+        "dashed" => "- ",
+        "dot-dash" => ".-",
+        "dot-dot-dash" => "..-",
+        "wave" => "~~",
+        _ => "--",
+    };
+    let undirected = !edge.arrows.start && !edge.arrows.end;
+    if undirected && base.as_bytes().get(1) == Some(&b' ') {
+        // upstream: "make ` -  ` into ` - -  `"
+        format!("{base}{base}")
+    } else {
+        base.to_string()
+    }
 }
 
 /// `[ name ]` with the upstream name escaping (`[\]\|\{\}\#]`).
@@ -278,121 +325,13 @@ fn group_line(name: &str) -> String {
 }
 
 fn escape_chars(name: &str, specials: &[char]) -> String {
-    let mut out = String::with_capacity(name.len());
-    for c in name.chars() {
-        if specials.contains(&c) {
-            out.push('\\');
-        }
-        out.push(c);
-    }
-    out
-}
-
-/// Upstream `_assign_ranks` (v1: no user ranks, no root node, no groups):
-/// nodes without predecessors get rank -1 and their chains deepen by one
-/// per hop (-2, -3, …); mid-graph nodes are picked up from the `also`
-/// queue at rank -1. The todo list stays sorted ascending by rank with
-/// FIFO tie order (upstream Graph::Easy::Heap).
-fn assign_ranks(graph: &Graph) -> Vec<isize> {
-    let n = graph.nodes.len();
-    let mut rank: Vec<Option<isize>> = vec![None; n];
-    let mut todo: Vec<(isize, usize)> = Vec::new();
-    let mut also: std::collections::VecDeque<usize> = std::collections::VecDeque::new();
-    for (i, _) in graph.nodes.iter().enumerate() {
-        if has_predecessors(graph, i) {
-            also.push_back(i);
-        } else {
-            rank[i] = Some(-1);
-            insert_stable(&mut todo, (-1, i));
-        }
-    }
-    while !also.is_empty() || !todo.is_empty() {
-        propagate_ranks(graph, &mut todo, &mut rank);
-        promote_from_also(&mut also, &mut todo, &mut rank);
-    }
-    // every node is ranked when both queues drain: propagation covers
-    // reachable nodes, promotion seeds the rest
-    rank.into_iter().map(|r| r.unwrap_or(-1)).collect()
-}
-
-/// Drain the todo list, deepening every unranked successor by one hop.
-fn propagate_ranks(graph: &Graph, todo: &mut Vec<(isize, usize)>, rank: &mut [Option<isize>]) {
-    while let Some(&(r, node)) = todo.first() {
-        todo.remove(0);
-        let mut l = r;
-        if l > 0 {
-            l = -l;
-        }
-        l -= 1;
-        for succ in successors(graph, node) {
-            if rank[succ].is_none() {
-                rank[succ] = Some(l);
-                insert_stable(todo, (l, succ));
+    name.chars()
+        .flat_map(|c| {
+            if specials.contains(&c) {
+                vec!['\\', c]
+            } else {
+                vec![c]
             }
-        }
-    }
-}
-
-/// Promote one still-unranked mid-graph node to a chain head at rank -1.
-fn promote_from_also(
-    also: &mut std::collections::VecDeque<usize>,
-    todo: &mut Vec<(isize, usize)>,
-    rank: &mut [Option<isize>],
-) {
-    while let Some(x) = also.pop_front() {
-        if rank[x].is_none() {
-            rank[x] = Some(-1);
-            insert_stable(todo, (-1, x));
-            break;
-        }
-    }
-}
-
-/// Insert into the ascending-by-rank todo list, after all entries with an
-/// equal rank (FIFO tie order — upstream's sorted-linear heap).
-fn insert_stable(todo: &mut Vec<(isize, usize)>, entry: (isize, usize)) {
-    let pos = todo.partition_point(|&(r, _)| r <= entry.0);
-    todo.insert(pos, entry);
-}
-
-/// Distinct successors of `node`, in first-seen edge order (upstream's
-/// `%suc` weed-out of doubles).
-fn successors(graph: &Graph, node: usize) -> Vec<usize> {
-    let mut seen = Vec::new();
-    for edge in &graph.edges {
-        if edge.from == node && !seen.contains(&edge.to) {
-            seen.push(edge.to);
-        }
-    }
-    seen
-}
-
-fn has_predecessors(graph: &Graph, node: usize) -> bool {
-    graph.edges.iter().any(|e| e.to == node)
-}
-
-/// Upstream `sorted_successors`: successors with more successors first,
-/// ties by name (counts from the precomputed successor matrix).
-fn sorted_successors(graph: &Graph, succ: &[usize], succs: &[Vec<usize>]) -> Vec<usize> {
-    let mut succ = succ.to_vec();
-    succ.sort_by(|x, y| {
-        succs[*y]
-            .len()
-            .cmp(&succs[*x].len())
-            .then(graph.nodes[*x].name.cmp(&graph.nodes[*y].name))
-    });
-    succ
-}
-
-/// The edge/isolated-node pass order (upstream `sorted_nodes('rank','name')`):
-/// ascending by absolute rank, ties by name.
-fn ordered_nodes(graph: &Graph, ranks: &[isize]) -> Vec<usize> {
-    let mut order: Vec<usize> = (0..graph.nodes.len()).collect();
-    order.sort_by(|x, y| {
-        ranks[*x]
-            .abs()
-            .cmp(&ranks[*y].abs())
-            .then(graph.nodes[*x].name.cmp(&graph.nodes[*y].name))
-    });
-    order
+        })
+        .collect()
 }
