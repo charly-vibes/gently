@@ -42,13 +42,12 @@ pub(super) fn layered(graph: &Graph) -> Placement {
     let max_rank = ranks.iter().max().copied().unwrap_or(0);
     let mut cell = vec![None; n];
     let mut next_band = vec![0usize; max_rank + 1];
-    let mut bands = 0usize;
     for (node, &rank) in ranks.iter().enumerate() {
         let band = next_band[rank];
         next_band[rank] = band + 1;
-        bands = bands.max(band + 1);
         cell[node] = Some((rank, band));
     }
+    let bands = next_band.iter().copied().max().unwrap_or(0);
     let route = classify(graph, &cell);
     Placement { cell, route, bands }
 }
