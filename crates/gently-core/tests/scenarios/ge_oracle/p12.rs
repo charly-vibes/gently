@@ -1,4 +1,3 @@
-use super::p4family::*;
 use super::*;
 
 /// ge.oracle.p1 (c1): every pin header names version + commit, every

@@ -218,7 +218,6 @@ mod p2_stem;
 
 #[path = "ge_ascii_render_cases.rs"]
 mod cases;
-use cases::*;
 
 /// ge.ascii_render p2 scaffold (gently-cbk): `shape: edge` nodes — RED reproduction + #[ignore]d oracle bytes. Side file.
 #[path = "ge_ascii_render_edge_node.rs"]

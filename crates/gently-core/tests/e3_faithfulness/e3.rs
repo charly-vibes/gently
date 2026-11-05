@@ -1,4 +1,3 @@
-use super::rows::*;
 use super::*;
 
 /// Clause 2: per fixture, canonically-ordered state snapshots normalize
