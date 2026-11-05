@@ -238,21 +238,21 @@ fn assert_quad_parallel_distinct() {
 /// (gently-a6g: a grown endpoint is met at its span — the star's east
 /// attachment abuts the hub's bottom span row, not its anchor row).
 fn assert_adjacent(p: (usize, usize), q: (usize, usize), span: (usize, usize), what: &str) {
-    let dx = if p.0 < q.0 {
-        q.0 - p.0
-    } else if p.0 >= q.0 + span.0 {
-        p.0 - (q.0 + span.0 - 1)
-    } else {
-        0
-    };
-    let dy = if p.1 < q.1 {
-        q.1 - p.1
-    } else if p.1 >= q.1 + span.1 {
-        p.1 - (q.1 + span.1 - 1)
-    } else {
-        0
-    };
+    let dx = axis_gap(p.0, q.0, span.0);
+    let dy = axis_gap(p.1, q.1, span.1);
     assert_eq!(dx + dy, 1, "{what} {p:?} not adjacent to {q:?}");
+}
+
+/// Gap along one axis between two spans of size `span`, as a proxy for
+/// adjacency (0 = overlapping/aligned on that axis).
+fn axis_gap(p: usize, q: usize, span: usize) -> usize {
+    if p < q {
+        q - p
+    } else if p >= q + span {
+        p - (q + span - 1)
+    } else {
+        0
+    }
 }
 
 /// The layout publishes a complete grid-output contract: every node

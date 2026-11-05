@@ -113,16 +113,32 @@ fn normalize_block(lines: &[&str]) -> Trace {
     let mut ctx = BlockCtx::default();
 
     for line in lines {
-        let line = line.trim();
-        if line.starts_with("== invocation ") {
-            ctx.apply_invocation(line);
-        } else {
-            ctx.emit(line, &mut nodes, &mut bands);
-        }
-        // "-- seed N" markers and "#" comments are block delimiters handled
-        // by the caller; "..." truncation markers never occur (E2 meter).
+        route_block_line(line.trim(), &mut ctx, &mut nodes, &mut bands);
     }
 
+    let mut trace = collect_trace(&nodes, &bands);
+    trace
+}
+
+fn route_block_line(
+    line: &str,
+    ctx: &mut BlockCtx,
+    nodes: &mut BTreeMap<(usize, String, i64, String), NodeEvent>,
+    bands: &mut BTreeMap<(usize, String, i64), BandEvent>,
+) {
+    if line.starts_with("== invocation ") {
+        ctx.apply_invocation(line);
+    } else {
+        ctx.emit(line, nodes, bands);
+    }
+    // "-- seed N" markers and "#" comments are block delimiters handled
+    // by the caller; "..." truncation markers never occur (E2 meter).
+}
+
+fn collect_trace(
+    nodes: &BTreeMap<(usize, String, i64, String), NodeEvent>,
+    bands: &BTreeMap<(usize, String, i64), BandEvent>,
+) -> Trace {
     let mut trace = Trace::new();
     for n in nodes.values() {
         trace.push(event_key(n));

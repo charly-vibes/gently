@@ -5,16 +5,13 @@ use super::*;
 /// observability marks must all be present.
 pub(crate) fn check_dump(name: &str, text: &str) -> Result<(), String> {
     let header = text.lines().next().unwrap_or("");
-    let pin_ok = header.starts_with("# dump: Graph::Easy v0.69 @ ") && header.contains(PIN_COMMIT);
-    if !pin_ok {
+    let pinned = header.starts_with("# dump: Graph::Easy v0.69 @ ") && header.contains(PIN_COMMIT);
+    if !pinned {
         return Err(dump_defect(&format!(
             "{name}: missing the oracle pin header ({PIN_COMMIT})"
         )));
     }
-    if !text
-        .lines()
-        .any(|l| l.starts_with("-- seed ") && l["-- seed ".len()..].trim().parse::<i64>().is_ok())
-    {
+    if !has_seed_field(text) {
         return Err(dump_defect(&format!(
             "{name}: missing the explicit hash-seed field"
         )));
@@ -25,6 +22,11 @@ pub(crate) fn check_dump(name: &str, text: &str) -> Result<(), String> {
         )));
     }
     Ok(())
+}
+
+fn has_seed_field(text: &str) -> bool {
+    text.lines()
+        .any(|l| l.starts_with("-- seed ") && l["-- seed ".len()..].trim().parse::<i64>().is_ok())
 }
 
 /// Split one dump into its `-- seed N` blocks (comment lines excluded) —

@@ -47,22 +47,28 @@ fn p1() {
             "stage {stage} must emit at least one event on the tracer graph"
         );
         for line in lines {
-            assert!(
-                line.contains("dt v1"),
-                "event lacks the schema version (c1): {line:?}"
-            );
-            assert!(
-                line.contains("spec=decision.trace"),
-                "event lacks the governing spec id (c1): {line:?}"
-            );
-            assert!(
-                line.contains(&format!("stage={stage}")),
-                "event lacks its stage: {line:?}"
-            );
+            assert_event_headers(line, stage);
         }
         clear_gate();
         std::fs::remove_file(&file).ok();
     }
+}
+
+/// c1: every emitted event carries the schema version, the governing
+/// spec id, and its own stage.
+fn assert_event_headers(line: &str, stage: &str) {
+    assert!(
+        line.contains("dt v1"),
+        "event lacks the schema version (c1): {line:?}"
+    );
+    assert!(
+        line.contains("spec=decision.trace"),
+        "event lacks the governing spec id (c1): {line:?}"
+    );
+    assert!(
+        line.contains(&format!("stage={stage}")),
+        "event lacks its stage: {line:?}"
+    );
 }
 
 /// decision.trace.p3 (specs/decision-trace.md p3, deriving from c3) plus
