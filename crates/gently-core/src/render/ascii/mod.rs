@@ -16,6 +16,7 @@ mod geometry;
 mod groups;
 mod labels;
 mod polyline;
+mod runs;
 mod styles;
 
 pub(in crate::render) use styles::display_width;
