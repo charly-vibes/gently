@@ -43,6 +43,9 @@ use std::path::{Path, PathBuf};
 #[path = "decision_trace/dump.rs"]
 mod dump;
 
+#[path = "decision_trace/oracle.rs"]
+mod oracle;
+
 #[path = "decision_trace/helpers.rs"]
 mod helpers;
 

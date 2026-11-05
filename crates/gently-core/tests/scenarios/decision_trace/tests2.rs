@@ -9,48 +9,63 @@ use super::*;
 #[test]
 fn p1() {
     let graph = Graph::tracer();
+    p1_gate_off_silence(&graph);
+    p1_event_headers(&graph);
+    assert!(trace_file("p1").file_name().is_some());
+}
 
-    // Regression arm: with the gate unset, emission is a no-op — even
-    // with a file pointed at a fresh path, no bytes appear
-    // (byte-identical corpus stays pinned by the existing corpus tests).
+/// Regression arm: with the gate unset, emission is a no-op — even
+/// with a file pointed at a fresh path, no bytes appear
+/// (byte-identical corpus stays pinned by the existing corpus tests).
+fn p1_gate_off_silence(graph: &Graph) {
     clear_gate();
     let off = trace_file("off");
     std::fs::remove_file(&off).ok();
     // stage=None models "GENTLY_TRACE unset" while the file arm stays
     // pointed — the exact p1 regression shape.
     gently_core::trace::set_test_gate(None, Some(&off));
-    let _ = layout::layout(&graph);
+    let _ = layout::layout(graph);
     assert!(
         !off.exists(),
         "trace-off must not create or write the trace file"
     );
     clear_gate();
+}
 
-    // Version arm: with the gate on, every line for every emitted stage
-    // carries the schema version, the stage, and the governing spec id.
+/// Version arm: with the gate on, every line for every emitted stage
+/// carries the schema version, the stage, and the governing spec id.
+fn p1_event_headers(graph: &Graph) {
     for stage in ["layout.place", "render.route", "parse"] {
         let file = trace_file(&stage.replace('.', "-"));
-        std::fs::remove_file(&file).ok();
-        set_gate(stage, &file);
-        let _ = layout::layout(&graph);
-        if stage == "parse" {
-            // parse events fire in the text parser's statement loop, not
-            // in the layout pass — drive a tiny source through it.
-            let _ = gently_core::parse::text::parse("[ a ] --> [ b ]\n");
-        }
-        std::env::remove_var("GENTLY_TRACE");
-        let text = std::fs::read_to_string(&file)
-            .unwrap_or_else(|e| panic!("trace file for stage {stage} missing: {e}"));
-        let lines: Vec<&str> = text.lines().filter(|l| !l.is_empty()).collect();
-        assert!(
-            !lines.is_empty(),
-            "stage {stage} must emit at least one event on the tracer graph"
-        );
-        for line in lines {
-            assert_event_headers(line, stage);
-        }
-        clear_gate();
-        std::fs::remove_file(&file).ok();
+        p1_stage(graph, stage, &file);
+        assert_stage_events(stage, &file);
+    }
+    clear_gate();
+}
+
+/// Gate on, run the stage's driver, drop the env arm. parse events fire
+/// in the text parser's statement loop, not in the layout pass — so the
+/// parse arm drives a tiny source through it.
+fn p1_stage(graph: &Graph, stage: &str, file: &std::path::Path) {
+    std::fs::remove_file(file).ok();
+    set_gate(stage, file);
+    let _ = layout::layout(graph);
+    if stage == "parse" {
+        let _ = gently_core::parse::text::parse("[ a ] --> [ b ]\n");
+    }
+    std::env::remove_var("GENTLY_TRACE");
+}
+
+fn assert_stage_events(stage: &str, file: &std::path::Path) {
+    let text = std::fs::read_to_string(file)
+        .unwrap_or_else(|e| panic!("trace file for stage {stage} missing: {e}"));
+    let lines: Vec<&str> = text.lines().filter(|l| !l.is_empty()).collect();
+    assert!(
+        !lines.is_empty(),
+        "stage {stage} must emit at least one event on the tracer graph"
+    );
+    for line in lines {
+        assert_event_headers(line, stage);
     }
 }
 

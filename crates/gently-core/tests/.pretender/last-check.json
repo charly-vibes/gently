@@ -1,0 +1,63 @@
+{
+  "files": [
+    {
+      "path": "e3_faithfulness/e3.rs",
+      "role": "app",
+      "diagnostics": [],
+      "file_violations": [],
+      "units": [
+        {
+          "name": "e3_normalization_is_order_insensitive",
+          "kind": "Function",
+          "start_line": 10,
+          "metrics": {
+            "cyclomatic": 3,
+            "cognitive": 3,
+            "assertions": 2,
+            "function_lines": 18,
+            "params": 0,
+            "nesting_max": 2,
+            "abc": 13.19090595827292
+          },
+          "violations": []
+        },
+        {
+          "name": "e3_pairwise_faithfulness",
+          "kind": "Function",
+          "start_line": 35,
+          "metrics": {
+            "cyclomatic": 7,
+            "cognitive": 10,
+            "assertions": 4,
+            "function_lines": 58,
+            "params": 0,
+            "nesting_max": 3,
+            "abc": 32.341923257592455
+          },
+          "violations": [
+            {
+              "metric": "function_lines",
+              "actual": 58.0,
+              "limit": 30.0
+            },
+            {
+              "metric": "abc",
+              "actual": 32.341923257592455,
+              "limit": 30.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "history": {
+    "top_hotspots": [],
+    "top_patterns": [],
+    "resolution": {
+      "fixed": 0,
+      "still_open": 2,
+      "new": 0,
+      "rate": 0.0
+    }
+  }
+}

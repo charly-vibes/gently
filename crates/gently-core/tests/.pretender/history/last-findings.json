@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "run_id": "1793835726-623372",
+  "timestamp": "2026-11-04T23:42:06Z",
+  "finding_ids": [
+    "e3_faithfulness/e3.rs::e3_pairwise_faithfulness::function_lines_max",
+    "e3_faithfulness/e3.rs::e3_pairwise_faithfulness::abc_max"
+  ],
+  "first_seen": {
+    "e3_faithfulness.rs::permute_block::function_lines_max": "2026-11-04T23:40:14Z",
+    "e3_faithfulness/e3.rs::e3_pairwise_faithfulness::function_lines_max": "2026-11-04T23:42:06Z",
+    "e3_faithfulness/e3.rs::e3_pairwise_faithfulness::abc_max": "2026-11-04T23:42:06Z",
+    "e3_faithfulness.rs::permute_block::abc_max": "2026-11-04T23:40:14Z",
+    "e3_faithfulness.rs::::mut_ratio": "2026-11-04T23:40:14Z",
+    "e3_faithfulness.rs::parse_node::function_lines_max": "2026-11-04T23:40:14Z",
+    "e3_faithfulness.rs::normalize_block::function_lines_max": "2026-11-04T23:40:14Z"
+  }
+}
