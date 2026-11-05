@@ -128,6 +128,8 @@ pub(super) enum Ep {
 /// (bare scopes), and the group nodes declared here belong to (`None` at
 /// graph level and in bare scopes — bare scopes keep their nodes
 /// ungrouped).
+mod autosplit;
+
 pub(super) struct ScopeSt {
     pub(super) is_group: bool,
     pub(super) group: Option<usize>,
@@ -280,130 +282,5 @@ impl<'a> P<'a> {
             }
         }
         Ok(idx)
-    }
-
-    /// Resolve `base:port[:compass]` (c5): the base must be an autosplit
-    /// node; numeric ports index the parts, compass points resolve to the
-    /// first part; everything else fails with the oracle's typed error.
-    pub(super) fn resolve_port(
-        &mut self,
-        base: &str,
-        port: &str,
-        compass: Option<&str>,
-    ) -> Result<usize, ParseError> {
-        let port_err = |p: &P| {
-            err(
-                p.line(),
-                format!(
-                    "Cannot find autosplit node for {base}:{port} on edge {}",
-                    p.g.edges.len() + 1
-                ),
-            )
-        };
-        let parts = match self.split.get(base) {
-            Some(parts) => parts.clone(),
-            None => return Err(port_err(self)),
-        };
-        if let Ok(i) = port.parse::<usize>() {
-            return parts.get(i).copied().ok_or_else(|| port_err(self));
-        }
-        let is_compass = compass.is_some()
-            || matches!(
-                port,
-                "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw" | "c"
-            );
-        if is_compass {
-            Ok(parts[0])
-        } else {
-            Err(port_err(self))
-        }
-    }
-
-    /// Apply an attribute list to a node, then autosplit if the resulting
-    /// node is a record or HTML-like label (c5).
-    pub(super) fn apply_node_attrs(
-        &mut self,
-        idx: usize,
-        list: &[(String, String)],
-    ) -> Result<(), ParseError> {
-        for (k, v) in list {
-            self.g.set_attr(Scope::Node(idx), k, v);
-        }
-        self.maybe_autosplit(idx)
-    }
-
-    /// Autosplit a finished node label (c5): a `shape=record` label with
-    /// a vertical bar splits flat into parts; an HTML-like table label
-    /// splits into one part per `<TD>` cell. Unsplit labels are kept.
-    fn maybe_autosplit(&mut self, idx: usize) -> Result<(), ParseError> {
-        let shape = self
-            .g
-            .get_attr(Scope::Node(idx), "shape")
-            .unwrap_or("")
-            .to_string();
-        let label = match self.g.get_attr(Scope::Node(idx), "label") {
-            Some(label) => label.to_string(),
-            None => return Ok(()),
-        };
-        if shape == "record" {
-            if label.contains('{') || label.contains('}') {
-                let escaped = record::escape_record_braces(&label);
-                self.g.set_attr(Scope::Node(idx), "label", &escaped);
-                self.split_record(idx, &escaped)
-            } else if label.contains('|') {
-                self.split_record(idx, &label)
-            } else {
-                Ok(())
-            }
-        } else if label.starts_with('<') && label.ends_with('>') && label.len() >= 2 {
-            self.split_html(idx, &label)
-        } else {
-            Ok(())
-        }
-    }
-
-    /// The record split: the original node is renamed to the label text
-    /// (its `label` attribute dropped, `basename` set to the old name) and
-    /// `name.N` part nodes are created — flat on every `|`, the oracle's
-    /// own surviving behavior (not Graphviz's nesting semantics).
-    fn split_record(&mut self, idx: usize, label: &str) -> Result<(), ParseError> {
-        let base = self.g.nodes[idx].name.clone();
-        self.g.nodes[idx].name = label.to_string();
-        self.g.nodes[idx].attributes.remove("label");
-        self.g.set_attr(Scope::Node(idx), "basename", &base);
-        self.make_parts(base, label.split('|').count());
-        Ok(())
-    }
-
-    /// The HTML-like split: bare text outside `<TD>` cells is malformed
-    /// (oracle: "not recognized"); parts are the `<TD>` cell texts, the
-    /// original node renamed to the raw label with `basename` unset.
-    fn split_html(&mut self, idx: usize, label: &str) -> Result<(), ParseError> {
-        let texts = match record::html_parts(&label[1..label.len() - 1]) {
-            Ok(texts) if !texts.is_empty() => texts,
-            _ => {
-                return Err(err(
-                    self.line(),
-                    format!(
-                        "'{}' not recognized by Graph::Easy::Parser::Graphviz",
-                        label
-                    ),
-                ))
-            }
-        };
-        let base = self.g.nodes[idx].name.clone();
-        self.g.nodes[idx].name = label.to_string();
-        self.g.nodes[idx].attributes.remove("label");
-        self.make_parts(base, texts.len());
-        Ok(())
-    }
-
-    /// Create the `name.N` part nodes for a split node and register the
-    /// split map (references to `name` resolve to part 0 from now on).
-    fn make_parts(&mut self, base: String, count: usize) {
-        let parts: Vec<usize> = (0..count)
-            .map(|i| self.g.add_node(&format!("{}.{}", base, i)))
-            .collect();
-        self.split.insert(base, parts);
     }
 }

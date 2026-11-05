@@ -9,10 +9,16 @@
 //! under the tidy gates; geometry shaped by the recorded v0.69 @ ededa3d7
 //! companions (the parallel elbow, the diamond's verticals and c->d route).
 
+mod attach;
+
 use super::canvas::Canvas;
 use super::edges::EdgeNodeEnds;
 use super::RenderError;
 use crate::layout::{Cell, Layout};
+use attach::{
+    dir_between, entry_attachment, entry_dir, exit_attachment, exit_dir, start_glyph, waypoints,
+    EntrySide,
+};
 
 /// Direction of travel along an edge polyline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,16 +67,9 @@ pub(super) fn draw(
     start_arrow: bool,
     ends: EdgeNodeEnds,
 ) -> Result<(), RenderError> {
+    let ctx = path_ctx(canvas, layout, edge_index, from, to);
     let (sc, sr) = layout.node_cells[from];
     let (tc, tr) = layout.node_cells[to];
-    let ctx = Ctx {
-        path: &layout.edge_paths[edge_index],
-        tc,
-        tr,
-        edge_index,
-        span_s: canvas.spans[from],
-        span_t: canvas.spans[to],
-    };
     let Some(&first) = ctx.path.first() else {
         return Err(RenderError::unsupported(format!(
             "edge {edge_index} has an empty path"
@@ -80,31 +79,59 @@ pub(super) fn draw(
     let exit = exit_dir(&ctx, first, sc, sr)?;
     let (entry, _) = entry_dir(&ctx, last)?;
     let a0 = exit_attachment(canvas, exit, sc, sr, ctx.span_s, edge_index, first.1)?;
-    // An indexed-port slot entry arrives one char east of the target's
-    // east border — inside the adjacent gap column, mirroring the
-    // west-side rule's one-char offset (gently-byq: the SO fixture's
-    // `<` at the gap column's second char). Ordinary east-side entries
-    // stay flush (the recorded bent westward shapes).
-    let side = EntrySide {
+    let side = entry_side(&ctx, tc, tr, last);
+    let a_end = entry_attachment(canvas, entry, &side, edge_index)?;
+    let (waypoints, arrow) = final_waypoints(canvas, &ctx, exit, entry, a0, a_end, ends)?;
+    let start = start_head(start_arrow, ends, exit);
+    draw_runs(canvas, &waypoints, a0, a_end, arrow, start);
+    Ok(())
+}
+
+/// The polyline context of edge `edge_index`: its routed path and both
+/// endpoints' spans.
+fn path_ctx<'a>(
+    canvas: &Canvas,
+    layout: &'a Layout,
+    edge_index: usize,
+    from: usize,
+    to: usize,
+) -> Ctx<'a> {
+    let (tc, tr) = layout.node_cells[to];
+    Ctx {
+        path: &layout.edge_paths[edge_index],
+        tc,
+        tr,
+        edge_index,
+        span_s: canvas.spans[from],
+        span_t: canvas.spans[to],
+    }
+}
+
+/// The target-side entry geometry: an indexed-port slot entry arrives one
+/// char east of the target's east border — inside the adjacent gap
+/// column, mirroring the west-side rule's one-char offset (gently-byq:
+/// the SO fixture's `<` at the gap column's second char). Ordinary
+/// east-side entries stay flush (the recorded bent westward shapes).
+fn entry_side(ctx: &Ctx, tc: usize, tr: usize, last: Cell) -> EntrySide {
+    EntrySide {
         c: tc,
         r: tr,
         span: ctx.span_t,
         row: last.1,
         shift: usize::from(last.0 >= tc + ctx.span_t.0 && last.1 > tr),
-    };
-    let a_end = entry_attachment(canvas, entry, &side, edge_index)?;
-    let (waypoints, arrow) = final_waypoints(canvas, &ctx, exit, entry, a0, a_end, ends)?;
-    // The start arrowhead points into the source box — opposite the exit
-    // travel direction, the same glyph an end arrowhead arriving through
-    // that side would carry. A shape:edge source carries none (upstream
-    // strips its START flags outright).
-    let start = if start_arrow && !ends.src {
+    }
+}
+
+/// The start arrowhead points into the source box — opposite the exit
+/// travel direction, the same glyph an end arrowhead arriving through
+/// that side would carry. A shape:edge source carries none (upstream
+/// strips its START flags outright).
+fn start_head(start_arrow: bool, ends: EdgeNodeEnds, exit: Dir) -> Option<char> {
+    if start_arrow && !ends.src {
         Some(start_glyph(exit))
     } else {
         None
-    };
-    draw_runs(canvas, &waypoints, a0, a_end, arrow, start);
-    Ok(())
+    }
 }
 
 /// The waypoint chain and the (possibly suppressed) end arrowhead: a
@@ -127,26 +154,43 @@ fn final_waypoints(
             Some(arrow_of(ctx)?),
         ));
     }
-    let last = *ctx.path.last().expect("path has a first cell");
-    // The direction of the final run: the last path hop's direction (a
-    // one-cell path travels straight from the exit).
-    let last_dir = match ctx.path.len() {
-        0..=1 => exit,
-        n => dir_between(ctx.path[n - 2], ctx.path[n - 1], ctx.edge_index)?,
-    };
+    let last_dir = last_run_dir(ctx, exit)?;
     let sliding_past =
         matches!(entry, Dir::North | Dir::South) && matches!(last_dir, Dir::East | Dir::West);
     if !sliding_past {
         return Ok((waypoints(canvas, ctx, exit, entry, a0, a_end)?, None));
     }
+    Ok((slide_past(canvas, ctx, exit, a0, last_dir)?, None))
+}
+
+/// The direction of the final run: the last path hop's direction (a
+/// one-cell path travels straight from the exit).
+fn last_run_dir(ctx: &Ctx, exit: Dir) -> Result<Dir, RenderError> {
+    match ctx.path.len() {
+        0..=1 => Ok(exit),
+        n => dir_between(ctx.path[n - 2], ctx.path[n - 1], ctx.edge_index),
+    }
+}
+
+/// The sliding shape: the run extends flush through the target column's
+/// far edge (West: through the target's west offset; East: the column
+/// after its span).
+fn slide_past(
+    canvas: &Canvas,
+    ctx: &Ctx,
+    exit: Dir,
+    a0: Pt,
+    last_dir: Dir,
+) -> Result<Vec<Pt>, RenderError> {
     let far = if last_dir == Dir::West {
         canvas.offsets[ctx.tc]
     } else {
         canvas.offsets[ctx.tc + 1]
     };
     let mut wps = waypoints_before_tail(canvas, ctx, exit, a0)?;
-    wps.push((far, canvas.mid(last.1)));
-    Ok((wps, None))
+    let last = ctx.path.last().expect("path has a first cell").1;
+    wps.push((far, canvas.mid(last)));
+    Ok(wps)
 }
 
 /// The entry arrowhead glyph for the path (the normal target-side rule).
@@ -173,202 +217,6 @@ fn waypoints_before_tail(
         }
         dir = next_dir;
     }
-    Ok(wps)
-}
-
-/// The start arrowhead glyph for an edge leaving its source box through
-/// `dir`: the arrow points INTO the box (gently-7qz, pinned by
-/// tests/repro/claims/pod-bidir-parallel.observed — the bent bidirectional
-/// edge leaves north and draws `v` at the source's north attachment).
-fn start_glyph(exit: Dir) -> char {
-    match exit {
-        Dir::East => '<',
-        Dir::West => '>',
-        Dir::North => 'v',
-        Dir::South => '^',
-    }
-}
-
-/// How the path leaves the source box, judged from the first path cell's
-/// position relative to the source cell.
-fn exit_dir(ctx: &Ctx, first: Cell, sc: usize, sr: usize) -> Result<Dir, RenderError> {
-    // A multi-celled source is left through any column of its span
-    // (gently-awd): east of the anchor leaves east, west leaves west,
-    // same-column rows leave north/south. An INDEXED port slot leaves
-    // through the span's east side on the slot's continuation row
-    // (gently-byq): the first path cell sits strictly east of the span,
-    // on a row inside the source's row span below the band.
-    let span_c = ctx.span_s.0;
-    if first.1 == sr {
-        match first.0.cmp(&sc) {
-            std::cmp::Ordering::Greater => Ok(Dir::East),
-            std::cmp::Ordering::Less => Ok(Dir::West),
-            std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "leaves")),
-        }
-    } else if first.0 >= sc + span_c && first.1 > sr && first.1 < sr + ctx.span_s.1.max(1) {
-        Ok(Dir::East)
-    } else if first.0 < sc && first.1 > sr && first.1 < sr + ctx.span_s.1.max(1) {
-        // The span's WEST side on a continuation row (gently-0is, the
-        // exit mirror of the entry's west-side rule, gently-206): the
-        // corpus's straight gap cell rides the source's span rows west
-        // of the node — moving east into the source's west face.
-        Ok(Dir::West)
-    } else if first.0 >= sc && first.0 < sc + span_c {
-        Ok(if first.1 < sr { Dir::North } else { Dir::South })
-    } else {
-        Err(unsupported_side(ctx, "leaves"))
-    }
-}
-
-/// How the path arrives at the target box, and the matching arrowhead
-/// char, judged from the last path cell's position.
-fn entry_dir(ctx: &Ctx, last: Cell) -> Result<(Dir, char), RenderError> {
-    let (tc, tr) = (ctx.tc, ctx.tr);
-    let span_c = ctx.span_t.0;
-    if last.1 == tr {
-        match last.0.cmp(&tc) {
-            std::cmp::Ordering::Less => Ok((Dir::East, '>')),
-            std::cmp::Ordering::Greater => Ok((Dir::West, '<')),
-            std::cmp::Ordering::Equal => Err(unsupported_side(ctx, "enters")),
-        }
-    } else if last.0 >= tc + span_c && last.1 > tr && last.1 < tr + ctx.span_t.1.max(1) {
-        // An INDEXED port slot arrives through the span's east side on
-        // the slot's continuation row (gently-byq): moving west into the
-        // target's east, arrowhead `<`.
-        Ok((Dir::West, '<'))
-    } else if last.0 < tc && last.1 > tr && last.1 < tr + ctx.span_t.1.max(1) {
-        // The span's WEST side on a continuation row (gently-206): the
-        // fan-in star's west-ring attachments ride the target's grown
-        // row span below the band — moving east into the target's west,
-        // arrowhead `>` (the exit mirror of the east-side rule).
-        Ok((Dir::East, '>'))
-    } else if last.0 >= tc && last.0 < tc + span_c {
-        if last.1 < tr {
-            // Moving south arrives through the target's north side.
-            Ok((Dir::South, 'v'))
-        } else {
-            // Moving north arrives through its south side.
-            Ok((Dir::North, '^'))
-        }
-    } else {
-        Err(unsupported_side(ctx, "enters"))
-    }
-}
-
-/// The attachment point where the path leaves a box through `dir`: one
-/// char off the border (horizontal exits) or one line off (vertical).
-/// Rejected as a typed error when it falls outside the grid — valid
-/// layouts never produce that, since exits and entries always have a gap
-/// row on their far side.
-fn exit_attachment(
-    canvas: &Canvas,
-    dir: Dir,
-    c: usize,
-    r: usize,
-    span: (usize, usize),
-    ei: usize,
-    exit_row: usize,
-) -> Result<Pt, RenderError> {
-    let pt = match dir {
-        // The east border of a multi-column node sits one char west of
-        // the column after its span (gently-awd); the attachment line is
-        // the exit cell's row band's middle line — the band's own for a
-        // band-row exit, the slot's continuation row for an indexed-port
-        // slot exit (gently-byq: line `band_top + 3N + 1`).
-        Dir::East => (Some(canvas.offsets[c + span.0]), Some(canvas.mid(exit_row))),
-        Dir::West => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(exit_row))),
-        Dir::North => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::South => (Some(canvas.vert_x(c)), Some(canvas.box_below(r, span.1))),
-    };
-    attachment(canvas, pt, ei, "leaves")
-}
-
-/// The box side a path arrives at: the target anchor cell, span, the
-/// entry cell's row band (gently-byq: the slot's continuation row), and
-/// the extra char shift for an indexed-port east-side entry.
-struct EntrySide {
-    c: usize,
-    r: usize,
-    span: (usize, usize),
-    row: usize,
-    shift: usize,
-}
-
-/// The attachment point where the path arrives at a box moving `dir`:
-/// into the west side from the west, the east side from the east, the
-/// north side from above, the south side from below.
-fn entry_attachment(
-    canvas: &Canvas,
-    dir: Dir,
-    s: &EntrySide,
-    ei: usize,
-) -> Result<Pt, RenderError> {
-    let (c, r, span) = (s.c, s.r, s.span);
-    let pt = match dir {
-        // The attachment line is the entry cell's row band's middle line
-        // (gently-byq: an indexed-port slot entry lands on the slot's
-        // continuation row, line `band_top + 3N + 1`).
-        Dir::East => (canvas.offsets[c].checked_sub(1), Some(canvas.mid(s.row))),
-        Dir::West => (
-            Some(canvas.offsets[c + span.0] + s.shift),
-            Some(canvas.mid(s.row)),
-        ),
-        Dir::South => (Some(canvas.vert_x(c)), canvas.band_top(r).checked_sub(1)),
-        Dir::North => (Some(canvas.vert_x(c)), Some(canvas.box_below(r, span.1))),
-    };
-    attachment(canvas, pt, ei, "enters")
-}
-
-/// Validate an attachment point and unwrap its coordinates.
-fn attachment(
-    canvas: &Canvas,
-    pt: (Option<usize>, Option<usize>),
-    ei: usize,
-    verb: &str,
-) -> Result<Pt, RenderError> {
-    let (Some(x), Some(y)) = pt else {
-        return Err(RenderError::unsupported(format!(
-            "edge {ei} {verb} its box through an unreachable side"
-        )));
-    };
-    if y >= canvas.grid.len() || x >= canvas.grid[0].len() {
-        return Err(RenderError::unsupported(format!(
-            "edge {ei} {verb} its box outside the grid at char {x},{y}"
-        )));
-    }
-    Ok((x, y))
-}
-
-/// Walk the path, collecting waypoints: the source attachment, a corner
-/// wherever the run direction turns, and the target attachment.
-fn waypoints(
-    canvas: &Canvas,
-    ctx: &Ctx,
-    exit: Dir,
-    entry: Dir,
-    a0: Pt,
-    a_end: Pt,
-) -> Result<Vec<Pt>, RenderError> {
-    let mut wps = vec![a0];
-    let mut dir = exit;
-    for (i, &cell) in ctx.path.iter().enumerate() {
-        let next_dir = match ctx.path.get(i + 1) {
-            Some(&next) => dir_between(cell, next, ctx.edge_index)?,
-            None => entry,
-        };
-        if next_dir != dir {
-            push_corner(
-                canvas,
-                ctx,
-                &mut wps,
-                dir,
-                next_dir,
-                ctx.path.get(i + 1).copied(),
-            )?;
-        }
-        dir = next_dir;
-    }
-    wps.push(a_end);
     Ok(wps)
 }
 
@@ -461,24 +309,4 @@ fn ordered(a: usize, b: usize) -> (usize, usize) {
     } else {
         (b, a)
     }
-}
-
-/// Direction between two orthogonally adjacent path cells.
-fn dir_between(p: Cell, q: Cell, ei: usize) -> Result<Dir, RenderError> {
-    match (q.0 as isize - p.0 as isize, q.1 as isize - p.1 as isize) {
-        (1, 0) => Ok(Dir::East),
-        (-1, 0) => Ok(Dir::West),
-        (0, 1) => Ok(Dir::South),
-        (0, -1) => Ok(Dir::North),
-        _ => Err(RenderError::unsupported(format!(
-            "edge {ei} path cells {p:?} -> {q:?} are not orthogonally adjacent"
-        ))),
-    }
-}
-
-fn unsupported_side(ctx: &Ctx, verb: &str) -> RenderError {
-    RenderError::unsupported(format!(
-        "edge {} {verb} its box through an unsupported side",
-        ctx.edge_index
-    ))
 }

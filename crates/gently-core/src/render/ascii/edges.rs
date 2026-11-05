@@ -55,12 +55,7 @@ pub(super) fn draw_straight(
         stamp_flagged(canvas, sr, c, westward, edge_index, lines, ends);
         return;
     }
-    let run = straight_run_for(canvas, c, edge_index, lines);
-    let run = if westward && !canvas.edge_bidir[edge_index] {
-        mirror_run(&run)
-    } else {
-        run
-    };
+    let run = straight_run_for(canvas, c, edge_index, lines, westward);
     canvas.stamp(
         canvas.band_top(sr) + canvas.row_height[sr] - 2,
         c,
@@ -72,7 +67,13 @@ pub(super) fn draw_straight(
 /// The straight horizontal run for one edge at column `c`: bidirectional
 /// edges use the style's own bidi run, labelless edges the arrow-aware
 /// edge run, labelled edges the shared labelled run.
-fn straight_run_for(canvas: &Canvas, c: usize, edge_index: usize, lines: &[LabelLine]) -> String {
+fn straight_run_for(
+    canvas: &Canvas,
+    c: usize,
+    edge_index: usize,
+    lines: &[LabelLine],
+    westward: bool,
+) -> String {
     let style = canvas.edge_style[edge_index].clone();
     let width = canvas.col_width[c];
     let arrowed = canvas.edge_arrow_end[edge_index];
@@ -84,7 +85,12 @@ fn straight_run_for(canvas: &Canvas, c: usize, edge_index: usize, lines: &[Label
     } else {
         labelled_straight_run(&style, width, arrowed)
     };
-    run
+    let west = westward && !canvas.edge_bidir[edge_index];
+    if west {
+        mirror_run(&run)
+    } else {
+        run
+    }
 }
 
 /// Stamp the shape:edge-stripped straight run (gently-cbk): the effective
