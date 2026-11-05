@@ -61,35 +61,52 @@ fn simple_token(c: char) -> Option<Tok> {
     })
 }
 
+/// Cursor over the char vector: index, 1-based line, byte offset. One
+/// cohesive scanner state instead of three parallel mutable locals.
+#[derive(Default)]
+struct Cursor {
+    i: usize,
+    line: usize,
+    byte: usize,
+}
+
+impl Cursor {
+    fn byte_len(chars: &[char], from: usize, to: usize) -> usize {
+        chars[from..to].iter().map(|c| c.len_utf8()).sum()
+    }
+}
+
 /// Tokenize `src`; unknown characters and unterminated strings/HTML-like
 /// strings are tokenizing errors (c5 — the no-partial-graph path).
 pub(super) fn lex(src: &str) -> Result<Vec<Token>, super::ParseError> {
     let chars: Vec<char> = src.chars().collect();
     let mut toks = Vec::new();
-    let mut i = 0usize;
-    let mut line = 1usize;
-    let mut byte = 0usize;
-    while i < chars.len() {
-        let c = chars[i];
-        let scanned = scan_token(&chars, i, line)?;
+    let mut cur = Cursor {
+        i: 0,
+        line: 1,
+        byte: 0,
+    };
+    while cur.i < chars.len() {
+        let c = chars[cur.i];
+        let scanned = scan_token(&chars, cur.i, cur.line)?;
         let (t, end, newlines) = match scanned {
             Some(scanned) => scanned,
             None => {
                 // whitespace: newline chars advance the error line
-                line += if c == '\n' { 1 } else { 0 };
-                i += 1;
-                byte += c.len_utf8();
+                cur.line += usize::from(c == '\n');
+                cur.i += 1;
+                cur.byte += c.len_utf8();
                 continue;
             }
         };
         toks.push(Token {
             tok: t,
-            line,
-            start: byte,
+            line: cur.line,
+            start: cur.byte,
         });
-        line += newlines;
-        byte += chars[i..end].iter().map(|c| c.len_utf8()).sum::<usize>();
-        i = end;
+        cur.line += newlines;
+        cur.byte += Cursor::byte_len(&chars, cur.i, end);
+        cur.i = end;
     }
     Ok(toks)
 }
@@ -131,36 +148,48 @@ fn arrow(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), s
     }
 }
 
+/// Running scan state for a multi-char token: raw content so far, next
+/// index, and newlines seen (keeps error lines honest). One cohesive
+/// state instead of parallel mutable locals.
+struct StrScan {
+    raw: String,
+    j: usize,
+    newlines: usize,
+}
+
+impl StrScan {
+    fn at(start: usize) -> Self {
+        StrScan {
+            raw: String::new(),
+            j: start,
+            newlines: 0,
+        }
+    }
+    fn push(&mut self, c: char) {
+        self.newlines += usize::from(c == '\n');
+        self.raw.push(c);
+        self.j += 1;
+    }
+}
+
 /// A quoted string: raw content with escapes intact, through the unescaped
 /// closing `"`; counted newlines keep error lines honest.
 fn quoted(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), super::ParseError> {
-    let mut raw = String::new();
-    let mut j = i + 1;
-    let mut l = line;
+    let mut s = StrScan::at(i + 1);
     loop {
-        match chars.get(j) {
+        match chars.get(s.j) {
             None => return Err(err(line, "unterminated quoted string")),
-            Some('"') => {
-                return Ok((Tok::Str(raw), j + 1, l - line));
-            }
+            Some('"') => return Ok((Tok::Str(s.raw), s.j + 1, s.newlines)),
+            // escapes stay raw: the backslash and the escaped char both
+            // land in the token verbatim
             Some('\\') => {
-                raw.push('\\');
-                if let Some(&nc) = chars.get(j + 1) {
-                    if nc == '\n' {
-                        l += 1;
-                    }
-                    raw.push(nc);
-                    j += 1;
+                s.raw.push('\\');
+                if let Some(&nc) = chars.get(s.j + 1) {
+                    s.push(nc); // advances past the escaped char
                 }
-                j += 1;
+                s.j += 1; // advance past the backslash
             }
-            Some(&nc) => {
-                if nc == '\n' {
-                    l += 1;
-                }
-                raw.push(nc);
-                j += 1;
-            }
+            Some(&nc) => s.push(nc),
         }
     }
 }
@@ -169,24 +198,22 @@ fn quoted(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), 
 /// brackets stay part of the raw value (the oracle keeps them in the node
 /// name after autosplit).
 fn html(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), super::ParseError> {
-    let mut raw = String::from("<");
-    let mut j = i + 1;
-    let mut l = line;
+    let mut s = StrScan::at(i + 1);
+    s.raw.push('<');
+    s.j = i + 1;
     let mut depth = 1usize;
-    while j < chars.len() {
-        let c = chars[j];
-        if c == '\n' {
-            l += 1;
-        }
-        raw.push(c);
-        j += 1;
-        if c == '<' {
-            depth += 1;
-        } else if c == '>' {
-            depth -= 1;
-            if depth == 0 {
-                return Ok((Tok::Html(raw), j, l - line));
+    while let Some(&c) = chars.get(s.j) {
+        let closing = {
+            s.push(c);
+            if c == '<' {
+                depth += 1;
+            } else if c == '>' {
+                depth -= 1;
             }
+            depth == 0
+        };
+        if closing {
+            return Ok((Tok::Html(s.raw), s.j, s.newlines));
         }
     }
     Err(err(line, "unterminated HTML-like string"))
@@ -194,11 +221,6 @@ fn html(chars: &[char], i: usize, line: usize) -> Result<(Tok, usize, usize), su
 
 /// An identifier: alphanumerics plus `_`, `.`, `$`, `+`.
 fn ident(chars: &[char], i: usize) -> (Tok, usize) {
-    let mut s = String::new();
-    let mut j = i;
-    while j < chars.len() && ident_char(chars[j]) {
-        s.push(chars[j]);
-        j += 1;
-    }
-    (Tok::Ident(s), j)
+    let end = chars[i..].iter().take_while(|&&c| ident_char(c)).count() + i;
+    (Tok::Ident(chars[i..end].iter().collect()), end)
 }
