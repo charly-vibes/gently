@@ -1,0 +1,232 @@
+{
+  "ok": true,
+  "envelope_version": "0.1",
+  "cli_version": "0.1.0",
+  "envelope_kind": "ok",
+  "data": {
+    "schema_version": "brief.v1",
+    "as_of": "2026-11-18",
+    "generated_at": "2026-11-18T21:12:09.446236076Z",
+    "sources": [
+      {
+        "name": "beads",
+        "status": "present",
+        "observed_at": "2026-11-16T21:33:23Z",
+        "staleness": "fresh",
+        "detail": "12 malformed line(s) skipped in .beads/issues.jsonl"
+      },
+      {
+        "name": "git",
+        "status": "present",
+        "observed_at": "2026-11-16T11:40:03Z",
+        "staleness": "fresh",
+        "detail": null
+      },
+      {
+        "name": "openspec",
+        "status": "present",
+        "observed_at": "2026-11-16T11:40:03.262215901Z",
+        "staleness": "fresh",
+        "detail": null
+      },
+      {
+        "name": "whisper",
+        "status": "present",
+        "observed_at": "2026-10-16T20:40:40Z",
+        "staleness": "stale",
+        "detail": null
+      },
+      {
+        "name": "curation",
+        "status": "present",
+        "observed_at": "2026-11-18T21:12:09.439748465Z",
+        "staleness": "fresh",
+        "detail": null
+      }
+    ],
+    "curation": {
+      "updated_at": "2026-11-18T21:12:09.439748465Z",
+      "confirmed_at": null
+    },
+    "purpose_lite": null,
+    "focus": [],
+    "in_flight": [
+      {
+        "id": "gently-71w",
+        "title": "Implement Hegel property tests",
+        "status": "open",
+        "priority": 1,
+        "blocked_by": [
+          "gently-m0l"
+        ],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-jzb",
+        "title": "release: publish prebuilt binaries for the five targets on GitHub Releases",
+        "status": "open",
+        "priority": 1,
+        "blocked_by": [],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-m0l",
+        "title": "Research: Hegel property-based testing plan (antithesis-research)",
+        "status": "open",
+        "priority": 1,
+        "blocked_by": [],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-u7x",
+        "title": "migrate: single-tree corpus (mcy step 3) — retire two-tree mirror + deploy_specs.py + drift gate",
+        "status": "open",
+        "priority": 2,
+        "blocked_by": [],
+        "age_days": 33,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-w89",
+        "title": "docs: apply README front-door standard v0.4 (§5.1)",
+        "status": "open",
+        "priority": 2,
+        "blocked_by": [],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      }
+    ],
+    "blocked": [
+      {
+        "id": "gently-71w",
+        "title": "Implement Hegel property tests",
+        "status": "open",
+        "priority": 1,
+        "blocked_by": [
+          "gently-m0l"
+        ],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      }
+    ],
+    "next": [
+      {
+        "id": "gently-jzb",
+        "title": "release: publish prebuilt binaries for the five targets on GitHub Releases",
+        "status": "open",
+        "priority": 1,
+        "blocked_by": [],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-m0l",
+        "title": "Research: Hegel property-based testing plan (antithesis-research)",
+        "status": "open",
+        "priority": 1,
+        "blocked_by": [],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-u7x",
+        "title": "migrate: single-tree corpus (mcy step 3) — retire two-tree mirror + deploy_specs.py + drift gate",
+        "status": "open",
+        "priority": 2,
+        "blocked_by": [],
+        "age_days": 33,
+        "reason": null,
+        "confirmed_at": null
+      },
+      {
+        "id": "gently-w89",
+        "title": "docs: apply README front-door standard v0.4 (§5.1)",
+        "status": "open",
+        "priority": 2,
+        "blocked_by": [],
+        "age_days": 2,
+        "reason": null,
+        "confirmed_at": null
+      }
+    ],
+    "parked": [],
+    "needs_retriage": [],
+    "recent": [
+      {
+        "sha": "9a4293275bf59c518ec7d184055055056b73a39e",
+        "committed_at": "2026-11-16T11:40:03Z",
+        "subject": "docs: apply issue-review fixes to README/release tickets",
+        "outcome": null
+      },
+      {
+        "sha": "7606dac886026baef21fa0a1eeda4fedb84a12cf",
+        "committed_at": "2026-11-16T00:16:09Z",
+        "subject": "docs: file README front-door + release tickets",
+        "outcome": null
+      },
+      {
+        "sha": "af74c5966ae01a8ac8808423b9663a673c8cb8e3",
+        "committed_at": "2026-11-05T14:49:24Z",
+        "subject": "fix(lint): drop unused test imports",
+        "outcome": null
+      },
+      {
+        "sha": "20cae0549f4fe7c7535985b7ccae1abfac6fd462",
+        "committed_at": "2026-11-05T14:48:41Z",
+        "subject": "fix(lint): cut_event takes &str args",
+        "outcome": null
+      },
+      {
+        "sha": "8b72ff16e8d19d00d296ad6c1eaca25fdf36d19d",
+        "committed_at": "2026-11-05T14:47:51Z",
+        "subject": "fix(lint): clippy clean — dedupe cut_event, drop unused imports, needless return",
+        "outcome": null
+      }
+    ],
+    "health": {
+      "status": "amber",
+      "basis": "signals",
+      "signals": [
+        {
+          "kind": "orphan_commits",
+          "reason": "57 commits in the 14-day window link no tracker id or open work-item path: 05dc7e99bdcf685087017d458a361a1e8acad5b0 (refactor(quality): move ge_oracle manifest helpers to manifest module, breaking lazy_cluster); 0bdc9655e13e73cfae4e38c2ea30d91d0cdfad1e (refactor(quality): split decision_trace further (dump/verdicts modules); seed_blocks by split; fix nesting in check_manifest_row/p6); 13e1c0d01cd2af61f542d445850662150fbc561c (refactor(tests): split decision-trace oracle helpers, flatten with iterators); 16242dfea2f787507e4b5ccde6e929d2ae432866 (refactor(quality): extract ge_ascii_render p2 case table; break tb/corpus lazy clusters via distinct assertion shapes); 20cae0549f4fe7c7535985b7ccae1abfac6fd462 (fix(lint): cut_event takes &str args); 214701236d8e85a71f94e4c9892a6df3ea4d7c28 (refactor(layout): move port/span helpers to layout/ports.rs, decompose layout()); 23286b468090279a3d9f14473dd40724525ec8b9 (refactor(dot): lexer scan-state structs and html_body fold; mut_ratio under limit); 285733eb4f8c51b4987f04d0df881cabe7babe32 (refactor(quality): split ge_layout.rs into submodule files below file_lines limit); 2e71935b2ba44fe4c8cb495c81b8d9c50e70be39 (refactor(quality): split ge_text_parser.rs (arrows/quotes modules) below file_lines limit); 2f7ddd9a445d31df0916078f19a1016536b2f277 (refactor(layout): Placer state machine to placement/placer.rs); 3069edfc60edc4c8f708e37306df0c66014e6a3c (refactor(cli): remove superseded pipeline.rs (split already landed)); 37c41df2a7ce58f8563f2582b8de2a71d008e219 (refactor(quality): decompose e3 normalizer (BlockCtx, seed_blocks fold, band spans) clearing unit and mut_ratio debt); 390d0b679b93dcade0af93b6ba2a62e991064942 (refactor(quality): vary oracle-test assertion shapes in tb/corpus.rs to break lazy_cluster); 3efbfd301410501bce761b3007956feb9f07217f (refactor(cli): split pipeline.rs into pipeline/ module dir past gate limits); 41b4301019e2a89ef520da049324e0d01010e01d (refactor(quality): extract helpers to clear function_lines; Must trait to clear test mock_count/unwraps; real assertions for min_assertions); 489db0027786be22e551b62cfe794aba609717fc (refactor(ascii): straight-run drawers to runs.rs, draw_edge decomposed); 490655568917027627ac44bc35f7896bb5e5550e (refactor(ascii): seed_columns helper for column_geometry pass order); 5747e54322996153a38d68c3b0ff9e370754362c (refactor(text): statement loop to text/elements.rs, dispatch decomposed); 599d0768fb7c935068c69833e747a361d3c58b86 (refactor(quality): move scenarios.rs inline tb module to scenarios/tb.rs below file_lines limit); 59ecc9ba3c7c1fd0105181a614ddf8daea52884d (refactor(html): edge-cell emitters to html/edges.rs, orientation_of decomposed); 5b36d1abd94f0b551b39298bfc50d628c14e530a (docs(brief): pretender debt fix brief (gently) — orchestrator artifact); 5f7261077dacf0b8afbfbea2889e3c042fa08118 (refactor(quality): split ge_dot_parser.rs (misc/p5 modules) below file_lines limit); 611fe749ffdd6a974d8141e188113f4aa2314179 (refactor(quality): table-drive border_values_compose_upstream test below function_lines limit); 61d17ebcc35abdb864e6b1a308f6857390e85992 (refactor(quality): split decision_trace.rs into helpers/tests submodules below file_lines limit); 620b24540cf84e541b0352a65c92a4d2b11bbd0a (refactor(ascii): split polyline.rs into polyline/{mod,attach}.rs past gate limits); 62d129a48a44058b0b846ce5b6ba91a262c50c05 (refactor(ascii): split geometry.rs into geometry/{mod,columns}.rs past gate limits); 656d95ed86e7defc1a488fea5fcfb2f1c50e81ab (refactor(quality): move styles test modules and boxart edge table below file_lines limit); 665b0556863907c86913194d72644c91416da2a4 (refactor(quality): split e3_faithfulness.rs (rows/e3 modules) below file_lines limit); 699490c75f44acbb6af1a31cfb02f9785a0a8ec0 (refactor(layout): layered bands from max counter, mut_ratio under limit); 7606dac886026baef21fa0a1eeda4fedb84a12cf (docs: file README front-door + release tickets); 76b1979f13b4d336e620b20c1e136859f655821b (refactor(quality): split p10 into fixture helper + input-source phases below function_lines limit); 7e539e5c0633111b7db523774b8afe6f596ad1db (refactor(quality): decompose e3.rs pairwise test; vary rows.rs assertion shapes to break lazy_cluster); 895dd943580bd431105f65397638512ebb1acdee (refactor(quality): functional rewrites to clear mut_ratio; helper extractions for function_lines (unquote, quote, css, clean, endpoint, align_dump, border tables)); 8b72ff16e8d19d00d296ad6c1eaca25fdf36d19d (fix(lint): clippy clean — dedupe cut_event, drop unused imports, needless return); 8ce9aebf3251724ea1fcbb417209947475b15256 (refactor(quality): p10 coverage assertion (min_assertions)); 91fffc4bbf492169cb68ef6659342d587c51854e (refactor(layout): split paths.rs into paths/ modules past gate limits); 97d450b8eba9f862735c636a0734e5a4508439a4 (refactor(quality): clear mut_ratio and function_lines in txt/attributes, html/styles, ascii/groups, boxart/mod); 9a02d1eb4d6f253e24b3da2a68ef9e618ad41151 (refactor(txt): rank machinery to ranks.rs, join-based emission, chain_operator split); 9a4293275bf59c518ec7d184055055056b73a39e (docs: apply issue-review fixes to README/release tickets); 9df87f39803d20acf09cd813c4b172e7aa9fd426 (refactor(quality): functional rewrites clear mut_ratio (flow, html/styles, suggest, txt/tests); helper extraction for attr_list, unquote, first_bare_token, precheck; split ge_graph_model p2); a45fc3a5460b1b3c796efce0cd9cd2540df85f71 (refactor(dot): group lexer scanner state, fold ident to iterators); ac72e210c8b71324b5e2fd7bdcba117af843913c (refactor(quality): split ge_html_render.rs (asserts module) below file_lines limit); ae9cf818aa495c1acacfd80e35a2fb66b5af1f87 (refactor(dot): split autosplit/port resolution into dot/autosplit.rs); af74c5966ae01a8ac8808423b9663a673c8cb8e3 (fix(lint): drop unused test imports); baddf873e815d90159e3b0ff2faf6b4c7ef971eb (refactor(quality): dedupe p10 phases in cli_more); c9687992723dadea660200b9cf9fb2445ac1cebe (refactor(text): shared rewrite walker for escape layers, iterator branch-end scans); cc5035a8540ac801f35cc70c4437289b414a5b07 (refactor(ascii): extract absorb_title_widths from column_geometry); d5e07a44838eb6d63a770453986a351b5ce8c660 (refactor(layout): chains fold-based successors, drop dead opened flag); dacc3dcd03d9073541b586c9955dad9ae82f7cd4 (refactor(quality): split ge_oracle.rs (p4family/p12 modules) below file_lines limit); db3005a3e0b5c177130988352c525e1bf013f440 (refactor(quality): split ge_ascii_render.rs (p1s/p2_bits/tail modules) below file_lines limit); dcf3f65c71d57000b7a942b770068aa0fe55d957 (refactor(quality): split ge_dot_parser p4 into phase helpers below function_lines limit); e04d389bb7d952086b372ea0fdb14682f2e8efc0 (refactor(quality): split ge_boxart_render.rs and ge_txt_render.rs below file_lines limit); e1c785d155d41faf97d8d1877bc70fc5541fd72a (refactor(quality): split cli scenario tests further (cli_more module) below file_lines limit); ed55829867e50e89d241dfc4a5da40bdf9ac306e (refactor(ascii): split canvas.rs into canvas/ modules past gate limits); efa1aec8db0341a2a6ac5bfadae127eadfd6e8f9 (refactor(quality): clear mut_ratio in ge_txt_render/shapes and ge_boxart_render modules (sorted helpers, built() builder)); fc2e632f546ac6d3e06b42ddbe21936a4b8d5a79 (refactor(tests): extract helpers to clear unit cyclomatic/complexity over limits); ff35a1eeec71500ea5404c08d5a7423378f73cec (refactor(quality): built() in shapes labels test, clearing mut_ratio)"
+        }
+      ],
+      "owner": null,
+      "reason": "orphan_commits: 57 commits in the 14-day window link no tracker id or open work-item path: 05dc7e99bdcf685087017d458a361a1e8acad5b0 (refactor(quality): move ge_oracle manifest helpers to manifest module, breaking lazy_cluster); 0bdc9655e13e73cfae4e38c2ea30d91d0cdfad1e (refactor(quality): split decision_trace further (dump/verdicts modules); seed_blocks by split; fix nesting in check_manifest_row/p6); 13e1c0d01cd2af61f542d445850662150fbc561c (refactor(tests): split decision-trace oracle helpers, flatten with iterators); 16242dfea2f787507e4b5ccde6e929d2ae432866 (refactor(quality): extract ge_ascii_render p2 case table; break tb/corpus lazy clusters via distinct assertion shapes); 20cae0549f4fe7c7535985b7ccae1abfac6fd462 (fix(lint): cut_event takes &str args); 214701236d8e85a71f94e4c9892a6df3ea4d7c28 (refactor(layout): move port/span helpers to layout/ports.rs, decompose layout()); 23286b468090279a3d9f14473dd40724525ec8b9 (refactor(dot): lexer scan-state structs and html_body fold; mut_ratio under limit); 285733eb4f8c51b4987f04d0df881cabe7babe32 (refactor(quality): split ge_layout.rs into submodule files below file_lines limit); 2e71935b2ba44fe4c8cb495c81b8d9c50e70be39 (refactor(quality): split ge_text_parser.rs (arrows/quotes modules) below file_lines limit); 2f7ddd9a445d31df0916078f19a1016536b2f277 (refactor(layout): Placer state machine to placement/placer.rs); 3069edfc60edc4c8f708e37306df0c66014e6a3c (refactor(cli): remove superseded pipeline.rs (split already landed)); 37c41df2a7ce58f8563f2582b8de2a71d008e219 (refactor(quality): decompose e3 normalizer (BlockCtx, seed_blocks fold, band spans) clearing unit and mut_ratio debt); 390d0b679b93dcade0af93b6ba2a62e991064942 (refactor(quality): vary oracle-test assertion shapes in tb/corpus.rs to break lazy_cluster); 3efbfd301410501bce761b3007956feb9f07217f (refactor(cli): split pipeline.rs into pipeline/ module dir past gate limits); 41b4301019e2a89ef520da049324e0d01010e01d (refactor(quality): extract helpers to clear function_lines; Must trait to clear test mock_count/unwraps; real assertions for min_assertions); 489db0027786be22e551b62cfe794aba609717fc (refactor(ascii): straight-run drawers to runs.rs, draw_edge decomposed); 490655568917027627ac44bc35f7896bb5e5550e (refactor(ascii): seed_columns helper for column_geometry pass order); 5747e54322996153a38d68c3b0ff9e370754362c (refactor(text): statement loop to text/elements.rs, dispatch decomposed); 599d0768fb7c935068c69833e747a361d3c58b86 (refactor(quality): move scenarios.rs inline tb module to scenarios/tb.rs below file_lines limit); 59ecc9ba3c7c1fd0105181a614ddf8daea52884d (refactor(html): edge-cell emitters to html/edges.rs, orientation_of decomposed); 5b36d1abd94f0b551b39298bfc50d628c14e530a (docs(brief): pretender debt fix brief (gently) — orchestrator artifact); 5f7261077dacf0b8afbfbea2889e3c042fa08118 (refactor(quality): split ge_dot_parser.rs (misc/p5 modules) below file_lines limit); 611fe749ffdd6a974d8141e188113f4aa2314179 (refactor(quality): table-drive border_values_compose_upstream test below function_lines limit); 61d17ebcc35abdb864e6b1a308f6857390e85992 (refactor(quality): split decision_trace.rs into helpers/tests submodules below file_lines limit); 620b24540cf84e541b0352a65c92a4d2b11bbd0a (refactor(ascii): split polyline.rs into polyline/{mod,attach}.rs past gate limits); 62d129a48a44058b0b846ce5b6ba91a262c50c05 (refactor(ascii): split geometry.rs into geometry/{mod,columns}.rs past gate limits); 656d95ed86e7defc1a488fea5fcfb2f1c50e81ab (refactor(quality): move styles test modules and boxart edge table below file_lines limit); 665b0556863907c86913194d72644c91416da2a4 (refactor(quality): split e3_faithfulness.rs (rows/e3 modules) below file_lines limit); 699490c75f44acbb6af1a31cfb02f9785a0a8ec0 (refactor(layout): layered bands from max counter, mut_ratio under limit); 7606dac886026baef21fa0a1eeda4fedb84a12cf (docs: file README front-door + release tickets); 76b1979f13b4d336e620b20c1e136859f655821b (refactor(quality): split p10 into fixture helper + input-source phases below function_lines limit); 7e539e5c0633111b7db523774b8afe6f596ad1db (refactor(quality): decompose e3.rs pairwise test; vary rows.rs assertion shapes to break lazy_cluster); 895dd943580bd431105f65397638512ebb1acdee (refactor(quality): functional rewrites to clear mut_ratio; helper extractions for function_lines (unquote, quote, css, clean, endpoint, align_dump, border tables)); 8b72ff16e8d19d00d296ad6c1eaca25fdf36d19d (fix(lint): clippy clean — dedupe cut_event, drop unused imports, needless return); 8ce9aebf3251724ea1fcbb417209947475b15256 (refactor(quality): p10 coverage assertion (min_assertions)); 91fffc4bbf492169cb68ef6659342d587c51854e (refactor(layout): split paths.rs into paths/ modules past gate limits); 97d450b8eba9f862735c636a0734e5a4508439a4 (refactor(quality): clear mut_ratio and function_lines in txt/attributes, html/styles, ascii/groups, boxart/mod); 9a02d1eb4d6f253e24b3da2a68ef9e618ad41151 (refactor(txt): rank machinery to ranks.rs, join-based emission, chain_operator split); 9a4293275bf59c518ec7d184055055056b73a39e (docs: apply issue-review fixes to README/release tickets); 9df87f39803d20acf09cd813c4b172e7aa9fd426 (refactor(quality): functional rewrites clear mut_ratio (flow, html/styles, suggest, txt/tests); helper extraction for attr_list, unquote, first_bare_token, precheck; split ge_graph_model p2); a45fc3a5460b1b3c796efce0cd9cd2540df85f71 (refactor(dot): group lexer scanner state, fold ident to iterators); ac72e210c8b71324b5e2fd7bdcba117af843913c (refactor(quality): split ge_html_render.rs (asserts module) below file_lines limit); ae9cf818aa495c1acacfd80e35a2fb66b5af1f87 (refactor(dot): split autosplit/port resolution into dot/autosplit.rs); af74c5966ae01a8ac8808423b9663a673c8cb8e3 (fix(lint): drop unused test imports); baddf873e815d90159e3b0ff2faf6b4c7ef971eb (refactor(quality): dedupe p10 phases in cli_more); c9687992723dadea660200b9cf9fb2445ac1cebe (refactor(text): shared rewrite walker for escape layers, iterator branch-end scans); cc5035a8540ac801f35cc70c4437289b414a5b07 (refactor(ascii): extract absorb_title_widths from column_geometry); d5e07a44838eb6d63a770453986a351b5ce8c660 (refactor(layout): chains fold-based successors, drop dead opened flag); dacc3dcd03d9073541b586c9955dad9ae82f7cd4 (refactor(quality): split ge_oracle.rs (p4family/p12 modules) below file_lines limit); db3005a3e0b5c177130988352c525e1bf013f440 (refactor(quality): split ge_ascii_render.rs (p1s/p2_bits/tail modules) below file_lines limit); dcf3f65c71d57000b7a942b770068aa0fe55d957 (refactor(quality): split ge_dot_parser p4 into phase helpers below function_lines limit); e04d389bb7d952086b372ea0fdb14682f2e8efc0 (refactor(quality): split ge_boxart_render.rs and ge_txt_render.rs below file_lines limit); e1c785d155d41faf97d8d1877bc70fc5541fd72a (refactor(quality): split cli scenario tests further (cli_more module) below file_lines limit); ed55829867e50e89d241dfc4a5da40bdf9ac306e (refactor(ascii): split canvas.rs into canvas/ modules past gate limits); efa1aec8db0341a2a6ac5bfadae127eadfd6e8f9 (refactor(quality): clear mut_ratio in ge_txt_render/shapes and ge_boxart_render modules (sorted helpers, built() builder)); fc2e632f546ac6d3e06b42ddbe21936a4b8d5a79 (refactor(tests): extract helpers to clear unit cyclomatic/complexity over limits); ff35a1eeec71500ea5404c08d5a7423378f73cec (refactor(quality): built() in shapes labels test, clearing mut_ratio)"
+    },
+    "truncation": {
+      "applied": true,
+      "omitted_counts": {
+        "recent": 195
+      }
+    },
+    "head_sha": "9a4293275bf59c518ec7d184055055056b73a39e",
+    "source_hash": "61411b058f56b68dc8aeff9cb20f77afb8ee2af2523b4f39fd3540de36720845",
+    "warnings": [
+      {
+        "source": "beads",
+        "code": "beads_parse_error",
+        "detail": "12 malformed line(s) skipped in .beads/issues.jsonl"
+      }
+    ]
+  },
+  "warnings": [],
+  "hints": [],
+  "meta": {
+    "duration_ms": 0,
+    "tx": null,
+    "request_id": null
+  }
+}
