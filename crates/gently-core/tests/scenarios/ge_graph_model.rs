@@ -107,7 +107,7 @@ fn p2() {
 fn p2_border_components_derive_at_assignment() {
     let mut g = Graph::default();
     let n = g.add_node("a");
-    let m = g.add_node("m");
+    let _m = g.add_node("m");
     // derived border components computed AT ASSIGNMENT TIME, exactly as
     // upstream split_border_attributes (Graph::Easy 0.69)
     g.set_attr(Scope::Node(n), "border", "2px dotted #f0f");

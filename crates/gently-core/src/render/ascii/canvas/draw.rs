@@ -151,8 +151,8 @@ impl Canvas {
         let y_mid = self.mid(r - 1);
         let y_attach = self.band_top(r) - 1;
         let (xl, xr) = (x0 + 2, x0 + w - 3);
-        for x in xl + 1..xr {
-            self.grid[y_mid][x] = b'-';
+        for cell in &mut self.grid[y_mid][xl + 1..xr] {
+            *cell = b'-';
         }
         self.grid[y_mid][xl] = b'+';
         self.grid[y_mid][xr] = b'+';

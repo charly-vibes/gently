@@ -1,5 +1,3 @@
-use super::*;
-
 /// Parse a checklist verdict table — rows `| N | item | verdict | ...`
 /// with N in 1..=5 — into `(item number, verdict)` pairs.
 pub(crate) fn checklist_verdicts(text: &str) -> Vec<(usize, String)> {

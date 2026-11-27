@@ -18,6 +18,20 @@ DOT — plus parse graphs from the Graph::Easy text format and from DOT.
 differentially against the original Perl tool via a pinned oracle
 (v0.69, `just oracle-verify`).
 
+## Install
+
+Prebuilt binaries for the five standard targets (linux/darwin amd64+arm64,
+windows amd64) are attached to every [GitHub release](https://github.com/charly-vibes/gently/releases),
+with sha256 sums in `checksums.txt`:
+
+```sh
+# linux amd64 example (v0.2.4)
+curl -fsSLO https://github.com/charly-vibes/gently/releases/download/v0.2.4/gently_0.2.4_linux_amd64.tar.gz
+tar xzf gently_0.2.4_linux_amd64.tar.gz && ./gently --version
+```
+
+`cargo install gently-cli` remains the fallback (needs a Rust toolchain).
+
 ## Quickstart
 
 Build the CLI and render a graph to ASCII art — the Graph::Easy text

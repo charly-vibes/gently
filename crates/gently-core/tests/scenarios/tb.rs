@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 mod tb {
     /// Walking-skeleton smoke test (epic gently-2po): the workspace links,
     /// gently-core is loadable, and the tracer shape plumbing is reachable.

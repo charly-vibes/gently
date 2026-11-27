@@ -189,7 +189,6 @@ mod p1s;
 mod p2;
 /// ge.ascii_render p2 additions (gently-klf, gently-yhg): the POD triangle's
 /// back-edge attachments and the minlen straight-gap stretch. Side file.
-#[path = "ge_ascii_render_klf.rs"]
 #[path = "ge_ascii_render/p2_bits.rs"]
 mod p2_bits;
 #[path = "ge_ascii_render/tail.rs"]

@@ -70,7 +70,6 @@ use p4family::*;
 
 #[path = "ge_oracle/p12.rs"]
 mod p12;
-use p12::*;
 
 #[path = "ge_oracle/manifest.rs"]
 mod manifest;

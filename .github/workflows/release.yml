@@ -1,7 +1,9 @@
 # Release workflow — publish both crates on version tags
 #
 # Triggered by pushing a version tag (e.g., `git tag v0.1.0 && git push --tags`).
-# Publishes gently-core first (gently-cli path-depends on it), then gently-cli.
+# Publishes gently-core first (gently-cli path-depends on it), then gently-cli,
+# and builds + attaches the five standard target archives plus checksums.txt
+# on the GitHub Release (gently-jzb).
 #
 # Required secrets:
 #   CARGO_REGISTRY_TOKEN   - crates.io API token for publishing the crates
@@ -61,3 +63,127 @@ jobs:
           out=$(cargo publish -p gently-cli 2>&1) || echo "$out" | grep -q "already exists"
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # The five standard targets (gently-jzb): linux/darwin amd64+arm64 and
+  # windows amd64. Archives are named gently_<version>_<os>_<arch> —
+  # .tar.gz on unix, .zip on windows — and checksums.txt (sha256) covers
+  # all of them on the GitHub Release.
+  build:
+    name: Build ${{ matrix.target }}
+    needs: publish
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            os_name: linux
+            arch: amd64
+            archive: tar
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            os_name: linux
+            arch: arm64
+            archive: tar
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+            os_name: darwin
+            arch: amd64
+            archive: tar
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            os_name: darwin
+            arch: arm64
+            archive: tar
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            os_name: windows
+            arch: amd64
+            archive: zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # The arm64 linux build needs its cross linker; everything else
+      # links natively on the runner.
+      - name: Install arm64 cross linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release -p gently-cli --target ${{ matrix.target }}
+
+      - name: Archive (tar.gz)
+        if: matrix.archive == 'tar'
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          name="gently_${version}_${{ matrix.os_name }}_${{ matrix.arch }}"
+          mkdir "$name"
+          cp target/${{ matrix.target }}/release/gently "$name"/
+          cp README.md "$name"/
+          tar czf "$name.tar.gz" "$name"
+          echo "ARCHIVE=$name.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $name = "gently_${version}_${{ matrix.os_name }}_${{ matrix.arch }}"
+          New-Item -ItemType Directory "$name" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/gently.exe" "$name/"
+          Copy-Item "README.md" "$name/"
+          Compress-Archive -Path "$name" -DestinationPath "$name.zip"
+          "ARCHIVE=$name.zip" | Add-Content $env:GITHUB_ENV
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os_name }}-${{ matrix.arch }}
+          path: ${{ env.ARCHIVE }}
+          if-no-files-found: error
+
+  release:
+    name: Attach archives to the GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum -- *.tar.gz *.zip > checksums.txt
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "gently ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            dist/*.tar.gz dist/*.zip dist/checksums.txt

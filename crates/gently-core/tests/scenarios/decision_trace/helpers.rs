@@ -1,5 +1,5 @@
 use super::dump::seed_blocks;
-use super::oracle::{probe_body, run_traced};
+use super::oracle::run_traced;
 use super::*;
 
 /// c5's manifest gate over `tests/repro/admission.tsv`: the pin header

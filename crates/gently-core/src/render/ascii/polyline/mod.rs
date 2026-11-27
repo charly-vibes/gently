@@ -291,13 +291,13 @@ fn draw_run(canvas: &mut Canvas, p: Pt, q: Pt, a0: Pt, a_end: Pt) {
         if q == a0 || q == a_end {
             hi = hi.saturating_sub(1);
         }
-        for x in lo..=hi {
-            canvas.grid[p.1][x] = b'-';
+        for cell in &mut canvas.grid[p.1][lo..=hi] {
+            *cell = b'-';
         }
     } else {
         let (y1, y2) = ordered(p.1, q.1);
-        for y in y1..=y2 {
-            canvas.grid[y][p.0] = b'|';
+        for r in &mut canvas.grid[y1..=y2] {
+            r[p.0] = b'|';
         }
     }
 }

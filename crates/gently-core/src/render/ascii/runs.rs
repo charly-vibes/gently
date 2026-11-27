@@ -280,8 +280,8 @@ pub(super) fn draw_straight_ver(
     let x = canvas.vert_x(c);
     let arrowed = canvas.edge_arrow_end[edge_index];
     let bidir = canvas.edge_bidir[edge_index];
-    for row in top..top + h {
-        canvas.grid[row][x] = b'|';
+    for r in &mut canvas.grid[top..top + h] {
+        r[x] = b'|';
     }
     stamp_ver_heads(canvas, top, x, h, upward, arrowed, bidir);
     if lines.is_empty() {

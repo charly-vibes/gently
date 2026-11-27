@@ -5,6 +5,35 @@ All notable changes to gently are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-11-27
+
+### Fixed
+
+- **Fan-in "edge N has an empty path"** (gently-481, gently-bb5) — the
+  ASCII layouter left edges unrouted when a grown span hosted the
+  walk's start row: `east_path` now falls back to a flank run beside
+  both spans when the walk comes back empty, and `west_span_hosted`
+  gains the corner lane (adjacent columns) and the hosted run (the
+  source's grown row span already hosts the target's band row). All
+  fallbacks fire only on otherwise-empty paths, so pinned oracle
+  renders are unchanged.
+- **Walled far-apart routes** — `multiband_path` gains a bounded
+  breadth-first free-cell last resort between the two face rings when
+  every structured routing family misses; the typed render error now
+  fires only for genuinely unroutable graphs. A random sweep of 1,800
+  4–8-node graphs: 12 empty-path failures → 0.
+- **Dotted DOT identifiers quoted** (gently-6li) — the graphviz
+  renderer treats `.` as a non-identifier character, quoting ids like
+  `cli.interface.layer`.
+- **`--version`/`--help` exit 0** (gently-bmw) — clap's DisplayVersion
+  and DisplayHelp errors no longer take the invalid-usage exit-2 path.
+
+### Changed
+
+- CI: the release workflow builds and attaches the five standard
+  target archives (linux/darwin amd64+arm64, windows amd64) plus
+  checksums.txt on every `v*` tag (gently-jzb).
+
 ## [0.2.3] - 2026-10-16
 
 ### Fixed

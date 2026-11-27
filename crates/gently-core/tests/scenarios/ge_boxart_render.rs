@@ -9,9 +9,7 @@ use gently_core::parse::text;
 use gently_core::render::ascii;
 use gently_core::render::txt;
 
-#[path = "ge_txt_render/shapes.rs"]
-mod shapes;
-use shapes::*;
+use crate::ge_txt_render::shapes::*;
 
 /// Add two nodes and a live edge between them; returns the edge index.
 fn chain_edge(g: &mut Graph, a: &str, b: &str, directed: bool) -> usize {

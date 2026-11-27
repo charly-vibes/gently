@@ -103,9 +103,10 @@ fn selfloop_renders_oracle_ascii() {
 /// so `size: 1,2` / `rows: 3` stay standard 3-line boxes.
 #[test]
 fn size_attr_renders_oracle_ascii() {
-    for bytes in [rendered_ascii("size-attr").into_bytes()] {
-        assert_eq!(bytes, oracle_body("size-attr", "ascii"));
-    }
+    assert_eq!(
+        rendered_ascii("size-attr").into_bytes(),
+        oracle_body("size-attr", "ascii")
+    );
 }
 
 /// ge.oracle.c3: txt-diamond (a->b, a->c, b->d, c->d) — ranks 0/1/2,
@@ -126,9 +127,10 @@ fn txt_diamond_renders_oracle_ascii() {
 /// byte-identical.
 #[test]
 fn txt_isolated_renders_oracle_ascii() {
-    for bytes in [rendered_ascii("txt-isolated").into_bytes()] {
-        assert_eq!(bytes, oracle_body("txt-isolated", "ascii"));
-    }
+    assert_eq!(
+        rendered_ascii("txt-isolated").into_bytes(),
+        oracle_body("txt-isolated", "ascii")
+    );
 }
 
 /// ge.oracle.c3: txt-shared-target — b east of c, edge drawn `<--`.

@@ -9,8 +9,10 @@ use gently_core::parse::text;
 use gently_core::render::ascii;
 use gently_core::render::txt;
 
+// Shared with ge_boxart_render (gently-89i) — declared once, here.
 #[path = "ge_txt_render/shapes.rs"]
-mod shapes;
+pub(crate) mod shapes;
+
 use shapes::*;
 
 /// Add two nodes and a live edge between them; returns the edge index.

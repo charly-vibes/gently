@@ -116,8 +116,7 @@ fn normalize_block(lines: &[&str]) -> Trace {
         route_block_line(line.trim(), &mut ctx, &mut nodes, &mut bands);
     }
 
-    let mut trace = collect_trace(&nodes, &bands);
-    trace
+    collect_trace(&nodes, &bands)
 }
 
 fn route_block_line(
@@ -234,7 +233,7 @@ impl BlockCtx {
 
     /// "  Client @ (2,0) 13x3" | "  Msg Server @ (0,0) 14x12 cx=1 cy=4"
     fn parse_node(&self, line: &str) -> NodeEvent {
-        let y = self
+        let _y = self
             .cur_band
             .get()
             .unwrap_or_else(|| panic!("node line outside a band: {line}"));
@@ -275,7 +274,7 @@ fn seed_blocks(dump: &str) -> Vec<(i64, Vec<String>)> {
     // grouping state rides the fold accumulator.
     let (done, tail) = dump.lines().chain(["-- seed END"]).fold(
         (Vec::new(), None::<(i64, Vec<String>)>),
-        |(mut blocks, cur), line| {
+        |(mut blocks, mut cur), line| {
             if let Some(rest) = line.strip_prefix("-- seed ") {
                 if let Some(finished) = cur {
                     blocks.push(finished);
@@ -284,11 +283,12 @@ fn seed_blocks(dump: &str) -> Vec<(i64, Vec<String>)> {
                     blocks,
                     rest.trim().parse::<i64>().ok().map(|s| (s, Vec::new())),
                 )
-            } else if cur.is_some() && !line.starts_with('#') {
-                let (seed, mut body) = cur.unwrap();
-                body.push(line.to_string());
-                (blocks, Some((seed, body)))
             } else {
+                if !line.starts_with('#') {
+                    if let Some((_, body)) = cur.as_mut() {
+                        body.push(line.to_string());
+                    }
+                }
                 (blocks, cur)
             }
         },

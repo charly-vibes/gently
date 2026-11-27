@@ -323,8 +323,8 @@ fn draw_run(canvas: &mut Canvas, p: Pt, q: Pt, a0: Pt, a_end: Pt, style: &str) {
     } else {
         let (y1, y2) = ordered(p.1, q.1);
         let ver = styles::edge(style).ver;
-        for y in y1..=y2 {
-            canvas.grid[y][p.0] = ver;
+        for r in &mut canvas.grid[y1..=y2] {
+            r[p.0] = ver;
         }
     }
 }
