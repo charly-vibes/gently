@@ -175,13 +175,13 @@ jobs:
           merge-multiple: true
 
       - name: Checksums
-        run: |
-          cd dist
-          sha256sum -- *.tar.gz *.zip > checksums.txt
+        run: sha256sum -- dist/*.tar.gz dist/*.zip > dist/checksums.txt
 
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
+          # No checkout in this job — pin the repo for gh explicitly.
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --title "gently ${GITHUB_REF_NAME#v}" \
