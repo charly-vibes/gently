@@ -14,7 +14,7 @@ traces_to = "[[cli]]"
 
 [[constraints]]
 id = "c3"
-kind = "invariant"
+kind = "effect"
 expr = "Rendered output goes to stdout, diagnostics go to stderr, and the process exits 0 on success and nonzero on any parse or render error."
 traces_to = "[[cli]]"
 
@@ -38,7 +38,7 @@ traces_to = "[[cli]]"
 
 [[constraints]]
 id = "c7"
-kind = "invariant"
+kind = "effect"
 expr = "An unknown subcommand or flag produces a genesis suggestion (`DidYouMean` / `Fix`) on stderr before the nonzero exit."
 traces_to = "[[cli]]"
 
