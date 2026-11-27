@@ -60,3 +60,56 @@ fn tall_source_adjacent_stack_routes_side_lane() {
     let l = gently_core::layout::layout(&g);
     assert!(paths_all_nonempty(&l), "every edge needs a routed path");
 }
+
+/// gently-bb5 sweep repro: a grown source whose span's bottom row is
+/// the walk's start, an interior row walled by a stacked node, and no
+/// jog lane (the corridor at the start row passes through the source's
+/// own span cells). The flank run beside both spans must carry the
+/// edge instead of leaving an empty path.
+#[test]
+fn grown_source_walled_walk_routes_flank() {
+    let mut g = Graph::default();
+    let d = g.add_node("d");
+    let e = g.add_node("e");
+    let h = g.add_node("h");
+    let gnode = g.add_node("g");
+    let b = g.add_node("b");
+    let a = g.add_node("a");
+    let c = g.add_node("c");
+    g.add_edge(d, e, true).must("live endpoints");
+    g.add_edge(d, h, true).must("live endpoints");
+    g.add_edge(e, d, true).must("live endpoints");
+    g.add_edge(gnode, b, true).must("live endpoints");
+    g.add_edge(gnode, d, true).must("live endpoints");
+    g.add_edge(d, a, true).must("live endpoints");
+    g.add_edge(e, gnode, true).must("live endpoints");
+    g.add_edge(c, b, true).must("live endpoints");
+    let l = gently_core::layout::layout(&g);
+    assert!(paths_all_nonempty(&l), "every edge needs a routed path");
+}
+
+/// gently-bb5 sweep repro: source and target far apart with the west
+/// run, the corner lane and the hosted run all walled by stacked
+/// nodes; only a free-cell run around the outside connects them. The
+/// breadth-first last resort must carry the edge instead of leaving an
+/// empty path.
+#[test]
+fn walled_far_apart_routes_bfs() {
+    let mut g = Graph::default();
+    let a = g.add_node("a");
+    let c = g.add_node("c");
+    let b = g.add_node("b");
+    let e = g.add_node("e");
+    let d = g.add_node("d");
+    g.add_edge(a, e, true).must("live endpoints");
+    g.add_edge(c, b, true).must("live endpoints");
+    g.add_edge(e, b, true).must("live endpoints");
+    g.add_edge(a, c, true).must("live endpoints");
+    g.add_edge(c, a, true).must("live endpoints");
+    g.add_edge(c, e, true).must("live endpoints");
+    g.add_edge(d, b, true).must("live endpoints");
+    g.add_edge(a, b, true).must("live endpoints");
+    g.add_edge(e, c, true).must("live endpoints");
+    let l = gently_core::layout::layout(&g);
+    assert!(paths_all_nonempty(&l), "every edge needs a routed path");
+}

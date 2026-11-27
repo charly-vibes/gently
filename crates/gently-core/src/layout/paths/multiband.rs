@@ -24,11 +24,102 @@ use super::{Ctx, Endpoints};
 /// jumped the occupied band row between two reserved gap rows, rendering
 /// non-adjacent paths.
 pub(super) fn multiband_path(ep: &Endpoints, rows: &Rows, ctx: &Ctx) -> Vec<Cell> {
-    if ep.gu.0 > ep.gv.0 {
+    let path = if ep.gu.0 > ep.gv.0 {
         west_path(ep, rows, ctx)
     } else {
         east_path(ep, ctx)
+    };
+    if !path.is_empty() {
+        return path;
     }
+    // Every structured family missed (gently-bb5's walled far-apart
+    // sweep shapes): last resort, a free-cell breadth-first run between
+    // the two face rings. `None` keeps the typed render error.
+    face_bfs_path(ep, ctx).unwrap_or_default()
+}
+
+/// A cell on the face ring of a span: outside the rectangle, adjacent
+/// (4-neighbour) to one of its cells.
+fn face_ring((anchor, span): (Cell, (usize, usize)), free: &impl Fn(Cell) -> bool) -> Vec<Cell> {
+    let (w, h) = span;
+    let inside =
+        |c: Cell| c.0 >= anchor.0 && c.0 < anchor.0 + w && c.1 >= anchor.1 && c.1 < anchor.1 + h;
+    let mut ring = Vec::new();
+    for r in anchor.1.saturating_sub(1)..anchor.1 + h + 1 {
+        for c in anchor.0.saturating_sub(1)..anchor.0 + w + 1 {
+            let cell = (c, r);
+            if !inside(cell)
+                && free(cell)
+                && [
+                    (c, r.wrapping_sub(1)),
+                    (c, r + 1),
+                    (c.wrapping_sub(1), r),
+                    (c + 1, r),
+                ]
+                .iter()
+                .any(|&n| inside(n))
+            {
+                ring.push(cell);
+            }
+        }
+    }
+    ring
+}
+
+/// The breadth-first free-cell run from the source's face ring to the
+/// target's, bounded to the endpoints' bounding box plus a margin of
+/// two — the same class of orthogonal free path the structured routes
+/// produce, so the renderer's exit/entry attachment still applies.
+fn face_bfs_path(ep: &Endpoints, ctx: &Ctx) -> Option<Vec<Cell>> {
+    let free = |c: Cell| !ctx.occupied.contains(&c);
+    let sources = face_ring((ep.gu, ep.span_u), &free);
+    let goals = face_ring((ep.gv, ep.span_v), &free);
+    if sources.is_empty() || goals.is_empty() {
+        return None;
+    }
+    let margin = 2;
+    let min_r = ep.gu.1.min(ep.gv.1).saturating_sub(margin);
+    let max_r = (ep.gu.1 + ep.span_u.1).max(ep.gv.1 + ep.span_v.1) + margin;
+    let min_c = ep.gu.0.min(ep.gv.0).saturating_sub(margin);
+    let max_c = (ep.gu.0 + ep.span_u.0).max(ep.gv.0 + ep.span_v.0) + margin;
+    let in_bounds = |c: Cell| c.0 >= min_c && c.0 <= max_c && c.1 >= min_r && c.1 <= max_r;
+    let mut parent: std::collections::HashMap<Cell, Cell> = std::collections::HashMap::new();
+    let mut queue = std::collections::VecDeque::new();
+    for &s in &sources {
+        parent.insert(s, s);
+        queue.push_back(s);
+    }
+    let goal = 'bfs: loop {
+        let cur = queue.pop_front()?;
+        if goals.contains(&cur) {
+            break 'bfs cur;
+        }
+        for next in [
+            (cur.0, cur.1.wrapping_sub(1)),
+            (cur.0, cur.1 + 1),
+            (cur.0.wrapping_sub(1), cur.1),
+            (cur.0 + 1, cur.1),
+        ] {
+            if in_bounds(next)
+                && free(next)
+                && !parent.contains_key(&next)
+                && parent.insert(next, cur).is_none()
+            {
+                queue.push_back(next);
+            }
+        }
+    };
+    let mut path = vec![goal];
+    let mut cur = goal;
+    while let Some(&p) = parent.get(&cur) {
+        if p == cur {
+            break;
+        }
+        path.push(p);
+        cur = p;
+    }
+    path.reverse();
+    Some(path)
 }
 
 /// The west-going route: try the run-row candidates beside the target
@@ -134,16 +225,70 @@ fn west_fallback(ep: &Endpoints, ctx: &Ctx, g: usize) -> Vec<Cell> {
 /// the last path cell abuts the span.
 fn west_span_hosted(ep: &Endpoints, ctx: &Ctx) -> Vec<Cell> {
     let (gu, gv) = (ep.gu, ep.gv);
-    let mut path = walk_column(gu.0, walk_from(gu.1, ep.span_u.1, gv.1), gv.1, ctx);
+    let from = walk_from(gu.1, ep.span_u.1, gv.1);
+    let mut path = walk_column(gu.0, from, gv.1, ctx);
     let east_face = gv.0 + ep.span_v.0;
     if west_dodge_close(&mut path, gu.0, gv.1, east_face, ctx) {
         return path;
     }
     if !west_short_close(&mut path, gu.0, gv.1, ctx) {
+        if path.is_empty() {
+            // The walk never started: the effective start row (the
+            // source's span bottom row, gently-0is's walk_from) is
+            // adjacent to the target's band row, so there is no
+            // interior cell. Fall back to the corner lane — the column
+            // abutting the source's west face and the target's east
+            // face — instead of reporting an empty path (gently-bb5).
+            if let Some(lane) = corner_lane(ep, from, gv.1, ctx) {
+                return lane;
+            }
+            // Or the source's own grown row span already hosts the
+            // target's band row: run west along that shared row.
+            if let Some(run) = hosted_run(ep, gv.1, ctx) {
+                return run;
+            }
+            return path;
+        }
         return path; // gave up: truncate, never jump
     }
     path.extend((east_face..gu.0).rev().map(|c| (c, gv.1)));
     path
+}
+
+/// The straight west run along the target's band row when the source's
+/// own grown row span hosts that row: the row is one of the source's
+/// face rows, so the edge runs the free corridor between the two
+/// faces. `None` when the row is outside the source's span or a cell
+/// is taken.
+fn hosted_run(ep: &Endpoints, dest: usize, ctx: &Ctx) -> Option<Vec<Cell>> {
+    if dest < ep.gu.1 || dest >= ep.gu.1 + ep.span_u.1 {
+        return None;
+    }
+    let run: Vec<Cell> = ((ep.gv.0 + ep.span_v.0)..ep.gu.0)
+        .rev()
+        .map(|c| (c, dest))
+        .collect();
+    (!run.iter().any(|&cell| ctx.occupied.contains(&cell))).then_some(run)
+}
+
+/// The corner lane beside a span-hosted west pair whose walk came back
+/// empty: the single column abutting the source's west face AND the
+/// target's east face — exists only when the source's west face sits
+/// directly east of the target's — covering every row from the walk's
+/// start row to the target's band row. `None` keeps the typed render
+/// error.
+fn corner_lane(ep: &Endpoints, from: usize, dest: usize, ctx: &Ctx) -> Option<Vec<Cell>> {
+    if ep.gu.0.checked_sub(1) != Some(ep.gv.0 + ep.span_v.0) {
+        return None;
+    }
+    let dc = ep.gu.0 - 1;
+    let rows = if dest > from {
+        (from..=dest).collect::<Vec<_>>()
+    } else {
+        ((dest..=from).rev()).collect()
+    };
+    let lane: Vec<Cell> = rows.iter().map(|&r| (dc, r)).collect();
+    (!lane.iter().any(|&cell| ctx.occupied.contains(&cell))).then_some(lane)
 }
 
 /// Dodge-column close on the band row: continue ALONG the band row to
@@ -220,35 +365,40 @@ fn east_path(ep: &Endpoints, ctx: &Ctx) -> Vec<Cell> {
     if walk_col != gv.0 {
         east_approach(ep, ctx, &mut path, walk_col, face);
     }
-    if path.is_empty() && walk_col == gv.0 && gu.0 == gv.0 && from.abs_diff(face) <= 1 {
-        // Directly-adjacent vertical fan-in (gently-481): the target's
+    if path.is_empty() && walk_col == gv.0 && gu.0 == gv.0 {
+        // Same-column vertical edge the walk could not realize
+        // (gently-481, gently-bb5's sweep repro): either the target's
         // grown face row neighbours the walk's effective start row
-        // (`from` — the span's bottom row for a south-going tall
-        // source, gently-n0d family), so the walk has no interior
-        // cell: the span hosting the slot accounting assumed
-        // (gently-a6g) failed and the band packed onto the cursor.
-        // Route the side face instead: out of the source's east (then
-        // west) flank and into the target's flank at its face row —
-        // the east-ring geometry of gently-a6g.
-        path = side_lane(gu, face, from, ctx).unwrap_or(path);
+        // (`from` — no interior cell at all), or every interior row is
+        // walled and no jog lane exists because the corridor at
+        // `from`'s row passes through the source's own grown span.
+        // Fall back to the flank: a contiguous run down (up) the free
+        // column beside both spans' faces, from the source's face row
+        // to the target's — the east-ring geometry of gently-a6g. Both
+        // flanks walled keeps the typed render error.
+        path = flank_path(ep, from, face, ctx).unwrap_or(path);
     }
     path
 }
 
-/// The side approach beside a directly-adjacent vertical pair: the free
-/// flank column's cells at the walk's start row and the target's face
-/// row (one cell when the two coincide). `None` when both flanks are
-/// walled.
-fn side_lane(gu: Cell, face: usize, from: usize, ctx: &Ctx) -> Option<Vec<Cell>> {
-    let rows = if from == face {
-        vec![face]
+/// The flank run beside a same-column vertical pair whose walk came
+/// back empty: the free column abutting BOTH spans' side faces (only
+/// when the two spans are equally wide — otherwise no single column
+/// abuts both), covering every row from the walk's start row down to
+/// the target's face row. `None` when a cell is taken.
+fn flank_path(ep: &Endpoints, from: usize, face: usize, ctx: &Ctx) -> Option<Vec<Cell>> {
+    if ep.span_u.0 != ep.span_v.0 {
+        return None;
+    }
+    let dc = [Some(ep.gu.0 + ep.span_u.0), ep.gu.0.checked_sub(1)];
+    let rows = if face > from {
+        (from..=face).collect::<Vec<_>>()
     } else {
-        vec![from, face]
+        ((face..=from).rev()).collect()
     };
-    let lanes = [gu.0.checked_add(1), gu.0.checked_sub(1)];
-    lanes.into_iter().flatten().find_map(|dc| {
-        let lane: Vec<Cell> = rows.iter().map(|&r| (dc, r)).collect();
-        (!lane.iter().any(|&c| ctx.occupied.contains(&c))).then_some(lane)
+    dc.into_iter().flatten().find_map(|c| {
+        let lane: Vec<Cell> = rows.iter().map(|&r| (c, r)).collect();
+        (!lane.iter().any(|&cell| ctx.occupied.contains(&cell))).then_some(lane)
     })
 }
 
