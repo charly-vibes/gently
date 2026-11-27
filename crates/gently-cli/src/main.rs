@@ -111,8 +111,9 @@ fn main() {
     ) {
         Ok(cli) => cli,
         Err(e) => {
+            let code = e.exit_code();
             let _ = e.print();
-            exit(2);
+            exit(code);
         }
     };
     let guide = Guide::builder("gently", env!("CARGO_PKG_VERSION"))

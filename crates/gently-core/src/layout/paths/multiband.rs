@@ -220,7 +220,36 @@ fn east_path(ep: &Endpoints, ctx: &Ctx) -> Vec<Cell> {
     if walk_col != gv.0 {
         east_approach(ep, ctx, &mut path, walk_col, face);
     }
+    if path.is_empty() && walk_col == gv.0 && gu.0 == gv.0 && from.abs_diff(face) <= 1 {
+        // Directly-adjacent vertical fan-in (gently-481): the target's
+        // grown face row neighbours the walk's effective start row
+        // (`from` — the span's bottom row for a south-going tall
+        // source, gently-n0d family), so the walk has no interior
+        // cell: the span hosting the slot accounting assumed
+        // (gently-a6g) failed and the band packed onto the cursor.
+        // Route the side face instead: out of the source's east (then
+        // west) flank and into the target's flank at its face row —
+        // the east-ring geometry of gently-a6g.
+        path = side_lane(gu, face, from, ctx).unwrap_or(path);
+    }
     path
+}
+
+/// The side approach beside a directly-adjacent vertical pair: the free
+/// flank column's cells at the walk's start row and the target's face
+/// row (one cell when the two coincide). `None` when both flanks are
+/// walled.
+fn side_lane(gu: Cell, face: usize, from: usize, ctx: &Ctx) -> Option<Vec<Cell>> {
+    let rows = if from == face {
+        vec![face]
+    } else {
+        vec![from, face]
+    };
+    let lanes = [gu.0.checked_add(1), gu.0.checked_sub(1)];
+    lanes.into_iter().flatten().find_map(|dc| {
+        let lane: Vec<Cell> = rows.iter().map(|&r| (dc, r)).collect();
+        (!lane.iter().any(|&c| ctx.occupied.contains(&c))).then_some(lane)
+    })
 }
 
 /// The face row nearest the source (gently-a6g): a grown target entered

@@ -68,6 +68,9 @@ mod ge_perf;
 #[path = "scenarios/ge_graphviz_render.rs"]
 mod ge_graphviz_render;
 
+#[path = "scenarios/ge_layout_adjacent_stack.rs"]
+mod ge_layout_adjacent_stack;
+
 /// Test-local expectation helper: `.expect()`/`.unwrap()` calls trip
 /// pretender's file-level `mock_count` and `unwraps` metrics, so tests
 /// funnel through this panic-on-error extension instead (same runtime
